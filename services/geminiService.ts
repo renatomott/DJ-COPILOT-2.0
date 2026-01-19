@@ -2,12 +2,22 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import type { Track, Suggestion, MashupPair, SetReport, SuggestionResult } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+// Helper to get client safely
+const getAiClient = () => {
+  const key = process.env.API_KEY;
+  if (!key) {
+    console.error("API_KEY not found in environment variables.");
+    throw new Error("Chave da API não configurada. Verifique as configurações do servidor.");
+  }
+  return new GoogleGenAI({ apiKey: key });
+};
+
 const textModel = "gemini-3-flash-preview";
 const imageModel = "gemini-2.5-flash-image";
 
 export const generateVisuals = async (track: Track): Promise<string | null> => {
   try {
+    const ai = getAiClient();
     const prompt = `Crie uma arte abstrata, minimalista e psicodélica de alta qualidade que represente a vibe de uma música de ${track.genre} com BPM ${track.bpm} e tom ${track.key}. Use cores que remetam ao sentimento da música. Sem texto, sem marcas d'água.`;
     const response = await ai.models.generateContent({
       model: imageModel,
@@ -25,6 +35,7 @@ export const generateVisuals = async (track: Track): Promise<string | null> => {
 };
 
 export const getSetReport = async (history: Track[]): Promise<SetReport> => {
+  const ai = getAiClient();
   const tracksText = history.map(t => `${t.name} - ${t.artist} (${t.bpm} BPM, ${t.key})`).join('\n');
   const prompt = `Analise a jornada musical deste set de DJ:
   ${tracksText}
@@ -54,6 +65,7 @@ export const getSetReport = async (history: Track[]): Promise<SetReport> => {
 };
 
 export const getSemanticSearch = async (query: string, playlist: Track[]): Promise<Track[]> => {
+  const ai = getAiClient();
   // We send a subset to keep token count low
   const trackData = playlist.slice(0, 100).map(t => `ID:${t.id}|${t.name}|${t.artist}|${t.genre}|${t.key}`).join('\n');
   const prompt = `Aja como um curador musical. Dada a busca do usuário: "${query}", selecione as 8 faixas que melhor combinam com essa descrição emocional ou técnica.
@@ -78,6 +90,7 @@ export const getSemanticSearch = async (query: string, playlist: Track[]): Promi
 };
 
 export const getMashupPairs = async (playlist: Track[]): Promise<MashupPair[]> => {
+  const ai = getAiClient();
   const sample = playlist.slice(0, 40).map(t => `ID:${t.id}|${t.name}|${t.key}|${t.bpm}`).join('\n');
   const prompt = `Identifique 4 pares de faixas compatíveis para mashup ao vivo (tons harmônicos e BPMs próximos).
   Lista:
@@ -117,6 +130,7 @@ export const getMashupPairs = async (playlist: Track[]): Promise<MashupPair[]> =
 };
 
 export const getTrackSuggestions = async (currentTrack: Track, playlist: Track[]): Promise<SuggestionResult> => {
+  const ai = getAiClient();
   const availableTracks = playlist
     .filter(t => t.id !== currentTrack.id)
     .slice(0, 100) // Expanded context size to allow better selection for 10 items
@@ -170,6 +184,7 @@ export const getTrackSuggestions = async (currentTrack: Track, playlist: Track[]
 };
 
 export const getGapAnalysis = async (playlist: Track[]): Promise<string[]> => {
+  const ai = getAiClient();
   const stats = playlist.slice(0, 200).map(t => `${t.bpm}|${t.genre}`).join(',');
   const prompt = `Analise os dados de BPM e Gênero desta coleção: ${stats}. 
   Identifique 5 lacunas (Gaps) que limitam a versatilidade do DJ (ex: falta de techno melódico em 128bpm). 
@@ -183,6 +198,7 @@ export const getGapAnalysis = async (playlist: Track[]): Promise<string[]> => {
 };
 
 export const identifyTrackFromImage = async (base64Image: string): Promise<{ title: string; artist: string }> => {
+  const ai = getAiClient();
   const imagePart = { inlineData: { data: base64Image, mimeType: 'image/jpeg' } };
   const response = await ai.models.generateContent({
     model: textModel,
@@ -202,6 +218,7 @@ export const identifyTrackFromImage = async (base64Image: string): Promise<{ tit
 };
 
 export const generatePlaylist = async (playlist: Track[], vibe: string, isVocal: string): Promise<Track[]> => {
+  const ai = getAiClient();
   const tracksText = playlist.slice(0, 100).map(t => `ID:${t.id}|${t.name}|${t.artist}|${t.genre}`).join('\n');
   const prompt = `Crie uma playlist de 10 faixas para a vibe "${vibe}" (vocal: ${isVocal}).
   Biblioteca:
@@ -225,6 +242,7 @@ export const generatePlaylist = async (playlist: Track[], vibe: string, isVocal:
 };
 
 export const enrichPlaylistData = async (playlist: Track[]): Promise<Partial<Track>[]> => {
+  const ai = getAiClient();
   const tracksText = playlist.slice(0, 20).map(t => `ID:${t.id}|${t.name}|${t.artist}`).join('\n');
   const prompt = `Aja como um especialista musical. Para cada faixa, identifique o Subgênero e o Nível de Energia (1-5).
   Músicas:
