@@ -211,8 +211,21 @@ export const MainScreen: React.FC<MainScreenProps> = ({ playlist, onReset, onEnr
       <Header onReset={onReset} />
       
       {/* Hidden inputs */}
-      <input type="file" ref={imageInputRef} className="hidden" accept="image/*" onChange={handleIdentifyByImage} />
-      <input type="file" ref={libraryUpdateRef} className="hidden" accept=".xml" onChange={handleUpdateLibraryFile} />
+      <input 
+        type="file" 
+        ref={imageInputRef} 
+        className="hidden" 
+        accept="image/*" 
+        capture="environment"
+        onChange={handleIdentifyByImage} 
+      />
+      <input 
+        type="file" 
+        ref={libraryUpdateRef} 
+        className="hidden" 
+        accept=".xml" 
+        onChange={handleUpdateLibraryFile} 
+      />
 
       <main className="pt-20 pb-28 px-4 max-w-4xl mx-auto">
         {error && (
