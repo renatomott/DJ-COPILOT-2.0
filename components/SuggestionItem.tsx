@@ -58,8 +58,8 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({ suggestion, curr
     const keyCompat = getKeyCompatibility(currentTrack.key, suggestion.key);
     const bpmCompat = getBpmCompatibility(currentTrack.bpm, suggestion.bpm);
 
-    const keyColor = keyCompat === 'high' ? 'text-green-400' : 'text-yellow-400';
-    const bpmColor = bpmCompat === 'high' ? 'text-green-400' : 'text-yellow-400';
+    const keyColor = keyCompat === 'high' ? 'text-green-400 border-green-900/50 bg-green-900/20' : 'text-yellow-400 border-yellow-900/50 bg-yellow-900/20';
+    const bpmColor = bpmCompat === 'high' ? 'text-green-400 border-green-900/50 bg-green-900/20' : 'text-yellow-400 border-yellow-900/50 bg-yellow-900/20';
     
     const bpmDiff = (parseFloat(suggestion.bpm) - parseFloat(currentTrack.bpm)).toFixed(2);
     
@@ -69,13 +69,13 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({ suggestion, curr
         : Math.round(suggestion.matchScore);
 
     return (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden shadow-lg mb-4">
+        <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all mb-4">
             {/* Collapsed View (Always Visible) */}
             <div 
                 className="p-3 relative cursor-pointer active:bg-gray-800/50 transition-colors"
                 onClick={() => setIsExpanded(!isExpanded)}
             >
-                <div className="flex gap-3">
+                <div className="flex gap-4">
                     {/* Album Art Container */}
                     <div className="relative flex-shrink-0 w-20 h-20">
                         <CoverArt 
@@ -97,54 +97,49 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({ suggestion, curr
                     </div>
 
                     {/* Basic Info Column */}
-                    <div className="flex-1 flex flex-col justify-between overflow-hidden">
+                    <div className="flex-1 flex flex-col justify-between overflow-hidden py-0.5">
                         <div>
                             <h4 className="text-white font-bold text-sm leading-tight line-clamp-2 mb-0.5">{suggestion.name}</h4>
                             <p className="text-gray-400 text-xs font-medium truncate">{suggestion.artist}</p>
                         </div>
 
                         {/* Metadata Grid */}
-                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2">
-                            <div className="flex items-center gap-1 bg-gray-800/50 px-1.5 py-0.5 rounded">
-                                <span className={`text-xs font-mono font-bold ${bpmColor}`}>{suggestion.bpm}</span>
+                        <div className="flex flex-wrap items-center gap-2 mt-2">
+                            <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded border ${bpmColor}`}>
+                                <span className="text-xs font-mono font-bold">{suggestion.bpm}</span>
                             </div>
-                            <div className="flex items-center gap-1 bg-gray-800/50 px-1.5 py-0.5 rounded">
-                                <span className={`text-xs font-mono font-bold ${keyColor}`}>{suggestion.key}</span>
+                            <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded border ${keyColor}`}>
+                                <span className="text-xs font-mono font-bold">{suggestion.key}</span>
                             </div>
-                            <div className="flex items-center gap-1 bg-gray-800/50 px-1.5 py-0.5 rounded text-gray-400">
+                            <div className="flex items-center gap-1 bg-gray-800 px-1.5 py-0.5 rounded text-gray-400 border border-gray-700">
                                 <ClockIcon className="w-2.5 h-2.5" />
                                 <span className="text-[10px] font-mono">{suggestion.duration}</span>
-                            </div>
-                             <div className="flex items-center gap-1 bg-gray-800/50 px-1.5 py-0.5 rounded">
-                                {renderRating(suggestion.rating)}
                             </div>
                         </div>
                     </div>
                     
                     {/* Expand Icon */}
                     <div className="flex flex-col justify-between items-end">
-                         <div className="flex gap-2">
-                            <button 
-                                onClick={(e) => { e.stopPropagation(); onDismiss(suggestion.id); }} 
-                                className="p-1.5 text-gray-500 hover:text-red-400"
-                            >
-                                <XIcon className="w-4 h-4" />
-                            </button>
-                         </div>
+                         <button 
+                             onClick={(e) => { e.stopPropagation(); onDismiss(suggestion.id); }} 
+                             className="p-1 text-gray-600 hover:text-red-400 transition-colors"
+                         >
+                             <XIcon className="w-4 h-4" />
+                         </button>
                          <ChevronDownIcon className={`w-5 h-5 text-gray-600 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
                     </div>
                 </div>
 
                 {/* Playlist Location Row */}
-                <div className="mt-2 flex items-center gap-2 text-gray-500 overflow-hidden">
-                    <PlaylistIcon className="w-3 h-3 flex-shrink-0" />
+                <div className="mt-2.5 flex items-center gap-2 text-gray-500 overflow-hidden bg-black/20 p-1 rounded-md">
+                    <PlaylistIcon className="w-3 h-3 flex-shrink-0 ml-1" />
                     {suggestion.color && (
                         <span 
                             className="w-2 h-2 rounded-full flex-shrink-0 shadow-sm"
                             style={{ backgroundColor: suggestion.color }}
                         />
                     )}
-                    <span className="text-xs truncate">{suggestion.location}</span>
+                    <span className="text-[10px] truncate">{suggestion.location}</span>
                 </div>
             </div>
 
@@ -152,24 +147,24 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({ suggestion, curr
             {isExpanded && (
                 <div className="px-3 pb-3 pt-0 border-t border-gray-800/50 bg-black/20 animate-in fade-in slide-in-from-top-1 duration-200">
                     <div className="grid grid-cols-2 gap-2 mt-3">
-                        <div className="bg-gray-800/40 p-2 rounded flex flex-col items-center justify-center">
+                        <div className="bg-gray-800/40 p-2 rounded border border-gray-700/30 flex flex-col items-center justify-center">
                             <span className={`text-lg font-bold ${parseFloat(bpmDiff) > 5 ? 'text-red-400' : 'text-blue-400'}`}>
                                 {parseFloat(bpmDiff) > 0 ? '+' : ''}{bpmDiff}
                             </span>
                             <span className="text-[9px] uppercase tracking-wider text-gray-500">Diff BPM</span>
                         </div>
-                        <div className="bg-gray-800/40 p-2 rounded flex flex-col items-center justify-center text-center">
+                        <div className="bg-gray-800/40 p-2 rounded border border-gray-700/30 flex flex-col items-center justify-center text-center">
                             <span className="text-white text-xs font-bold line-clamp-1">{suggestion.subgenre || suggestion.genre || 'N/A'}</span>
                             <span className="text-[9px] uppercase tracking-wider text-gray-500">Gênero</span>
                         </div>
-                        <div className="bg-gray-800/40 p-2 rounded flex flex-col items-center justify-center">
+                        <div className="bg-gray-800/40 p-2 rounded border border-gray-700/30 flex flex-col items-center justify-center">
                             <div className="flex items-center gap-1">
                                 <ZapIcon className="w-3 h-3 text-yellow-500" />
                                 <span className="text-white font-bold">{suggestion.energy || '?'}</span>
                             </div>
                             <span className="text-[9px] uppercase tracking-wider text-gray-500">Energia (1-5)</span>
                         </div>
-                         <div className="bg-gray-800/40 p-2 rounded flex flex-col items-center justify-center">
+                         <div className="bg-gray-800/40 p-2 rounded border border-gray-700/30 flex flex-col items-center justify-center">
                             <div className="flex items-center gap-1">
                                 <PlayIcon className="w-3 h-3 text-green-500" />
                                 <span className="text-white font-bold">{suggestion.playCount}</span>
@@ -187,7 +182,7 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({ suggestion, curr
 
                     <button 
                         onClick={() => onSelect(suggestion)}
-                        className="w-full mt-3 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all active:scale-95"
+                        className="w-full mt-3 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg shadow-blue-900/20"
                     >
                         <PlayIcon className="w-4 h-4 fill-current" />
                         Carregar no Deck

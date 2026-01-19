@@ -112,6 +112,7 @@ const App: React.FC = () => {
             playlist={playlist} 
             onReset={handleReset}
             onEnrich={handleEnrichPlaylist}
+            onUpdateLibrary={handleFileUpload}
             isEnriching={isEnriching}
          />;
 };
