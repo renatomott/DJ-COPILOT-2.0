@@ -1,0 +1,8 @@
+{
+  "name": "DJ Copilot 2.0",
+  "description": "An AI-powered assistant for DJs using Rekordbox. Upload your playlist XML to get intelligent track suggestions and generate custom playlists based on vibe, energy, and more.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
