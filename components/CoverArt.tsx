@@ -15,10 +15,10 @@ interface CoverArtProps {
 export const CoverArt: React.FC<CoverArtProps> = ({ artist, name, id, className = "", alt = "Album Art", priority = false }) => {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isVisible, setIsVisible] = useState(priority); // Load immediately if priority is true
+  const [isVisible, setIsVisible] = useState(priority);
   const imgRef = useRef<HTMLDivElement>(null);
 
-  // Intersection Observer to detect when the component is on screen
+  // Intersection Observer: Only load when the element is near the viewport
   useEffect(() => {
     if (priority) return;
 
@@ -29,7 +29,7 @@ export const CoverArt: React.FC<CoverArtProps> = ({ artist, name, id, className 
           observer.disconnect();
         }
       },
-      { rootMargin: '100px' } // Start loading 100px before it enters the viewport
+      { rootMargin: '200px' } // Pre-load when within 200px of scrolling
     );
 
     if (imgRef.current) {
@@ -42,7 +42,6 @@ export const CoverArt: React.FC<CoverArtProps> = ({ artist, name, id, className 
   }, [priority]);
 
   useEffect(() => {
-    // Only fetch if visible on screen or is priority
     if (!isVisible) return;
 
     let isMounted = true;
@@ -51,13 +50,14 @@ export const CoverArt: React.FC<CoverArtProps> = ({ artist, name, id, className 
     const fallbackUrl = `https://picsum.photos/seed/${id}/400`;
 
     const fetchCover = async () => {
-      // Add a small random delay to spread out requests even further
+      // Add a tiny random delay to prevent bursting the API even when visible
       if (!priority) {
-          await new Promise(resolve => setTimeout(resolve, Math.random() * 2000));
+        await new Promise(resolve => setTimeout(resolve, Math.random() * 500));
       }
-
+      
       if (!isMounted) return;
 
+      // Try fetching from iTunes
       const foundUrl = await searchAlbumArt(artist, name);
       
       if (isMounted) {
@@ -81,8 +81,8 @@ export const CoverArt: React.FC<CoverArtProps> = ({ artist, name, id, className 
     <div ref={imgRef} className={`relative overflow-hidden bg-gray-800 ${className}`}>
         {/* Placeholder / Loading State */}
         {loading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-gray-800 animate-pulse z-0">
-                <MusicIcon className="w-1/3 h-1/3 text-gray-700" />
+            <div className="absolute inset-0 flex items-center justify-center bg-gray-800 z-0">
+                <MusicIcon className="w-1/3 h-1/3 text-gray-700 animate-pulse" />
             </div>
         )}
         
@@ -91,7 +91,7 @@ export const CoverArt: React.FC<CoverArtProps> = ({ artist, name, id, className 
             <img
                 src={imageUrl}
                 alt={alt}
-                className={`w-full h-full object-cover transition-opacity duration-500 ${loading ? 'opacity-0' : 'opacity-100'}`}
+                className={`w-full h-full object-cover transition-opacity duration-700 ${loading ? 'opacity-0' : 'opacity-100'}`}
                 loading="lazy"
             />
         )}

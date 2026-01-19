@@ -2,12 +2,12 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import type { Track, Suggestion, MashupPair, SetReport, SuggestionResult } from "../types";
 
-// Helper to get client safely
+// Helper to get client safely with clear error for the user
 const getAiClient = () => {
   const key = process.env.API_KEY;
-  if (!key) {
-    console.error("API_KEY not found in environment variables.");
-    throw new Error("Chave da API não configurada. Verifique as configurações do servidor.");
+  if (!key || key.startsWith("AIza") === false) {
+    console.error("API Key Invalid or Missing. Current Key:", key ? "HIDDEN (Invalid Format)" : "Undefined");
+    throw new Error("API Key inválida ou ausente. Por favor, verifique as Variáveis de Ambiente no Netlify e faça um novo Deploy.");
   }
   return new GoogleGenAI({ apiKey: key });
 };

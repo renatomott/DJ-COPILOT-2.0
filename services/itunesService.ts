@@ -4,6 +4,7 @@ const artCache = new Map<string, string | null>();
 
 // Circuit breaker flag to stop requests if we get rate limited
 let isRateLimited = false;
+let rateLimitResetTimeout: ReturnType<typeof setTimeout> | null = null;
 
 export const searchAlbumArt = async (artist: string, name: string): Promise<string | null> => {
   // If we are rate limited, don't even try, just return null immediately
@@ -11,7 +12,8 @@ export const searchAlbumArt = async (artist: string, name: string): Promise<stri
     return null;
   }
 
-  const cacheKey = `${artist}-${name}`;
+  // Check cache first
+  const cacheKey = `${artist}-${name}`.toLowerCase();
   if (artCache.has(cacheKey)) {
     return artCache.get(cacheKey) || null;
   }
@@ -36,18 +38,20 @@ export const searchAlbumArt = async (artist: string, name: string): Promise<stri
     
     // Handle Rate Limiting (429) or Forbidden (403) which usually means IP ban
     if (response.status === 429 || response.status === 403) {
-        console.warn(`iTunes API Rate Limit/Block detected (${response.status}). Pausing cover art fetches for 60 seconds.`);
+        console.warn(`iTunes API Rate Limit detected (${response.status}). Pausing art fetch for 60s.`);
         isRateLimited = true;
-        // Try to reset the breaker after 60 seconds
-        setTimeout(() => {
+        
+        if (rateLimitResetTimeout) clearTimeout(rateLimitResetTimeout);
+        
+        rateLimitResetTimeout = setTimeout(() => {
             isRateLimited = false;
             console.log("Resuming iTunes API requests...");
-        }, 60000);
+        }, 60000); // Wait 1 minute
+        
         return null;
     }
 
     if (!response.ok) {
-        // Silently fail for other errors to keep console clean
         return null;
     }
 
