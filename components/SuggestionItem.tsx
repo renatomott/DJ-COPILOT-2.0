@@ -1,49 +1,23 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import type { Suggestion, Track } from '../types';
-import { ChevronDownIcon, ClockIcon, PlayIcon, StarIcon, TagIcon, PlusIcon, XIcon, BarChartIcon, PlaylistIcon, ZapIcon } from './icons';
+import { ChevronDownIcon, ClockIcon, PlayIcon, TagIcon, XIcon, PlaylistIcon, ActivityIcon, StarIcon } from './icons';
 import { CoverArt } from './CoverArt';
-
-// --- Helper Functions for Compatibility ---
-
-const CAMELOT_MAP: { [key: string]: { compatible: string[] } } = {
-  '1A': { compatible: ['1A', '2A', '12A', '1B'] }, '1B': { compatible: ['1B', '2B', '12B', '1A'] },
-  '2A': { compatible: ['2A', '3A', '1A', '2B'] }, '2B': { compatible: ['2B', '3B', '1B', '2A'] },
-  '3A': { compatible: ['3A', '4A', '2A', '3B'] }, '3B': { compatible: ['3B', '4B', '2B', '3A'] },
-  '4A': { compatible: ['4A', '5A', '3A', '4B'] }, '4B': { compatible: ['4B', '5B', '3B', '4A'] },
-  '5A': { compatible: ['5A', '6A', '4A', '5B'] }, '5B': { compatible: ['5B', '6B', '4B', '5A'] },
-  '6A': { compatible: ['6A', '7A', '5A', '6B'] }, '6B': { compatible: ['6B', '7B', '5B', '6A'] },
-  '7A': { compatible: ['7A', '8A', '6A', '7B'] }, '7B': { compatible: ['7B', '8B', '6B', '7A'] },
-  '8A': { compatible: ['8A', '9A', '7A', '8B'] }, '8B': { compatible: ['8B', '9B', '7B', '8A'] },
-  '9A': { compatible: ['9A', '10A', '8A', '9B'] }, '9B': { compatible: ['9B', '10B', '8B', '9A'] },
-  '10A': { compatible: ['10A', '11A', '9A', '10B'] }, '10B': { compatible: ['10B', '11B', '9B', '10A'] },
-  '11A': { compatible: ['11A', '12A', '10A', '11B'] }, '11B': { compatible: ['11B', '12B', '10B', '11A'] },
-  '12A': { compatible: ['12A', '1A', '11A', '12B'] }, '12B': { compatible: ['12B', '1B', '11B', '12A'] },
-};
-
-const getKeyCompatibility = (key1: string, key2: string): 'high' | 'medium' => {
-  if (key1 === key2) return 'high';
-  if (CAMELOT_MAP[key1] && CAMELOT_MAP[key1].compatible.includes(key2)) return 'high';
-  return 'medium';
-};
-
-const getBpmCompatibility = (bpm1Str: string, bpm2Str: string): 'high' | 'medium' => {
-  const bpm1 = parseFloat(bpm1Str);
-  const bpm2 = parseFloat(bpm2Str);
-  if (isNaN(bpm1) || isNaN(bpm2)) return 'medium';
-  const diff = Math.abs(bpm1 - bpm2);
-  const avgBpm = (bpm1 + bpm2) / 2;
-  if ((diff / avgBpm) <= 0.04) return 'high'; 
-  return 'medium';
-};
 
 const renderRating = (rating: number) => {
   const stars = [];
   for (let i = 1; i <= 5; i++) {
-    stars.push(<StarIcon key={i} className={`w-3 h-3 ${i <= rating ? 'text-yellow-400' : 'text-gray-700'}`} filled={i <= rating} />);
+    const isFilled = i <= rating;
+    stars.push(
+      <StarIcon 
+        key={i} 
+        className={`w-[0.9em] h-[0.9em] ${isFilled ? 'text-yellow-400 fill-current' : 'text-white opacity-20'}`} 
+        filled={isFilled} 
+      />
+    );
   }
   return <div className="flex items-center gap-0.5">{stars}</div>;
-}
+};
 
 interface SuggestionItemProps {
   suggestion: Suggestion;
@@ -54,138 +28,144 @@ interface SuggestionItemProps {
 
 export const SuggestionItem: React.FC<SuggestionItemProps> = ({ suggestion, currentTrack, onSelect, onDismiss }) => {
     const [isExpanded, setIsExpanded] = useState(false);
-
-    const keyCompat = getKeyCompatibility(currentTrack.key, suggestion.key);
-    const bpmCompat = getBpmCompatibility(currentTrack.bpm, suggestion.bpm);
-
-    const keyColor = keyCompat === 'high' ? 'text-green-400 border-green-900/50 bg-green-900/20' : 'text-yellow-400 border-yellow-900/50 bg-yellow-900/20';
-    const bpmColor = bpmCompat === 'high' ? 'text-green-400 border-green-900/50 bg-green-900/20' : 'text-yellow-400 border-yellow-900/50 bg-yellow-900/20';
+    const cardRef = useRef<HTMLDivElement>(null);
     
-    const bpmDiff = (parseFloat(suggestion.bpm) - parseFloat(currentTrack.bpm)).toFixed(2);
+    // Rola para o topo do card quando expandido
+    useEffect(() => {
+        if (isExpanded && cardRef.current) {
+            // Pequeno timeout para garantir que a renderização do conteúdo expandido iniciou
+            setTimeout(() => {
+                cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+        }
+    }, [isExpanded]);
     
-    // Normalize match score to 0-100 integer
-    const matchScore = suggestion.matchScore <= 1 
-        ? Math.round(suggestion.matchScore * 100) 
-        : Math.round(suggestion.matchScore);
+    // Cálculos de BPM
+    const bpmDiffVal = parseFloat(suggestion.bpm) - parseFloat(currentTrack.bpm);
+    const bpmDiff = bpmDiffVal > 0 ? `+${bpmDiffVal.toFixed(1)}` : bpmDiffVal.toFixed(1);
+    const isPositiveDiff = bpmDiffVal >= 0;
+    
+    const matchScore = suggestion.matchScore <= 1 ? Math.round(suggestion.matchScore * 100) : Math.round(suggestion.matchScore);
 
     return (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all mb-4">
-            {/* Collapsed View (Always Visible) */}
+        <div 
+            ref={cardRef}
+            className="bg-gray-900 border border-gray-700 rounded-2xl overflow-hidden shadow-lg mb-3 transition-colors duration-200 scroll-mt-24"
+        >
+            {/* Cabeçalho - Sempre mantém o layout original */}
             <div 
-                className="p-3 relative cursor-pointer active:bg-gray-800/50 transition-colors"
+                className="p-3 relative cursor-pointer active:bg-white/5"
                 onClick={() => setIsExpanded(!isExpanded)}
             >
-                <div className="flex gap-4">
-                    {/* Album Art Container */}
-                    <div className="relative flex-shrink-0 w-20 h-20">
-                        <CoverArt 
-                            id={suggestion.id}
-                            artist={suggestion.artist}
-                            name={suggestion.name}
-                            className="w-full h-full rounded-lg shadow-md"
-                            priority={true}
-                        />
-                        {/* Match Score Badge */}
-                        <div className="absolute -top-1 -right-1 bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-gray-900 shadow-sm z-10">
+                <div className="flex gap-3">
+                    {/* Artwork */}
+                    <div className="relative flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20">
+                        <CoverArt id={suggestion.id} artist={suggestion.artist} name={suggestion.name} className="w-full h-full rounded-xl" priority={false} />
+                        <div className="absolute -top-1.5 -right-1.5 bg-blue-600 text-white text-[0.7rem] font-black px-1.5 py-0.5 rounded-md border border-gray-950 z-10 shadow-sm">
                             {matchScore}%
-                        </div>
-                        {/* Play Count Badge */}
-                        <div className="absolute bottom-0 right-0 bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-tl-lg flex items-center gap-1 border-t border-l border-gray-700 z-10">
-                            <PlayIcon className="w-2.5 h-2.5" />
-                            {suggestion.playCount}
                         </div>
                     </div>
 
-                    {/* Basic Info Column */}
-                    <div className="flex-1 flex flex-col justify-between overflow-hidden py-0.5">
-                        <div>
-                            <h4 className="text-white font-bold text-sm leading-tight line-clamp-2 mb-0.5">{suggestion.name}</h4>
-                            <p className="text-gray-400 text-xs font-medium truncate">{suggestion.artist}</p>
+                    {/* Metadata - Estrutura fixa, não muda ao expandir */}
+                    <div className="flex-1 flex flex-col justify-between overflow-hidden">
+                        <div className="pr-8">
+                            <h4 className="text-white font-bold text-sm leading-tight mb-0.5 break-words line-clamp-2">
+                                {suggestion.name}
+                            </h4>
+                            <p className="text-white opacity-90 text-xs truncate mb-1.5 font-bold">
+                                {suggestion.artist}
+                            </p>
+                            
+                            {/* Informações Secundárias (Sempre visíveis) */}
+                            <div className="flex flex-col gap-1.5">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <div className="flex items-center gap-1.5 text-[0.65rem] text-white font-black truncate bg-blue-600/20 px-1.5 py-0.5 rounded border border-blue-500/30">
+                                        <PlaylistIcon className="w-3 h-3 text-blue-400" />
+                                        <span>{suggestion.location}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1 text-xs text-white font-mono font-black">
+                                        <ClockIcon className="w-3 h-3 opacity-70" />
+                                        <span>{suggestion.duration}</span>
+                                    </div>
+                                </div>
+                                <div className="flex items-center">
+                                    {renderRating(suggestion.rating)}
+                                </div>
+                            </div>
                         </div>
 
-                        {/* Metadata Grid */}
-                        <div className="flex flex-wrap items-center gap-2 mt-2">
-                            <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded border ${bpmColor}`}>
-                                <span className="text-xs font-mono font-bold">{suggestion.bpm}</span>
+                        {/* Badges Técnicos (Sempre visíveis) */}
+                        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                            <div className="bg-black text-green-400 text-xs font-mono font-black px-1.5 py-0.5 rounded border border-green-900/50">
+                                {suggestion.bpm}
                             </div>
-                            <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded border ${keyColor}`}>
-                                <span className="text-xs font-mono font-bold">{suggestion.key}</span>
-                            </div>
-                            <div className="flex items-center gap-1 bg-gray-800 px-1.5 py-0.5 rounded text-gray-400 border border-gray-700">
-                                <ClockIcon className="w-2.5 h-2.5" />
-                                <span className="text-[10px] font-mono">{suggestion.duration}</span>
+                            <div className="bg-black text-blue-400 text-xs font-mono font-black px-1.5 py-0.5 rounded border border-blue-900/50">
+                                {suggestion.key}
                             </div>
                         </div>
                     </div>
                     
-                    {/* Expand Icon */}
-                    <div className="flex flex-col justify-between items-end">
-                         <button 
-                             onClick={(e) => { e.stopPropagation(); onDismiss(suggestion.id); }} 
-                             className="p-1 text-gray-600 hover:text-red-400 transition-colors"
-                         >
+                    {/* Botões de Ação no Canto */}
+                    <div className="flex flex-col justify-between items-end absolute right-2.5 top-2.5 bottom-2.5">
+                         <button onClick={(e) => { e.stopPropagation(); onDismiss(suggestion.id); }} className="p-1.5 text-white hover:text-red-400 transition-colors">
                              <XIcon className="w-4 h-4" />
                          </button>
-                         <ChevronDownIcon className={`w-5 h-5 text-gray-600 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
+                         <ChevronDownIcon className={`w-5 h-5 text-white transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
                     </div>
-                </div>
-
-                {/* Playlist Location Row */}
-                <div className="mt-2.5 flex items-center gap-2 text-gray-500 overflow-hidden bg-black/20 p-1 rounded-md">
-                    <PlaylistIcon className="w-3 h-3 flex-shrink-0 ml-1" />
-                    {suggestion.color && (
-                        <span 
-                            className="w-2 h-2 rounded-full flex-shrink-0 shadow-sm"
-                            style={{ backgroundColor: suggestion.color }}
-                        />
-                    )}
-                    <span className="text-[10px] truncate">{suggestion.location}</span>
                 </div>
             </div>
 
-            {/* Expanded View */}
+            {/* Conteúdo Expandido */}
             {isExpanded && (
-                <div className="px-3 pb-3 pt-0 border-t border-gray-800/50 bg-black/20 animate-in fade-in slide-in-from-top-1 duration-200">
-                    <div className="grid grid-cols-2 gap-2 mt-3">
-                        <div className="bg-gray-800/40 p-2 rounded border border-gray-700/30 flex flex-col items-center justify-center">
-                            <span className={`text-lg font-bold ${parseFloat(bpmDiff) > 5 ? 'text-red-400' : 'text-blue-400'}`}>
-                                {parseFloat(bpmDiff) > 0 ? '+' : ''}{bpmDiff}
-                            </span>
-                            <span className="text-[9px] uppercase tracking-wider text-gray-500">Diff BPM</span>
-                        </div>
-                        <div className="bg-gray-800/40 p-2 rounded border border-gray-700/30 flex flex-col items-center justify-center text-center">
-                            <span className="text-white text-xs font-bold line-clamp-1">{suggestion.subgenre || suggestion.genre || 'N/A'}</span>
-                            <span className="text-[9px] uppercase tracking-wider text-gray-500">Gênero</span>
-                        </div>
-                        <div className="bg-gray-800/40 p-2 rounded border border-gray-700/30 flex flex-col items-center justify-center">
-                            <div className="flex items-center gap-1">
-                                <ZapIcon className="w-3 h-3 text-yellow-500" />
-                                <span className="text-white font-bold">{suggestion.energy || '?'}</span>
-                            </div>
-                            <span className="text-[9px] uppercase tracking-wider text-gray-500">Energia (1-5)</span>
-                        </div>
-                         <div className="bg-gray-800/40 p-2 rounded border border-gray-700/30 flex flex-col items-center justify-center">
-                            <div className="flex items-center gap-1">
-                                <PlayIcon className="w-3 h-3 text-green-500" />
-                                <span className="text-white font-bold">{suggestion.playCount}</span>
-                            </div>
-                            <span className="text-[9px] uppercase tracking-wider text-gray-500">Total Plays</span>
-                        </div>
-                    </div>
-
-                    <div className="mt-3 p-3 bg-blue-900/10 border border-blue-900/30 rounded-lg">
-                        <p className="text-xs text-blue-200 leading-relaxed">
-                            <span className="font-bold text-blue-400 block mb-1 uppercase text-[9px] tracking-widest">Por que combina:</span>
+                <div className="px-3 pb-3 pt-0 border-t border-gray-800 bg-black/10 animate-in slide-in-from-top-1">
+                    
+                    {/* Análise da IA */}
+                    <div className="mt-3 p-3 bg-blue-900/20 border border-blue-500/30 rounded-xl">
+                        <p className="text-xs text-white font-bold leading-relaxed">
+                            <span className="font-black text-blue-400 block mb-1 uppercase text-[0.7rem] tracking-wider">Por que combina:</span>
                             {suggestion.reason}
                         </p>
                     </div>
 
+                    {/* Grid de Informações Adicionais (Diff BPM, Gênero, Plays) */}
+                    <div className="mt-3 grid grid-cols-3 gap-2">
+                        {/* Diferença de BPM */}
+                        <div className="bg-gray-800/60 border border-gray-700 p-2 rounded-lg flex flex-col justify-center items-center text-center">
+                             <span className="text-[0.6rem] text-white opacity-50 font-black uppercase tracking-widest mb-1">Diff BPM</span>
+                             <span className={`text-xs font-black font-mono ${isPositiveDiff ? 'text-green-400' : 'text-red-400'}`}>
+                                {bpmDiff}
+                             </span>
+                        </div>
+
+                        {/* Gênero */}
+                        <div className="bg-gray-800/60 border border-gray-700 p-2 rounded-lg flex flex-col justify-center items-center text-center">
+                            <div className="flex items-center gap-1 mb-1">
+                                <TagIcon className="w-3 h-3 text-purple-400" />
+                                <span className="text-[0.6rem] text-white opacity-50 font-black uppercase tracking-widest">Gênero</span>
+                            </div>
+                            <span className="text-xs text-white font-black truncate w-full" title={suggestion.genre}>
+                                {suggestion.genre || '---'}
+                            </span>
+                        </div>
+
+                        {/* Plays */}
+                        <div className="bg-gray-800/60 border border-gray-700 p-2 rounded-lg flex flex-col justify-center items-center text-center">
+                            <div className="flex items-center gap-1 mb-1">
+                                <ActivityIcon className="w-3 h-3 text-green-400" />
+                                <span className="text-[0.6rem] text-white opacity-50 font-black uppercase tracking-widest">Plays</span>
+                            </div>
+                            <span className="text-xs text-white font-black font-mono">
+                                {suggestion.playCount || 0}
+                            </span>
+                        </div>
+                    </div>
+
                     <button 
                         onClick={() => onSelect(suggestion)}
-                        className="w-full mt-3 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg shadow-blue-900/20"
+                        className="w-full mt-4 bg-blue-600 hover:bg-blue-500 text-white font-black text-sm py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 shadow-md"
                     >
                         <PlayIcon className="w-4 h-4 fill-current" />
-                        Carregar no Deck
+                        CARREGAR NO DECK
                     </button>
                 </div>
             )}
