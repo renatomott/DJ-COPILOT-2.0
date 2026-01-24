@@ -10,6 +10,10 @@ const STORAGE_KEY = 'dj_copilot_playlist_v2';
 const CURRENT_TRACK_KEY = 'dj_copilot_current_track';
 const SUGGESTIONS_KEY = 'dj_copilot_suggestions';
 const FONT_SCALE_KEY = 'dj_copilot_font_scale';
+const AUTO_ENRICH_KEY = 'dj_copilot_auto_enrich';
+const HIGH_CONTRAST_KEY = 'dj_copilot_high_contrast';
+const SET_QUEUE_KEY = 'dj_copilot_set_queue';
+const LANGUAGE_KEY = 'dj_copilot_language';
 
 const App: React.FC = () => {
   const [playlist, setPlaylist] = useState<Track[] | null>(null);
@@ -20,6 +24,10 @@ const App: React.FC = () => {
   const [isEnriching, setIsEnriching] = useState<boolean>(false);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
   const [fontScale, setFontScale] = useState<number>(100);
+  const [autoEnrichEnabled, setAutoEnrichEnabled] = useState<boolean>(true); // Default True
+  const [isHighContrast, setIsHighContrast] = useState<boolean>(false);
+  const [setQueue, setSetQueue] = useState<Track[]>([]);
+  const [language, setLanguage] = useState<'pt-BR' | 'en-US'>('pt-BR');
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -61,6 +69,35 @@ const App: React.FC = () => {
         if (!isNaN(scale)) setFontScale(scale);
     }
 
+    // Load Auto Enrich Setting
+    const savedAutoEnrich = localStorage.getItem(AUTO_ENRICH_KEY);
+    if (savedAutoEnrich) {
+      setAutoEnrichEnabled(JSON.parse(savedAutoEnrich));
+    } else {
+      // Ensure default persistence if never set
+      localStorage.setItem(AUTO_ENRICH_KEY, 'true');
+    }
+
+    // Load High Contrast
+    const savedHighContrast = localStorage.getItem(HIGH_CONTRAST_KEY);
+    if (savedHighContrast) {
+        setIsHighContrast(JSON.parse(savedHighContrast));
+    }
+
+    // Load Set Queue
+    const savedQueue = localStorage.getItem(SET_QUEUE_KEY);
+    if (savedQueue) {
+        try {
+            setSetQueue(JSON.parse(savedQueue));
+        } catch(e) { console.error(e); }
+    }
+
+    // Load Language
+    const savedLanguage = localStorage.getItem(LANGUAGE_KEY);
+    if (savedLanguage === 'en-US' || savedLanguage === 'pt-BR') {
+        setLanguage(savedLanguage);
+    }
+
     setIsInitialized(true);
   }, []);
 
@@ -79,46 +116,23 @@ const App: React.FC = () => {
 
     document.documentElement.style.fontSize = `${fontScale}%`;
     localStorage.setItem(FONT_SCALE_KEY, fontScale.toString());
-  }, [playlist, currentTrack, suggestions, fontScale, isInitialized]);
 
-  const handleFileUpload = useCallback(async (file: File) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const xmlString = e.target?.result as string;
-        if (xmlString) {
-          const parsedTracks = parseRekordboxXml(xmlString);
-          if (parsedTracks.length === 0) {
-            setError('Não foi possível encontrar nenhuma faixa no arquivo XML. Por favor, verifique o formato do arquivo.');
-          } else {
-            setPlaylist(parsedTracks);
-          }
-        } else {
-          setError('Não foi possível ler o arquivo.');
-        }
-        setIsLoading(false);
-      };
-      reader.onerror = () => {
-        setError('Falha ao ler o arquivo.');
-        setIsLoading(false);
-      };
-      reader.readAsText(file);
-    } catch (err) {
-      setError('Ocorreu um erro ao analisar o arquivo XML.');
-      setIsLoading(false);
-    }
-  }, []);
+    localStorage.setItem(AUTO_ENRICH_KEY, JSON.stringify(autoEnrichEnabled));
+    localStorage.setItem(HIGH_CONTRAST_KEY, JSON.stringify(isHighContrast));
+    localStorage.setItem(SET_QUEUE_KEY, JSON.stringify(setQueue));
+    localStorage.setItem(LANGUAGE_KEY, language);
 
-  const handleEnrichPlaylist = useCallback(async () => {
-    if (!playlist) return;
+  }, [playlist, currentTrack, suggestions, fontScale, autoEnrichEnabled, isHighContrast, setQueue, language, isInitialized]);
+
+  // Handle Enrich Logic (extracted to be reusable)
+  const performEnrichment = useCallback(async (tracksToEnrich: Track[]) => {
     setIsEnriching(true);
     setError(null);
     try {
-        const enrichedTracks = await enrichPlaylistData(playlist);
+        const enrichedTracks = await enrichPlaylistData(tracksToEnrich);
         const enrichedMap = new Map(enrichedTracks.map(t => [t.id, t]));
-        const updatedPlaylist = playlist.map(originalTrack => {
+        
+        const updatedPlaylist = tracksToEnrich.map(originalTrack => {
             const enriched = enrichedMap.get(originalTrack.id);
             if (enriched) {
                 return { ...originalTrack, ...enriched };
@@ -132,17 +146,63 @@ const App: React.FC = () => {
     } finally {
         setIsEnriching(false);
     }
-  }, [playlist]);
+  }, []);
+
+  const handleEnrichPlaylist = useCallback(async () => {
+    if (!playlist) return;
+    await performEnrichment(playlist);
+  }, [playlist, performEnrichment]);
+
+
+  const handleFileUpload = useCallback(async (file: File) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const xmlString = e.target?.result as string;
+        if (xmlString) {
+          const parsedTracks = parseRekordboxXml(xmlString);
+          if (parsedTracks.length === 0) {
+            setError('Não foi possível encontrar nenhuma faixa no arquivo XML. Por favor, verifique o formato do arquivo.');
+            setIsLoading(false);
+          } else {
+            setPlaylist(parsedTracks);
+            setIsLoading(false); // Stop loading before potential enrichment starts
+            
+            // Auto-Enrich Trigger
+            if (autoEnrichEnabled) {
+               // We pass parsedTracks directly because 'playlist' state might not be updated yet in this closure
+               performEnrichment(parsedTracks);
+            }
+          }
+        } else {
+          setError('Não foi possível ler o arquivo.');
+          setIsLoading(false);
+        }
+      };
+      reader.onerror = () => {
+        setError('Falha ao ler o arquivo.');
+        setIsLoading(false);
+      };
+      reader.readAsText(file);
+    } catch (err) {
+      setError('Ocorreu um erro ao analisar o arquivo XML.');
+      setIsLoading(false);
+    }
+  }, [autoEnrichEnabled, performEnrichment]);
 
   const handleReset = useCallback(() => {
     if (window.confirm("Isso removerá a playlist atual e todo o histórico. Deseja continuar?")) {
       setPlaylist(null);
       setCurrentTrack(null);
       setSuggestions([]);
+      setSetQueue([]);
       setError(null);
       localStorage.removeItem(STORAGE_KEY);
       localStorage.removeItem(CURRENT_TRACK_KEY);
       localStorage.removeItem(SUGGESTIONS_KEY);
+      localStorage.removeItem(SET_QUEUE_KEY);
     }
   }, []);
 
@@ -164,6 +224,14 @@ const App: React.FC = () => {
             setCurrentTrack={setCurrentTrack}
             suggestions={suggestions}
             setSuggestions={setSuggestions}
+            autoEnrichEnabled={autoEnrichEnabled}
+            onAutoEnrichChange={setAutoEnrichEnabled}
+            isHighContrast={isHighContrast}
+            onHighContrastChange={setIsHighContrast}
+            queue={setQueue}
+            setQueue={setSetQueue}
+            language={language}
+            setLanguage={setLanguage}
          />;
 };
 

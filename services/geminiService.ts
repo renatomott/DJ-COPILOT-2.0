@@ -141,17 +141,29 @@ export const getMashupPairs = async (playlist: Track[]): Promise<MashupPair[]> =
   }
 };
 
-export const getTrackSuggestions = async (currentTrack: Track, playlist: Track[]): Promise<SuggestionResult> => {
+export const getTrackSuggestions = async (currentTrack: Track, playlist: Track[], excludeIds: string[] = [], language: 'pt-BR' | 'en-US' = 'pt-BR'): Promise<SuggestionResult> => {
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const availableTracks = playlist
-      .filter(t => t.id !== currentTrack.id)
-      .slice(0, 100)
+    
+    // Filtra as faixas para não enviar o que já foi sugerido ou a própria faixa atual
+    const candidates = playlist
+      .filter(t => t.id !== currentTrack.id && !excludeIds.includes(t.id));
+
+    // Pega um chunk (ex: 80 faixas) para análise. Se a lista for muito grande, pegamos aleatórias ou as primeiras.
+    // Para melhorar a variedade no "Load More", embaralhamos levemente se tiver muitas
+    const availableTracks = candidates
+      .sort(() => 0.5 - Math.random()) 
+      .slice(0, 80)
       .map(t => `ID: ${t.id}, "${t.name}" (${t.bpm} BPM, Tom: ${t.key})`)
       .join('\n');
 
-    // Prompt atualizado para exigir resposta em Português
-    const prompt = `Faixa atual: "${currentTrack.name}" (${currentTrack.bpm} BPM, Tom ${currentTrack.key}). Analise as faixas disponíveis e sugira as melhores combinações. Retorne JSON com "suggestions" (id, matchScore, reason em Português do Brasil explicando a conexão musical) e "cuePoints" (strings).\n\n${availableTracks}`;
+    if (!availableTracks) {
+        return { suggestions: [], cuePoints: [] };
+    }
+
+    const langInstruction = language === 'pt-BR' ? 'Português do Brasil' : 'Inglês (English)';
+
+    const prompt = `Faixa atual: "${currentTrack.name}" (${currentTrack.bpm} BPM, Tom ${currentTrack.key}). Analise as faixas disponíveis e sugira as 5 melhores combinações (ordene por matchScore decrescente). Retorne JSON com "suggestions" (id, matchScore, reason em ${langInstruction} explicando a conexão musical) e "cuePoints" (strings).\n\n${availableTracks}`;
 
     const response = await ai.models.generateContent({
       model: textModel,

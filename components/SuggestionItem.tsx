@@ -1,8 +1,9 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import type { Suggestion, Track } from '../types';
-import { ChevronDownIcon, ClockIcon, PlayIcon, TagIcon, XIcon, PlaylistIcon, ActivityIcon, StarIcon } from './icons';
+import { ChevronDownIcon, ClockIcon, PlayIcon, TagIcon, XIcon, PlaylistIcon, ActivityIcon, StarIcon, PlusIcon } from './icons';
 import { CoverArt } from './CoverArt';
+import { translations } from '../utils/translations';
 
 const renderRating = (rating: number) => {
   const stars = [];
@@ -24,11 +25,14 @@ interface SuggestionItemProps {
   currentTrack: Track;
   onSelect: (track: Track) => void;
   onDismiss: (trackId: string) => void;
+  onAddToQueue?: (track: Track) => void;
+  language: 'pt-BR' | 'en-US';
 }
 
-export const SuggestionItem: React.FC<SuggestionItemProps> = ({ suggestion, currentTrack, onSelect, onDismiss }) => {
+export const SuggestionItem: React.FC<SuggestionItemProps> = ({ suggestion, currentTrack, onSelect, onDismiss, onAddToQueue, language }) => {
     const [isExpanded, setIsExpanded] = useState(false);
     const cardRef = useRef<HTMLDivElement>(null);
+    const t = translations[language];
     
     // Rola para o topo do card quando expandido
     useEffect(() => {
@@ -107,7 +111,7 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({ suggestion, curr
                     
                     {/* Botões de Ação no Canto */}
                     <div className="flex flex-col justify-between items-end absolute right-2.5 top-2.5 bottom-2.5">
-                         <button onClick={(e) => { e.stopPropagation(); onDismiss(suggestion.id); }} className="p-1.5 text-white hover:text-red-400 transition-colors">
+                         <button onClick={(e) => { e.stopPropagation(); onDismiss(suggestion.id); }} className="p-1.5 text-white hover:text-red-400 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center">
                              <XIcon className="w-4 h-4" />
                          </button>
                          <ChevronDownIcon className={`w-5 h-5 text-white transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
@@ -122,7 +126,7 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({ suggestion, curr
                     {/* Análise da IA */}
                     <div className="mt-3 p-3 bg-blue-900/20 border border-blue-500/30 rounded-xl">
                         <p className="text-xs text-white font-bold leading-relaxed">
-                            <span className="font-black text-blue-400 block mb-1 uppercase text-[0.7rem] tracking-wider">Por que combina:</span>
+                            <span className="font-black text-blue-400 block mb-1 uppercase text-[0.7rem] tracking-wider">{t.whyMatch}</span>
                             {suggestion.reason}
                         </p>
                     </div>
@@ -131,42 +135,46 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({ suggestion, curr
                     <div className="mt-3 grid grid-cols-3 gap-2">
                         {/* Diferença de BPM */}
                         <div className="bg-gray-800/60 border border-gray-700 p-2 rounded-lg flex flex-col justify-center items-center text-center">
-                             <span className="text-[0.6rem] text-white opacity-50 font-black uppercase tracking-widest mb-1">Diff BPM</span>
-                             <span className={`text-xs font-black font-mono ${isPositiveDiff ? 'text-green-400' : 'text-red-400'}`}>
+                             <span className="text-[0.6rem] text-white opacity-50 font-black uppercase tracking-widest mb-1">{t.diffBpm}</span>
+                             <span className={`text-xs font-black font-mono ${isPositiveDiff ? 'text-red-400' : 'text-green-400'}`}>
                                 {bpmDiff}
                              </span>
                         </div>
-
-                        {/* Gênero */}
-                        <div className="bg-gray-800/60 border border-gray-700 p-2 rounded-lg flex flex-col justify-center items-center text-center">
-                            <div className="flex items-center gap-1 mb-1">
-                                <TagIcon className="w-3 h-3 text-purple-400" />
-                                <span className="text-[0.6rem] text-white opacity-50 font-black uppercase tracking-widest">Gênero</span>
-                            </div>
-                            <span className="text-xs text-white font-black truncate w-full" title={suggestion.genre}>
-                                {suggestion.genre || '---'}
-                            </span>
+                         {/* Gênero */}
+                         <div className="bg-gray-800/60 border border-gray-700 p-2 rounded-lg flex flex-col justify-center items-center text-center">
+                             <span className="text-[0.6rem] text-white opacity-50 font-black uppercase tracking-widest mb-1">{t.genre}</span>
+                             <span className="text-[0.65rem] font-bold text-white truncate w-full" title={suggestion.genre}>
+                                {suggestion.genre || 'N/A'}
+                             </span>
                         </div>
-
-                        {/* Plays */}
+                        {/* Play Count */}
                         <div className="bg-gray-800/60 border border-gray-700 p-2 rounded-lg flex flex-col justify-center items-center text-center">
-                            <div className="flex items-center gap-1 mb-1">
-                                <ActivityIcon className="w-3 h-3 text-green-400" />
-                                <span className="text-[0.6rem] text-white opacity-50 font-black uppercase tracking-widest">Plays</span>
-                            </div>
-                            <span className="text-xs text-white font-black font-mono">
-                                {suggestion.playCount || 0}
-                            </span>
+                             <span className="text-[0.6rem] text-white opacity-50 font-black uppercase tracking-widest mb-1">{t.plays}</span>
+                             <span className="text-xs font-black font-mono text-white">
+                                {suggestion.playCount}
+                             </span>
                         </div>
                     </div>
 
-                    <button 
-                        onClick={() => onSelect(suggestion)}
-                        className="w-full mt-4 bg-blue-600 hover:bg-blue-500 text-white font-black text-sm py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 shadow-md"
-                    >
-                        <PlayIcon className="w-4 h-4 fill-current" />
-                        CARREGAR NO DECK
-                    </button>
+                    {/* Ações Principais */}
+                    <div className="mt-3 flex gap-2">
+                        <button 
+                            onClick={() => onSelect(suggestion)}
+                            className="flex-1 bg-white text-black text-xs font-black py-4 rounded-xl hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 shadow-lg min-h-[50px]"
+                        >
+                            <PlayIcon className="w-4 h-4" />
+                            {t.loadDeck}
+                        </button>
+                        {onAddToQueue && (
+                            <button 
+                                onClick={() => onAddToQueue(suggestion)}
+                                className="px-4 bg-gray-800 border border-gray-700 text-white rounded-xl hover:bg-gray-700 hover:border-blue-500 transition-colors flex items-center justify-center shadow-lg min-h-[50px] min-w-[50px]"
+                                title="Adicionar ao Set Builder"
+                            >
+                                <PlusIcon className="w-4 h-4" />
+                            </button>
+                        )}
+                    </div>
                 </div>
             )}
         </div>

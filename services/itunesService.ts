@@ -19,17 +19,35 @@ export const searchAlbumArt = async (artist: string, name: string): Promise<stri
   }
 
   try {
-    // 1. Clean up search terms for better hit rate
-    const cleanName = name
+    // 1. Clean up search terms aggressively for better hit rate
+    let cleanName = name
+      // Remove content within parentheses or brackets (often contains remix info that breaks search)
       .replace(/\s*\(.*?\)\s*/g, ' ')
       .replace(/\s*\[.*?\]\s*/g, ' ')
+      // Remove common feature markers
       .replace(/\s*feat\..*/i, '')
       .replace(/\s*ft\..*/i, '')
+      .replace(/\s*with\..*/i, '')
+      // Remove file extensions if somehow present
+      .replace(/\.(mp3|wav|aiff|m4a|flac)$/i, '')
+      // Remove common DJ suffixes often found after a dash
+      .replace(/\s*-\s*.*(?:mix|edit|remix|dub|instrumental).*/i, '')
+      // Remove specific keywords even if no dash
+      .replace(/original mix/gi, '')
+      .replace(/extended mix/gi, '')
+      .replace(/radio edit/gi, '')
+      // Normalize spaces
+      .replace(/\s+/g, ' ')
       .trim();
 
-    const cleanArtist = artist
-        .split(/[,&]/)[0] // Take only the first artist if multiple
+    let cleanArtist = artist
+        .split(/[,&]/)[0] // Take only the first artist if multiple (e.g. "Artist A & Artist B")
+        .replace(/feat\..*/i, '')
         .trim();
+
+    // If cleaning resulted in empty strings (unlikely), fallback to original
+    if (!cleanName) cleanName = name;
+    if (!cleanArtist) cleanArtist = artist;
 
     const query = encodeURIComponent(`${cleanArtist} ${cleanName}`);
     

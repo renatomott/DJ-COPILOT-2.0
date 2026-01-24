@@ -4,7 +4,9 @@ import type { Track, Suggestion } from '../types';
 import { getTrackSuggestions } from '../services/geminiService';
 import { Loader } from './Loader';
 import { SuggestionItem } from './SuggestionItem';
-import { BrainIcon, RefreshCwIcon } from './icons';
+import { BrainIcon, RefreshCwIcon, PlusIcon } from './icons';
+import { SkeletonLoader } from './SkeletonLoader';
+import { translations } from '../utils/translations';
 
 interface SuggestionPanelProps {
   currentTrack: Track;
@@ -12,13 +14,16 @@ interface SuggestionPanelProps {
   suggestions: Suggestion[];
   setSuggestions: React.Dispatch<React.SetStateAction<Suggestion[]>>;
   onSelectTrack: (track: Track) => void;
+  onAddToQueue?: (track: Track) => void;
+  language: 'pt-BR' | 'en-US';
 }
 
-export const SuggestionPanel: React.FC<SuggestionPanelProps> = ({ currentTrack, playlist, suggestions, setSuggestions, onSelectTrack }) => {
+export const SuggestionPanel: React.FC<SuggestionPanelProps> = ({ currentTrack, playlist, suggestions, setSuggestions, onSelectTrack, onAddToQueue, language }) => {
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // Referência para evitar disparos duplicados em renders rápidos
+  const t = translations[language];
   const isFetching = useRef(false);
 
   const handleDismiss = (trackId: string) => {
@@ -40,7 +45,7 @@ export const SuggestionPanel: React.FC<SuggestionPanelProps> = ({ currentTrack, 
     isFetching.current = true;
 
     try {
-      const { suggestions: result, cuePoints } = await getTrackSuggestions(currentTrack, playlist);
+      const { suggestions: result, cuePoints } = await getTrackSuggestions(currentTrack, playlist, [], language);
       
       setSuggestions(result);
       
@@ -55,7 +60,28 @@ export const SuggestionPanel: React.FC<SuggestionPanelProps> = ({ currentTrack, 
       setIsLoading(false);
       isFetching.current = false;
     }
-  }, [currentTrack, playlist, suggestions.length, setSuggestions]);
+  }, [currentTrack, playlist, suggestions.length, setSuggestions, language]);
+
+  const handleLoadMore = async () => {
+      if (isLoadingMore || isLoading) return;
+      setIsLoadingMore(true);
+      
+      try {
+          // Pass existing IDs to exclude them from new results
+          const excludeIds = suggestions.map(s => s.id);
+          const { suggestions: newSuggestions } = await getTrackSuggestions(currentTrack, playlist, excludeIds, language);
+          
+          if (newSuggestions.length === 0) {
+             // Optional: Handle "no more results" state
+          } else {
+             setSuggestions(prev => [...prev, ...newSuggestions]);
+          }
+      } catch (err) {
+          console.error("Error loading more suggestions", err);
+      } finally {
+          setIsLoadingMore(false);
+      }
+  };
 
   useEffect(() => {
     loadSuggestions();
@@ -71,24 +97,25 @@ export const SuggestionPanel: React.FC<SuggestionPanelProps> = ({ currentTrack, 
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <BrainIcon className="w-5 h-5 text-purple-400" />
-          <h3 className="text-lg font-bold text-gray-200">Próximas Faixas Sugeridas</h3>
+          <h3 className="text-lg font-bold text-gray-200">{t.nextTracks}</h3>
         </div>
         
         <button 
           onClick={handleRefresh}
           disabled={isLoading}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-300 hover:text-white rounded-lg border border-gray-700 transition-all text-xs font-semibold group"
+          className="flex items-center gap-1.5 px-3 py-2 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-300 hover:text-white rounded-lg border border-gray-700 transition-all text-xs font-semibold group min-h-[36px]"
           title="Pedir novas sugestões à IA"
         >
           <RefreshCwIcon className={`w-3.5 h-3.5 transition-transform group-hover:rotate-180 duration-500 ${isLoading ? 'animate-spin' : ''}`} />
-          {isLoading ? 'Analisando...' : 'Recalcular'}
+          {isLoading ? t.analyzing : t.recalculate}
         </button>
       </div>
       
       {isLoading && suggestions.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-10 opacity-60">
-          <Loader />
-          <p className="mt-3 text-sm font-medium animate-pulse text-gray-300">A IA está analisando sua biblioteca...</p>
+        <div className="flex flex-col gap-2">
+            <SkeletonLoader variant="card" />
+            <SkeletonLoader variant="card" />
+            <SkeletonLoader variant="card" />
         </div>
       )}
       
@@ -99,22 +126,39 @@ export const SuggestionPanel: React.FC<SuggestionPanelProps> = ({ currentTrack, 
       )}
       
       {!isLoading && !error && suggestions.length === 0 && (
-        <p className="text-gray-400 text-center py-8 italic border-2 border-dashed border-gray-800 rounded-xl text-sm">Nenhuma sugestão encontrada.</p>
+        <p className="text-gray-400 text-center py-8 italic border-2 border-dashed border-gray-800 rounded-xl text-sm">{t.noSuggestions}</p>
       )}
       
       {/* Mostramos as sugestões antigas enquanto carrega as novas se for um refresh */}
       {(suggestions.length > 0) && (
-        <div className={`space-y-3 transition-opacity duration-300 ${isLoading ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}>
-          {suggestions.map((suggestion) => (
-            <SuggestionItem 
-              key={suggestion.id}
-              suggestion={suggestion}
-              currentTrack={currentTrack}
-              onSelect={onSelectTrack}
-              onDismiss={handleDismiss}
-            />
-          ))}
-        </div>
+        <>
+            <div className={`space-y-3 transition-opacity duration-300 ${isLoading ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}>
+              {suggestions.map((suggestion) => (
+                <SuggestionItem 
+                  key={suggestion.id}
+                  suggestion={suggestion}
+                  currentTrack={currentTrack}
+                  onSelect={onSelectTrack}
+                  onDismiss={handleDismiss}
+                  onAddToQueue={onAddToQueue}
+                  language={language}
+                />
+              ))}
+            </div>
+
+            <button 
+                onClick={handleLoadMore}
+                disabled={isLoadingMore}
+                className="w-full mt-4 py-4 bg-gray-800/50 hover:bg-gray-800 text-blue-400 font-black text-xs uppercase tracking-widest rounded-xl border border-gray-700/50 hover:border-blue-500/50 transition-all flex items-center justify-center gap-2 min-h-[50px]"
+            >
+                {isLoadingMore ? (
+                    <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+                ) : (
+                    <PlusIcon className="w-4 h-4" />
+                )}
+                {t.loadMore}
+            </button>
+        </>
       )}
     </div>
   );
