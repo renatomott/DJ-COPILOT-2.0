@@ -1,7 +1,7 @@
 
 import React from 'react';
 import type { Track } from '../types';
-import { ClockIcon, StarIcon, FolderIcon, PlusIcon } from './icons';
+import { ClockIcon, StarIcon, FolderIcon, PlusIcon, ZapIcon } from './icons';
 import { CoverArt } from './CoverArt';
 import { EnergyBar } from './EnergyBar';
 
@@ -9,17 +9,19 @@ interface TrackItemProps {
   track: Track;
   onSelect: (track: Track) => void;
   isSelected: boolean;
+  isOnAir?: boolean;
   onAddToQueue?: (e: React.MouseEvent, track: Track) => void;
 }
 
 const renderRating = (rating: number) => {
   const stars = [];
+  const normalizedRating = rating > 5 ? Math.round(rating / 20) : rating;
   for (let i = 1; i <= 5; i++) {
-    const isFilled = i <= rating;
+    const isFilled = i <= normalizedRating;
     stars.push(
       <StarIcon 
         key={i} 
-        className={`w-[0.8em] h-[0.8em] ${isFilled ? 'text-yellow-400 fill-current' : 'text-white opacity-20'}`} 
+        className={`w-[0.75em] h-[0.75em] ${isFilled ? 'text-yellow-400 fill-current' : 'text-white/10 stroke-white/50'}`} 
         filled={isFilled} 
       />
     );
@@ -27,79 +29,95 @@ const renderRating = (rating: number) => {
   return <div className="flex items-center gap-0.5">{stars}</div>;
 };
 
-export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelected, onAddToQueue }) => {
-  const baseClasses = "p-3 rounded-xl flex items-center gap-3 cursor-pointer transition-all duration-200 border relative group";
-  const selectedClasses = "bg-blue-900/30 border-blue-500 shadow-md ring-1 ring-blue-500/30";
-  const defaultClasses = "bg-gray-900 border-gray-700 hover:bg-gray-800 hover:border-gray-500";
+export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelected, isOnAir, onAddToQueue }) => {
+  const baseClasses = "p-2 rounded-xl flex items-center gap-2.5 cursor-pointer transition-all duration-300 border relative group overflow-hidden";
+  const selectedClasses = "bg-cyan-950/20 border-cyan-500 shadow-md ring-1 ring-cyan-500/30";
+  const onAirClasses = "bg-cyan-500/10 border-cyan-400 shadow-[0_0_20px_rgba(34,211,238,0.3)] animate-pulse-onair ring-2 ring-cyan-400/50 ring-offset-2 ring-offset-black";
+  const defaultClasses = "bg-slate-900/40 border-slate-800 hover:bg-slate-800 hover:border-slate-600";
 
   return (
-    <div
-      onClick={() => onSelect(track)}
-      className={`${baseClasses} ${isSelected ? selectedClasses : defaultClasses}`}
-    >
-      <div className="w-14 h-14 flex-shrink-0 relative">
-          <CoverArt 
-            id={track.id}
-            artist={track.artist}
-            name={track.name}
-            className="w-full h-full rounded-lg"
-            priority={false} 
-          />
-          {isSelected && (
-              <div className="absolute inset-0 ring-1 ring-blue-500 rounded-lg z-10"></div>
-          )}
-      </div>
-      
-      <div className="flex-1 overflow-hidden min-w-0 flex flex-col justify-center">
-        <div className="flex justify-between items-start gap-2 mb-0.5">
-            <p className={`font-bold text-base leading-tight text-white line-clamp-2 break-words`}>{track.name}</p>
-            {track.bpm && (
-                <span className="flex-shrink-0 text-xs font-mono font-black text-white bg-black px-1.5 py-0.5 rounded border border-gray-600 self-start mt-0.5">
-                  {track.bpm}
-                </span>
+    <>
+      <style>{`
+        @keyframes pulse-onair {
+          0%, 100% { border-color: rgba(34, 211, 238, 0.4); box-shadow: 0 0 10px rgba(34, 211, 238, 0.2); }
+          50% { border-color: rgba(34, 211, 238, 1); box-shadow: 0 0 25px rgba(34, 211, 238, 0.4); }
+        }
+        .animate-pulse-onair {
+          animation: pulse-onair 1.5s infinite cubic-bezier(0.4, 0, 0.6, 1);
+        }
+      `}</style>
+      <div
+        onClick={() => onSelect(track)}
+        className={`${baseClasses} ${isOnAir ? onAirClasses : isSelected ? selectedClasses : defaultClasses}`}
+      >
+        <div className="w-12 h-12 flex-shrink-0 relative">
+            <CoverArt 
+              id={track.id}
+              artist={track.artist}
+              name={track.name}
+              className="w-full h-full rounded-lg"
+              priority={false} 
+            />
+            {isOnAir && (
+                <div className="absolute inset-0 ring-1 ring-cyan-400 rounded-lg z-10"></div>
             )}
         </div>
-        <p className="text-sm text-white opacity-90 line-clamp-1 mb-1.5 font-bold">{track.artist}</p>
         
-        <div className="flex items-center gap-3 text-xs text-white">
-            <span className={`font-mono text-[0.8em] px-1.5 py-0.5 rounded font-black ${isSelected ? 'bg-blue-600 text-white' : 'bg-gray-800 text-white border border-gray-600'}`}>
-                {track.key || 'N/A'}
-            </span>
-            
-            <div className="w-px h-3 bg-gray-600"></div>
-            
-            {track.energy ? (
-                <EnergyBar energy={track.energy} />
-            ) : (
-                <div className="flex items-center gap-1">
-                    <ClockIcon className="w-3 h-3 text-white opacity-70" />
-                    <span className="font-mono font-black text-xs">{track.duration}</span>
-                </div>
-            )}
+        <div className="flex-1 overflow-hidden min-w-0 flex flex-col justify-center">
+          <div className="flex justify-between items-start gap-2 mb-0.5">
+              <p className={`font-black text-sm leading-tight text-white line-clamp-1 break-words tracking-tight`}>
+                {track.name}
+              </p>
+              {track.bpm && (
+                  <span className="flex-shrink-0 text-[9px] font-mono font-black text-cyan-400 bg-black/40 px-1.5 py-0.5 rounded border border-slate-700 self-start shadow-sm">
+                    {track.bpm}
+                  </span>
+              )}
+          </div>
+          <div className="flex items-center justify-between gap-2 mb-1">
+            <p className="text-[11px] text-slate-400 line-clamp-1 font-bold">{track.artist}</p>
+            <p className="text-[8px] text-cyan-500/60 truncate uppercase tracking-wider font-black max-w-[40%]">{track.location}</p>
+          </div>
+          
+          <div className="flex items-center gap-2 text-[9px] text-white">
+              <span className={`font-mono px-1.5 py-0.5 rounded-md font-black text-[9px] ${isOnAir ? 'bg-cyan-500 text-black shadow-[0_0_8px_rgba(6,182,212,0.5)]' : 'bg-slate-800 text-cyan-400 border border-slate-700'}`}>
+                  {track.key || 'N/A'}
+              </span>
+              
+              <div className="w-px h-3 bg-slate-700/50"></div>
+              
+              {track.energy ? (
+                  <EnergyBar energy={track.energy} className="scale-75 origin-left" />
+              ) : (
+                  <div className="flex items-center gap-1">
+                      <ClockIcon className="w-2.5 h-2.5 text-slate-500 opacity-70" />
+                      <span className="font-mono font-black text-[9px] text-slate-400">{track.duration}</span>
+                  </div>
+              )}
 
-            <div className="w-px h-3 bg-gray-600"></div>
+              <div className="w-px h-3 bg-slate-700/50 ml-auto"></div>
 
-            {/* Renderização da Classificação */}
-            <div className="flex items-center">
-                {renderRating(track.rating)}
-            </div>
-            
-             <div className="hidden sm:flex items-center gap-1 ml-auto">
-                <FolderIcon className="w-3 h-3 text-white opacity-70" />
-                <span className="truncate max-w-[120px] font-bold text-blue-300">{track.location}</span>
-            </div>
+              <div className="flex items-center">
+                  {renderRating(track.rating)}
+              </div>
+          </div>
         </div>
-      </div>
 
-      {onAddToQueue && (
-        <button 
-            onClick={(e) => onAddToQueue(e, track)}
-            className="absolute right-2 bottom-2 p-2 bg-black/60 rounded-full text-white opacity-0 group-hover:opacity-100 hover:bg-blue-600 transition-all border border-gray-600 hover:border-blue-500 z-20"
-            title="Adicionar ao Set Builder"
-        >
-            <PlusIcon className="w-4 h-4" />
-        </button>
-      )}
-    </div>
+        {isOnAir && (
+          <div className="absolute top-0 left-0 bg-cyan-500 text-black text-[7px] font-black px-1.5 py-0.5 rounded-br-md flex items-center gap-1 uppercase tracking-widest shadow-lg z-20 border-r border-b border-cyan-400/50">
+            <ZapIcon className="w-1.5 h-1.5 fill-current" /> ON
+          </div>
+        )}
+
+        {onAddToQueue && !isOnAir && (
+          <button 
+              onClick={(e) => onAddToQueue(e, track)}
+              className="p-2 bg-slate-800/80 rounded-lg text-white opacity-0 group-hover:opacity-100 hover:bg-cyan-600 transition-all border border-slate-600 hover:border-cyan-500 z-20 shadow-lg ml-1"
+          >
+              <PlusIcon className="w-3 h-3" />
+          </button>
+        )}
+      </div>
+    </>
   );
 };

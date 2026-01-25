@@ -7,87 +7,64 @@ let isRateLimited = false;
 let rateLimitResetTimeout: ReturnType<typeof setTimeout> | null = null;
 
 export const searchAlbumArt = async (artist: string, name: string): Promise<string | null> => {
-  // If we are rate limited, don't even try, just return null immediately
-  if (isRateLimited) {
-    return null;
-  }
+  if (isRateLimited) return null;
 
-  // Check cache first
   const cacheKey = `${artist}-${name}`.toLowerCase();
-  if (artCache.has(cacheKey)) {
-    return artCache.get(cacheKey) || null;
-  }
+  if (artCache.has(cacheKey)) return artCache.get(cacheKey) || null;
 
   try {
-    // 1. Clean up search terms aggressively for better hit rate
+    // 1. CLEANING: Deep strip of DJ metadata that breaks iTunes search
+    // Handles common DJ patterns like: "1A - 124 - Artist - Song (Original Mix)"
     let cleanName = name
-      // Remove content within parentheses or brackets (often contains remix info that breaks search)
-      .replace(/\s*\(.*?\)\s*/g, ' ')
-      .replace(/\s*\[.*?\]\s*/g, ' ')
-      // Remove common feature markers
+      .replace(/^[0-9]{1,2}[A-B]\s*-\s*[0-9]{2,3}\s*-\s*/, '') // Strip "1A - 124 - " prefix
+      .replace(/\s*\(.*?\)\s*/g, ' ') // Strip (remix info)
+      .replace(/\s*\[.*?\]\s*/g, ' ') // Strip [label info]
       .replace(/\s*feat\..*/i, '')
       .replace(/\s*ft\..*/i, '')
-      .replace(/\s*with\..*/i, '')
-      // Remove file extensions if somehow present
       .replace(/\.(mp3|wav|aiff|m4a|flac)$/i, '')
-      // Remove common DJ suffixes often found after a dash
-      .replace(/\s*-\s*.*(?:mix|edit|remix|dub|instrumental).*/i, '')
-      // Remove specific keywords even if no dash
-      .replace(/original mix/gi, '')
-      .replace(/extended mix/gi, '')
-      .replace(/radio edit/gi, '')
-      // Normalize spaces
+      .replace(/original mix|extended mix|radio edit|remix|mix/gi, '')
       .replace(/\s+/g, ' ')
       .trim();
 
     let cleanArtist = artist
-        .split(/[,&]/)[0] // Take only the first artist if multiple (e.g. "Artist A & Artist B")
+        .split(/[,&]/)[0] // Only first artist
+        .replace(/^[0-9]{1,2}[A-B]\s*-\s*/, '') // Strip Key prefix if artist tag is messy
         .replace(/feat\..*/i, '')
         .trim();
 
-    // If cleaning resulted in empty strings (unlikely), fallback to original
-    if (!cleanName) cleanName = name;
-    if (!cleanArtist) cleanArtist = artist;
+    if (!cleanName || cleanName.length < 2) cleanName = name;
+    if (!cleanArtist || cleanArtist.length < 2) cleanArtist = artist;
 
     const query = encodeURIComponent(`${cleanArtist} ${cleanName}`);
     
-    // 2. Fetch from iTunes API
-    const response = await fetch(`https://itunes.apple.com/search?term=${query}&media=music&entity=song&limit=1`);
+    // First attempt: Cleaned search
+    let response = await fetch(`https://itunes.apple.com/search?term=${query}&media=music&entity=song&limit=1`);
     
-    // Handle Rate Limiting (429) or Forbidden (403) which usually means IP ban
     if (response.status === 429 || response.status === 403) {
-        console.warn(`iTunes API Rate Limit detected (${response.status}). Pausing art fetch for 60s.`);
         isRateLimited = true;
-        
-        if (rateLimitResetTimeout) clearTimeout(rateLimitResetTimeout);
-        
-        rateLimitResetTimeout = setTimeout(() => {
-            isRateLimited = false;
-            console.log("Resuming iTunes API requests...");
-        }, 60000); // Wait 1 minute
-        
+        rateLimitResetTimeout = setTimeout(() => { isRateLimited = false; }, 60000);
         return null;
     }
 
-    if (!response.ok) {
-        return null;
-    }
+    let data = await response.json();
 
-    const data = await response.json();
+    // Second attempt fallback: Just the artist + first 2 words of title if first failed
+    if ((!data.results || data.results.length === 0) && cleanName.split(' ').length > 2) {
+        const fuzzyTitle = cleanName.split(' ').slice(0, 2).join(' ');
+        const fuzzyQuery = encodeURIComponent(`${cleanArtist} ${fuzzyTitle}`);
+        response = await fetch(`https://itunes.apple.com/search?term=${fuzzyQuery}&media=music&entity=song&limit=1`);
+        data = await response.json();
+    }
 
     if (data.results && data.results.length > 0) {
-      // Get the artwork URL and upgrade resolution from 100x100 to 600x600
       const artworkUrl = data.results[0].artworkUrl100.replace('100x100bb', '600x600bb');
       artCache.set(cacheKey, artworkUrl);
       return artworkUrl;
     }
 
-    // No result found
     artCache.set(cacheKey, null);
     return null;
-
   } catch (error) {
-    // Suppress network errors to avoid console pollution
     return null;
   }
 };

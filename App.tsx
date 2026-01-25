@@ -95,7 +95,7 @@ const App: React.FC = () => {
     // Load Language
     const savedLanguage = localStorage.getItem(LANGUAGE_KEY);
     if (savedLanguage === 'en-US' || savedLanguage === 'pt-BR') {
-        setLanguage(savedLanguage);
+        setLanguage(savedLanguage as 'pt-BR' | 'en-US');
     }
 
     setIsInitialized(true);
@@ -172,7 +172,6 @@ const App: React.FC = () => {
             
             // Auto-Enrich Trigger
             if (autoEnrichEnabled) {
-               // We pass parsedTracks directly because 'playlist' state might not be updated yet in this closure
                performEnrichment(parsedTracks);
             }
           }
@@ -209,7 +208,13 @@ const App: React.FC = () => {
   if (!isInitialized) return null;
 
   if (!playlist) {
-    return <FileUploadScreen onFileUpload={handleFileUpload} error={error} isLoading={isLoading} />;
+    return <FileUploadScreen 
+              onFileUpload={handleFileUpload} 
+              error={error} 
+              isLoading={isLoading} 
+              language={language}
+              setLanguage={setLanguage}
+           />;
   }
 
   return <MainScreen 

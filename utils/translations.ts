@@ -1,6 +1,14 @@
 
 export const translations = {
   'pt-BR': {
+    // Upload Screen
+    uploadWelcome: 'Bem-vindo ao DJ Copilot 2.0',
+    uploadSub: 'Seu assistente de mixagem com IA',
+    uploadBoxTitle: 'Carregue seu XML do Rekordbox',
+    uploadBoxSub: 'ou arraste e solte o arquivo aqui',
+    uploadNote: 'Exporte sua biblioteca ou playlist como XML no Rekordbox (File > Export Collection in xml format).',
+    uploadError: 'Erro ao processar arquivo.',
+    
     // Nav
     navDeck: 'DECK',
     navLib: 'BIBLIO',
@@ -14,6 +22,33 @@ export const translations = {
     openLib: 'ABRIR BIBLIOTECA',
     noTracksFound: 'Nenhuma faixa encontrada.',
     noSuggestions: 'Nenhuma sugestão encontrada.',
+    
+    // Planner
+    plannerTitle: 'Planejador IA',
+    plannerSub: 'Crie uma jornada musical automática',
+    progression: 'Progressão',
+    progLinear: 'Constante (Vibe Única)',
+    progRising: 'Crescente (Warm-up → Peak)',
+    progChaos: 'Dinâmica (Variações)',
+    setLength: 'Tamanho do Set',
+    tracks5: '5 Faixas',
+    tracks10: '10 Faixas',
+    tracks15: '15 Faixas',
+    btnPlan: 'GERAR SEQUÊNCIA IA',
+    plannerHint: 'A IA analisará tons harmônicos e energia para criar o fluxo perfeito.',
+    addingToQueue: 'Organizando Set...',
+    mandatoryTracks: 'Músicas Obrigatórias',
+    addMandatory: 'Incluir no Plano',
+    searchToPlan: 'Buscar músicas para incluir...',
+    mandatoryEmpty: 'Nenhuma música obrigatória selecionada.',
+    fillGaps: 'A IA preencherá as lacunas entre suas escolhas.',
+    modeInspired: 'Inspirado (Preferência)',
+    modeStrict: 'Obrigatório (Restrição)',
+    minRating: 'Rating Mínimo',
+    targetPlaylists: 'Playlists Alvo',
+    allPlaylists: 'Todas as Playlists',
+    browseByFolder: 'Navegar por Pastas',
+    matchingTracks: 'Faixas compatíveis',
     
     // Header / Actions
     identifyBtn: 'IDENTIFICAR O QUE ESTÁ TOCANDO',
@@ -76,6 +111,20 @@ export const translations = {
     emptyBuilder: 'Set Builder Vazio',
     emptyBuilderSub: 'Adicione músicas do Deck ou da Biblioteca clicando em "+ Queue" para construir sua performance.',
     exportM3u: 'EXPORTAR .M3U',
+    exportTxt: 'EXPORTAR .TXT',
+    exportPdf: 'EXPORTAR .PDF',
+    downloadAll: 'BAIXAR TXT + PDF',
+    confirmDownloadBeforeClear: 'Deseja baixar sua playlist atual (TXT/PDF) antes de limpar tudo?',
+    importPlan: 'IMPORTAR PLANO',
+    aiGenerated: 'Gerado pela IA',
+    userPicked: 'Sua Escolha',
+    back: 'Voltar',
+    errorImport: 'Erro ao ler arquivo de set. Formato inválido.',
+    setImported: 'Set carregado com sucesso!',
+    startPerformance: 'INICIAR PERFORMANCE',
+    loadNext: 'CARREGAR PRÓXIMA',
+    trackCount: 'faixas',
+    trackOf: 'de',
     
     // Modal
     identifyPhoto: 'Identificar via Foto',
@@ -94,9 +143,17 @@ export const translations = {
     trackFound: 'Deck Identificado:',
     trackNotFound: 'Faixa identificada mas não encontrada no XML.',
     resetConfirm: 'Isso removerá a playlist atual e todo o histórico. Deseja continuar?',
-    nextInQueue: 'Próxima na Fila'
+    nextInQueue: 'PRÓXIMA'
   },
   'en-US': {
+    // Upload Screen
+    uploadWelcome: 'Welcome to DJ Copilot 2.0',
+    uploadSub: 'Your AI mixing assistant',
+    uploadBoxTitle: 'Load your Rekordbox XML',
+    uploadBoxSub: 'or drag and drop the file here',
+    uploadNote: 'Export your collection or playlist as XML in Rekordbox (File > Export Collection in xml format).',
+    uploadError: 'Error processing file.',
+
     // Nav
     navDeck: 'DECK',
     navLib: 'LIBRARY',
@@ -111,6 +168,33 @@ export const translations = {
     noTracksFound: 'No tracks found.',
     noSuggestions: 'No suggestions found.',
     
+    // Planner
+    plannerTitle: 'AI Set Planner',
+    plannerSub: 'Create an automatic musical journey',
+    progression: 'Progression',
+    progLinear: 'Steady (Same Vibe)',
+    progRising: 'Rising (Warm-up → Peak)',
+    progChaos: 'Dynamic (Variations)',
+    setLength: 'Set Length',
+    tracks5: '5 Tracks',
+    tracks10: '10 Tracks',
+    tracks15: '15 Tracks',
+    btnPlan: 'GENERATE AI SEQUENCE',
+    plannerHint: 'AI will analyze harmonic keys and energy to create the perfect flow.',
+    addingToQueue: 'Organizing Set...',
+    mandatoryTracks: 'Must-Have Tracks',
+    addMandatory: 'Include in Plan',
+    searchToPlan: 'Search tracks to include...',
+    mandatoryEmpty: 'No must-have tracks selected.',
+    fillGaps: 'AI will fill the gaps between your choices.',
+    modeInspired: 'Inspired (Preference)',
+    modeStrict: 'Strict (Requirement)',
+    minRating: 'Min Rating',
+    targetPlaylists: 'Target Playlists',
+    allPlaylists: 'All Playlists',
+    browseByFolder: 'Browse by Folder',
+    matchingTracks: 'Matching tracks',
+
     // Header / Actions
     identifyBtn: 'IDENTIFY WHAT IS PLAYING',
     enrichBtn: 'AI Enrich',
@@ -172,6 +256,20 @@ export const translations = {
     emptyBuilder: 'Empty Set Builder',
     emptyBuilderSub: 'Add songs from Deck or Library by clicking "+ Queue" to build your performance.',
     exportM3u: 'EXPORT .M3U',
+    exportTxt: 'EXPORT .TXT',
+    exportPdf: 'EXPORT .PDF',
+    downloadAll: 'DOWNLOAD TXT + PDF',
+    confirmDownloadBeforeClear: 'Do you want to download your current playlist (TXT/PDF) before clearing everything?',
+    importPlan: 'IMPORT PLAN',
+    aiGenerated: 'AI Generated',
+    userPicked: 'User Picked',
+    back: 'Back',
+    errorImport: 'Error reading set file. Invalid format.',
+    setImported: 'Set loaded successfully!',
+    startPerformance: 'START PERFORMANCE',
+    loadNext: 'LOAD NEXT',
+    trackCount: 'tracks',
+    trackOf: 'of',
 
     // Modal
     identifyPhoto: 'Identify via Photo',
@@ -190,6 +288,6 @@ export const translations = {
     trackFound: 'Deck Identified:',
     trackNotFound: 'Track identified but not found in XML.',
     resetConfirm: 'This will remove the current playlist and all history. Do you want to continue?',
-    nextInQueue: 'Next in Queue'
+    nextInQueue: 'NEXT'
   }
 };
