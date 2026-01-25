@@ -64,13 +64,10 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
   const handleClear = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
     if (queue.length === 0) return;
-
     if (window.confirm(t.confirmDownloadBeforeClear)) {
         exportBoth();
     }
-    
     if (window.confirm(t.resetConfirm)) {
       setQueue([]);
     }
@@ -168,13 +165,14 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
               
               const idsJson = text.substring(metaStart + 19, metaEnd).trim();
               const ids = JSON.parse(idsJson);
-              const importedQueue = ids.map((id: string) => fullPlaylist.find(t => t.id === id)).filter((t: any) => !!t);
-              
-              if (importedQueue.length > 0) {
-                  setQueue(importedQueue);
-                  alert(t.setImported);
-              } else {
-                  throw new Error("No tracks found in library");
+              if (Array.isArray(ids)) {
+                  const importedQueue = ids.map((id: string) => fullPlaylist.find(t => t.id === id)).filter((t: any) => !!t);
+                  if (importedQueue.length > 0) {
+                      setQueue(importedQueue);
+                      alert(t.setImported);
+                  } else {
+                      throw new Error("No tracks found in library");
+                  }
               }
           } catch (err) {
               alert(t.errorImport);
@@ -208,7 +206,7 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
       try {
           const currentTrack = fullPlaylist.find(t => t.id === currentTrackId) || null;
           const sequence = await planAutoSet(fullPlaylist, currentTrack, mustHaves, plannerParams, language);
-          if (sequence.length > 0) {
+          if (sequence && sequence.length > 0) {
               setQueue(sequence);
               setShowPlanner(false);
               setMustHaves([]);
@@ -220,6 +218,7 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
       }
   };
 
+  // ... (rest of the file remains same, keeping helper hooks and render)
   const filteredLibraryForPlan = useMemo(() => {
       if (!planSearch || planSearch.length < 2) return [];
       return fullPlaylist.filter(t => 
@@ -477,7 +476,7 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
                 </div>
           </div>
       )}
-
+      
       {queue.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-[60vh] text-center px-6 opacity-60">
             <div className="bg-slate-800 p-8 rounded-full mb-6 ring-8 ring-slate-900 shadow-xl relative">
@@ -533,11 +532,7 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
                                             PICKED
                                         </div>
                                     )}
-                                    
-                                    <button 
-                                        onClick={(e) => handleRemove(e, index)}
-                                        className="absolute right-1.5 bottom-1.5 p-1.5 bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white rounded-lg transition-all opacity-0 group-hover:opacity-100 border border-red-500/20 flex items-center justify-center min-h-[32px] min-w-[32px] z-20 shadow-lg active:scale-90"
-                                    >
+                                    <button onClick={(e) => handleRemove(e, index)} className="absolute right-1.5 bottom-1.5 p-1.5 bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white rounded-lg transition-all opacity-0 group-hover:opacity-100 border border-red-500/20 flex items-center justify-center min-h-[32px] min-w-[32px] z-20 shadow-lg active:scale-90">
                                         <TrashIcon className="w-3.5 h-3.5" />
                                     </button>
                                 </div>

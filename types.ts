@@ -40,3 +40,6 @@ export interface SuggestionResult {
   suggestions: Suggestion[];
   cuePoints: string[];
 }
+
+export type ViewMode = 'card' | 'list';
+export type GroupingMode = 'all' | 'folder';

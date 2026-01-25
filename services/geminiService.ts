@@ -52,19 +52,15 @@ export const planAutoSet = async (
         
         let pool = playlist;
 
-        // Apply pre-filtering if STRICT mode is on
         if (params.isStrict) {
             pool = pool.filter(t => {
                 const matchesRating = t.rating >= params.minRating;
                 const matchesPlaylist = params.targetPlaylists.length === 0 || params.targetPlaylists.includes(t.location);
-                // Always keep must-haves even if they don't match the rating/playlist criteria? 
-                // Let's assume must-haves are explicit overrides.
                 const isMustHave = mustHaveTracks.some(m => m.id === t.id);
                 return isMustHave || (matchesRating && matchesPlaylist);
             });
         }
 
-        // Optimize library size for tokens (limit to 250 for context window)
         const tracksData = pool.slice(0, 250).map(t => 
             `ID:${t.id}|${t.name}|${t.key}|${t.bpm}|R:${t.rating}|P:${t.location}`
         ).join('\n');
@@ -102,7 +98,8 @@ export const planAutoSet = async (
             }
         });
 
-        const { ids } = JSON.parse(response.text || '{"ids":[]}');
+        const parsed = JSON.parse(response.text || '{"ids":[]}');
+        const ids = Array.isArray(parsed.ids) ? parsed.ids : [];
         return ids.map((id: string) => playlist.find(t => t.id === id)).filter((t: any) => !!t);
     } catch (err) {
         handleApiError(err, "planAutoSet");
@@ -155,7 +152,8 @@ export const getSemanticSearch = async (query: string, playlist: Track[]): Promi
         }
       }
     });
-    const { ids } = JSON.parse(response.text || '{"ids":[]}');
+    const parsed = JSON.parse(response.text || '{"ids":[]}');
+    const ids = Array.isArray(parsed.ids) ? parsed.ids : [];
     return playlist.filter(t => ids.includes(t.id));
   } catch (err) {
     return [];
@@ -190,7 +188,8 @@ export const getMashupPairs = async (playlist: Track[]): Promise<MashupPair[]> =
         }
       }
     });
-    const { pairs } = JSON.parse(response.text || '{"pairs":[]}');
+    const parsed = JSON.parse(response.text || '{"pairs":[]}');
+    const pairs = Array.isArray(parsed.pairs) ? parsed.pairs : [];
     return pairs.map((p: any) => ({
       track1: playlist.find(t => t.id === p.id1)!,
       track2: playlist.find(t => t.id === p.id2)!,
@@ -304,7 +303,8 @@ export const generatePlaylist = async (playlist: Track[], vibe: string, isVocal:
         }
       }
     });
-    const { ids } = JSON.parse(response.text || '{"ids":[]}');
+    const parsed = JSON.parse(response.text || '{"ids":[]}');
+    const ids = Array.isArray(parsed.ids) ? parsed.ids : [];
     return playlist.filter(t => ids.includes(t.id));
   } catch (err) {
     return [];
@@ -339,8 +339,8 @@ export const enrichPlaylistData = async (playlist: Track[]): Promise<Partial<Tra
         }
       }
     });
-    const { enrichments } = JSON.parse(response.text || '{"enrichments":[]}');
-    return enrichments;
+    const parsed = JSON.parse(response.text || '{"enrichments":[]}');
+    return Array.isArray(parsed.enrichments) ? parsed.enrichments : [];
   } catch (err) {
     return [];
   }
