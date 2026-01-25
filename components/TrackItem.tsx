@@ -1,7 +1,7 @@
 
 import React from 'react';
 import type { Track } from '../types';
-import { ClockIcon, StarIcon, PlusIcon, ZapIcon } from './icons';
+import { ClockIcon, StarIcon, FolderIcon, PlusIcon, ZapIcon } from './icons';
 import { CoverArt } from './CoverArt';
 import { EnergyBar } from './EnergyBar';
 
@@ -21,7 +21,7 @@ const renderRating = (rating: number) => {
     stars.push(
       <StarIcon 
         key={i} 
-        className={`w-[0.75em] h-[0.75em] ${isFilled ? 'text-yellow-400 fill-current' : 'text-white/20 stroke-white/60'}`} 
+        className={`w-[0.75em] h-[0.75em] ${isFilled ? 'text-yellow-400 fill-current' : 'text-white/10 stroke-white/50'}`} 
         filled={isFilled} 
       />
     );
@@ -60,11 +60,6 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
             />
             {isOnAir && (
                 <div className="absolute inset-0 ring-1 ring-cyan-400 rounded-lg z-10"></div>
-            )}
-            {isOnAir && (
-              <div className="absolute top-0 left-0 bg-cyan-500 text-black text-[7px] font-black px-1 py-0.5 rounded-br-md flex items-center gap-1 uppercase tracking-widest shadow-lg z-20 border-r border-b border-cyan-400/50">
-                <ZapIcon className="w-1.5 h-1.5 fill-current" /> ON
-              </div>
             )}
         </div>
         
@@ -108,12 +103,18 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
           </div>
         </div>
 
+        {isOnAir && (
+          <div className="absolute top-0 left-0 bg-cyan-500 text-black text-[7px] font-black px-1.5 py-0.5 rounded-br-md flex items-center gap-1 uppercase tracking-widest shadow-lg z-20 border-r border-b border-cyan-400/50">
+            <ZapIcon className="w-1.5 h-1.5 fill-current" /> ON
+          </div>
+        )}
+
         {onAddToQueue && !isOnAir && (
           <button 
               onClick={(e) => onAddToQueue(e, track)}
               className="p-2 bg-slate-800/80 rounded-lg text-white opacity-0 group-hover:opacity-100 hover:bg-cyan-600 transition-all border border-slate-600 hover:border-cyan-500 z-20 shadow-lg ml-1"
           >
-              <PlusIcon className="w-3.5 h-3.5" />
+              <PlusIcon className="w-3 h-3" />
           </button>
         )}
       </div>
