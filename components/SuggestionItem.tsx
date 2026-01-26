@@ -74,25 +74,25 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({ suggestion, curr
         <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
           <div>
             <div className="flex justify-between items-start gap-2">
-              <h4 className="font-black text-sm text-white truncate leading-tight group-hover:text-cyan-400 transition-colors">
+              <h4 className="font-black text-lg text-white truncate leading-tight group-hover:text-cyan-400 transition-colors">
                 {suggestion.name}
               </h4>
-              <span className={`text-[10px] font-black font-mono ${scoreColor} bg-black/50 px-1.5 py-0.5 rounded border border-white/5`}>
+              <span className={`text-xs font-black font-mono ${scoreColor} bg-black/50 px-1.5 py-0.5 rounded border border-white/5`}>
                 {Math.round(suggestion.matchScore)}%
               </span>
             </div>
-            <p className="text-xs font-bold text-gray-400 truncate">{suggestion.artist}</p>
+            <p className="text-sm font-bold text-gray-400 truncate">{suggestion.artist}</p>
           </div>
 
           <div className="flex items-center gap-2 mt-1">
-             <div className="flex items-center gap-1 bg-gray-800/50 px-1.5 py-0.5 rounded text-[10px] font-mono text-gray-300 border border-white/5">
-                <ActivityIcon className="w-3 h-3 text-gray-500" />
+             <div className="flex items-center gap-1 bg-gray-800/50 px-1.5 py-0.5 rounded text-xs font-mono text-gray-300 border border-white/5">
+                <ActivityIcon className="w-3.5 h-3.5 text-gray-500" />
                 <span>{suggestion.bpm}</span>
                 <span className={`ml-1 ${Math.abs(bpmDiff) > 5 ? 'text-red-400' : 'text-green-400'}`}>
                    ({bpmDiffFormatted})
                 </span>
              </div>
-             <div className="flex items-center gap-1 bg-gray-800/50 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold text-gray-300 border border-white/5">
+             <div className="flex items-center gap-1 bg-gray-800/50 px-1.5 py-0.5 rounded text-xs font-mono font-bold text-gray-300 border border-white/5">
                 <span className={suggestion.key === currentTrack.key ? 'text-cyan-400' : 'text-pink-400'}>
                    {suggestion.key}
                 </span>
@@ -101,7 +101,7 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({ suggestion, curr
           
           <div className="flex items-center gap-2 mt-1">
              {renderRating(suggestion.rating)}
-             <span className="text-[9px] text-gray-600 font-bold uppercase tracking-wider truncate">
+             <span className="text-[11px] text-gray-600 font-bold uppercase tracking-wider truncate">
                 {suggestion.genre}
              </span>
           </div>
@@ -131,8 +131,8 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({ suggestion, curr
 
       {/* AI Reason Footer */}
       <div className="bg-gradient-to-r from-gray-900/80 to-transparent px-3 py-1.5 border-t border-white/5">
-          <p className="text-[10px] text-gray-400 italic flex items-center gap-1.5 truncate">
-            <span className="text-cyan-500/80 font-bold not-italic text-[9px] uppercase tracking-wider">{t.whyMatch}</span> 
+          <p className="text-xs text-gray-400 italic flex items-center gap-1.5 truncate">
+            <span className="text-cyan-500/80 font-bold not-italic text-[10px] uppercase tracking-wider">{t.whyMatch}</span> 
             {suggestion.reason}
           </p>
       </div>

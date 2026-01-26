@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useRef } from 'react';
 import type { Track } from '../types';
 import { TrackItem } from './TrackItem';
@@ -20,8 +19,13 @@ interface SetBuilderProps {
   fullPlaylist?: Track[];
 }
 
+interface SwipeableRowProps {
+    children: React.ReactNode;
+    onDelete: () => void;
+}
+
 // Componente auxiliar para Swipe to Delete
-const SwipeableRow = ({ children, onDelete }: { children: React.ReactNode, onDelete: () => void }) => {
+const SwipeableRow: React.FC<SwipeableRowProps> = ({ children, onDelete }) => {
     const [offsetX, setOffsetX] = useState(0);
     const [isSwiping, setIsSwiping] = useState(false);
     const startX = useRef(0);
@@ -289,7 +293,6 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
       }
   };
 
-  // ... (rest of the file remains same, keeping helper hooks and render)
   const filteredLibraryForPlan = useMemo(() => {
       if (!planSearch || planSearch.length < 2) return [];
       return fullPlaylist.filter(t => 
@@ -337,7 +340,6 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
       <input type="file" ref={importFileRef} className="hidden" accept=".txt" onChange={handleImport} />
       
       <div className="flex items-center justify-between mb-4 px-1 relative z-30">
-        {/* Changed: Removed parentheses from count */}
         <h2 className="text-xl font-bold text-white">{t.yourSet} {queue.length}</h2>
         <div className="flex gap-2">
             <button 
