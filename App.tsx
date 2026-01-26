@@ -33,7 +33,7 @@ const App: React.FC = () => {
   const [language, setLanguage] = useState<'pt-BR' | 'en-US'>('pt-BR');
   const [enabledDirectories, setEnabledDirectories] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>('card');
-  const [groupingMode, setGroupingMode] = useState<GroupingMode>('all');
+  const [groupingMode, setGroupingMode] = useState<GroupingMode>('folder');
 
   useEffect(() => {
     // Load Playlist safely

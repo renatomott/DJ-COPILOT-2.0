@@ -70,12 +70,12 @@ export const NowPlaying: React.FC<NowPlayingProps> = ({ track, language }) => {
           <div className="flex flex-col gap-4 sm:gap-6">
               {/* HEADER: On Air & BPM */}
               <div className="flex justify-between items-center w-full">
-                  <span className="text-[9px] sm:text-[10px] font-black text-cyan-400 uppercase tracking-[0.2em] bg-cyan-950/40 px-2 sm:px-3 py-1.5 rounded-full border border-cyan-500/40 shadow-[0_0_15px_rgba(6,182,212,0.3)]">
+                  <span className="text-[9px] sm:text-[10px] font-bold text-cyan-400 uppercase tracking-[0.2em] bg-cyan-950/40 px-2 sm:px-3 py-1.5 rounded-full border border-cyan-500/40 shadow-[0_0_15px_rgba(6,182,212,0.3)]">
                       {t.onAir}
                   </span>
                   <div className="flex items-center gap-3">
                       <div 
-                        className="bg-gray-900/80 backdrop-blur text-white text-xs sm:text-sm font-mono font-black px-3 py-1.5 rounded-lg border border-gray-700 shadow-lg flex items-center gap-2"
+                        className="bg-gray-900/80 backdrop-blur text-white text-xs sm:text-sm font-mono font-bold px-3 py-1.5 rounded-lg border border-gray-700 shadow-lg flex items-center gap-2"
                         style={{ 
                             animation: bpmValue > 0 ? `bpm-pulse ${animationDuration} ease-in-out infinite` : 'none',
                             willChange: 'transform' 
@@ -98,13 +98,13 @@ export const NowPlaying: React.FC<NowPlayingProps> = ({ track, language }) => {
                           className="w-full h-full rounded-xl sm:rounded-2xl shadow-2xl border border-gray-700/50 transform transition-transform duration-500 group-hover:rotate-y-12"
                           priority={true}
                       />
-                      <div className="absolute -bottom-1 -right-1 sm:-bottom-2 sm:-right-2 bg-black/90 backdrop-blur-md text-white text-[0.6rem] sm:text-[0.7rem] font-black px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-lg border border-gray-700 z-10 shadow-lg">
+                      <div className="absolute -bottom-1 -right-1 sm:-bottom-2 sm:-right-2 bg-black/90 backdrop-blur-md text-white text-[0.6rem] sm:text-[0.7rem] font-bold px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-lg border border-gray-700 z-10 shadow-lg">
                           PLAY {track.playCount}
                       </div>
                   </div>
 
                   <div className="flex-1 min-w-0 flex flex-col justify-center">
-                      <h2 className="text-xl sm:text-4xl font-black text-white leading-[1.1] mb-1 sm:mb-2 break-words tracking-tight">
+                      <h2 className="text-xl sm:text-4xl font-bold text-white leading-[1.1] mb-1 sm:mb-2 break-words tracking-tight">
                           {track.name}
                       </h2>
                       <p className="text-gray-300 font-bold text-base sm:text-xl break-words opacity-90">
@@ -116,7 +116,7 @@ export const NowPlaying: React.FC<NowPlayingProps> = ({ track, language }) => {
               {/* INFO BADGES */}
               <div className="grid grid-cols-4 gap-1.5 sm:gap-2 text-xs">
                   <div className="flex items-center justify-center gap-1 bg-gray-900/40 backdrop-blur-md p-2 sm:p-2.5 rounded-lg sm:rounded-xl border border-white/5">
-                      <span className={`font-black text-xs sm:text-sm ${track.key && track.key.includes('m') ? 'text-cyan-400' : 'text-pink-400'}`}>{track.key}</span>
+                      <span className={`font-bold text-xs sm:text-sm ${track.key && track.key.includes('m') ? 'text-cyan-400' : 'text-pink-400'}`}>{track.key}</span>
                   </div>
                   <div className="flex items-center justify-center gap-1 bg-gray-900/40 backdrop-blur-md p-2 sm:p-2.5 rounded-lg sm:rounded-xl border border-white/5">
                       <ClockIcon className="w-3 h-3 text-gray-400" />
@@ -127,7 +127,7 @@ export const NowPlaying: React.FC<NowPlayingProps> = ({ track, language }) => {
                   </div>
                   <div className="flex items-center justify-center gap-1 bg-gray-900/40 backdrop-blur-md p-2 sm:p-2.5 rounded-lg sm:rounded-xl border border-white/5 overflow-hidden">
                       <TagIcon className="w-3 h-3 text-gray-400 flex-shrink-0" />
-                      <span className="truncate text-[0.6rem] sm:text-[0.7em] font-black uppercase text-gray-300">{track.genre || 'N/A'}</span>
+                      <span className="truncate text-[0.6rem] sm:text-[0.7em] font-bold uppercase text-gray-300">{track.genre || 'N/A'}</span>
                   </div>
               </div>
 
@@ -144,7 +144,7 @@ export const NowPlaying: React.FC<NowPlayingProps> = ({ track, language }) => {
           {isExpanded && (
               <div className="mt-4 pt-3 border-t border-gray-800 animate-in slide-in-from-top-2">
                   <div className="flex justify-between items-center mb-3">
-                      <p className="text-[9px] uppercase font-black text-cyan-400 tracking-[0.2em] flex items-center gap-1.5">
+                      <p className="text-[9px] uppercase font-bold text-cyan-400 tracking-[0.2em] flex items-center gap-1.5">
                           <ZapIcon className="w-3 h-3" />
                           {t.cueAnalysis}
                       </p>
@@ -152,7 +152,7 @@ export const NowPlaying: React.FC<NowPlayingProps> = ({ track, language }) => {
                            <button 
                               onClick={handleGenerateVisual}
                               disabled={isGenerating}
-                              className="text-[9px] font-black bg-white/10 hover:bg-white/20 text-white px-2 py-2 rounded border border-white/10 flex items-center gap-1.5 transition-colors min-h-[30px]"
+                              className="text-[9px] font-bold bg-white/10 hover:bg-white/20 text-white px-2 py-2 rounded border border-white/10 flex items-center gap-1.5 transition-colors min-h-[30px]"
                           >
                               {isGenerating ? t.creating : <><ImageIcon className="w-3 h-3" /> {t.genArt}</>}
                           </button>
@@ -161,8 +161,8 @@ export const NowPlaying: React.FC<NowPlayingProps> = ({ track, language }) => {
                   <div className="grid grid-cols-2 gap-2">
                       {(track.cuePoints || ['Intro', 'Break', 'Drop', 'Outro']).map((cp, i) => (
                           <div key={i} className="flex items-center justify-between bg-black/40 border border-white/5 rounded px-3 py-2 hover:border-cyan-500/30 transition-colors group">
-                              <span className="text-[0.6em] text-gray-500 group-hover:text-cyan-400 font-black uppercase tracking-wider transition-colors">Cue {i + 1}</span>
-                              <span className="text-xs font-black text-white font-mono tracking-wide">{cp}</span>
+                              <span className="text-[0.6em] text-gray-500 group-hover:text-cyan-400 font-bold uppercase tracking-wider transition-colors">Cue {i + 1}</span>
+                              <span className="text-xs font-bold text-white font-mono tracking-wide">{cp}</span>
                           </div>
                       ))}
                   </div>

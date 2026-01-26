@@ -53,11 +53,19 @@ export const parseRekordboxXml = (xmlString: string): Track[] => {
 
     const tracks: Track[] = [];
     trackNodes.forEach((node) => {
+      const locationURI = node.getAttribute('Location') || '';
+      const location = getLastSubfolderFromLocation(locationURI);
+
+      // Filter out DEMO folders (case insensitive)
+      // "ignore e não carregue qualquer diretório que tenha o nome de DEMO"
+      if (location.toUpperCase().includes('DEMO')) {
+        return;
+      }
+
       const key = node.getAttribute('Tonality') || 'N/A';
       const bpmValue = parseFloat(node.getAttribute('AverageBpm') || '0');
       const bpm = isNaN(bpmValue) ? '0.00' : bpmValue.toFixed(2);
       const durationInSeconds = parseFloat(node.getAttribute('TotalTime') || '0');
-      const locationURI = node.getAttribute('Location') || '';
       const genre = node.getAttribute('Genre') || 'N/A';
       const album = node.getAttribute('Album') || 'N/A';
       const name = node.getAttribute('Name') || 'Unknown Track';
@@ -80,7 +88,7 @@ export const parseRekordboxXml = (xmlString: string): Track[] => {
         playCount: parseInt(node.getAttribute('PlayCount') || '0', 10),
         rating: parseInt(node.getAttribute('Rating') || '0', 10),
         duration: formatDuration(durationInSeconds),
-        location: getLastSubfolderFromLocation(locationURI),
+        location: location,
         isSample: isSample,
         color: color,
       });
