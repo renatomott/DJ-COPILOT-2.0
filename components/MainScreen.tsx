@@ -274,7 +274,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({
                 <div className="flex justify-between items-start">
                     <div>
                         <h3 className="text-xl font-bold text-white uppercase italic tracking-wider">{t.identifyPhoto}</h3>
-                        <p className="text-xs text-slate-400 mt-1 max-w-[250px]">{t.photoInstructions}</p>
+                        {/* Description removed for cleaner UI */}
                     </div>
                     <button onClick={() => setShowImageSourceModal(false)} className="bg-slate-800 p-2 rounded-full text-slate-400 hover:text-white">
                         <XIcon className="w-5 h-5" />
@@ -555,7 +555,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({
                     <h3 className="text-sm font-bold text-cyan-400 uppercase tracking-widest mb-2 flex items-center gap-2">
                         <FolderIcon className="w-4 h-4" /> {t.filterPlaylists}
                     </h3>
-                    <p className="text-[10px] text-slate-500 mb-4">{t.filterPlaylistsDesc}</p>
+                    {/* Description text removed */}
                     <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar pr-2">
                         {uniqueDirectories.length > 0 ? uniqueDirectories.map(dir => (
                             <div key={dir} className="flex items-center justify-between p-3 bg-black/40 rounded-xl border border-white/5 cursor-pointer active:scale-95 transition-transform" onClick={() => toggleDirectory(dir)}>
@@ -607,8 +607,8 @@ export const MainScreen: React.FC<MainScreenProps> = ({
                             <span className="text-lg font-bold text-white ml-2">A</span>
                         </div>
                          <div className="flex justify-between px-1 mt-1">
-                             <span className="text-[8px] text-gray-600">100%</span>
-                             <span className="text-[8px] text-gray-600">150%</span>
+                             <span className="text-[8px] text-gray-400">100%</span>
+                             <span className="text-[8px] text-gray-400">150%</span>
                         </div>
                     </div>
                 </section>
