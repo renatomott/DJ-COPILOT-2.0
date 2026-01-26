@@ -57,7 +57,6 @@ export const parseRekordboxXml = (xmlString: string): Track[] => {
       const location = getLastSubfolderFromLocation(locationURI);
 
       // Filter out DEMO folders (case insensitive)
-      // "ignore e não carregue qualquer diretório que tenha o nome de DEMO"
       if (location.toUpperCase().includes('DEMO')) {
         return;
       }
@@ -70,6 +69,26 @@ export const parseRekordboxXml = (xmlString: string): Track[] => {
       const album = node.getAttribute('Album') || 'N/A';
       const name = node.getAttribute('Name') || 'Unknown Track';
       const color = parseColor(node.getAttribute('Colour'));
+
+      // Parse Hot Cues (Position Marks)
+      const cuePoints: string[] = [];
+      // Use Array.from to ensure compatibility
+      const marks = Array.from(node.querySelectorAll('POSITION_MARK'));
+      
+      marks.forEach((mark) => {
+          const numStr = mark.getAttribute('Num');
+          const num = parseInt(numStr || '-1', 10);
+          
+          // Rekordbox Hot Cues: Num 0 to 7 correspond to Hot Cue A to H
+          // Num -1 is usually a Memory Cue
+          if (num >= 0 && num <= 7) {
+              const letter = String.fromCharCode(65 + num); // 0->A, 1->B...
+              const cueName = mark.getAttribute('Name');
+              // Format: "A: Name" or "Hot Cue A"
+              const label = cueName ? `${letter}: ${cueName}` : `Hot Cue ${letter}`;
+              cuePoints.push(label);
+          }
+      });
 
       // Simple heuristic for samples
       const isSample = durationInSeconds < 60 || 
@@ -91,6 +110,7 @@ export const parseRekordboxXml = (xmlString: string): Track[] => {
         location: location,
         isSample: isSample,
         color: color,
+        cuePoints: cuePoints.length > 0 ? cuePoints : undefined,
       });
     });
 

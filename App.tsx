@@ -131,7 +131,19 @@ const App: React.FC = () => {
         const enrichedMap = new Map(enrichedTracks.map(t => [t.id, t]));
         const updatedPlaylist = tracksToEnrich.map(originalTrack => {
             const enriched = enrichedMap.get(originalTrack.id);
-            if (enriched) return { ...originalTrack, ...enriched };
+            if (enriched) {
+                // IMPORTANT: If existing cues (from XML) are present, keep them.
+                // Only use AI suggested cues if original cues are empty or undefined.
+                const mergedCues = (originalTrack.cuePoints && originalTrack.cuePoints.length > 0)
+                    ? originalTrack.cuePoints
+                    : enriched.cuePoints;
+
+                return { 
+                    ...originalTrack, 
+                    ...enriched,
+                    cuePoints: mergedCues
+                };
+            }
             return originalTrack;
         });
         setPlaylist(updatedPlaylist);

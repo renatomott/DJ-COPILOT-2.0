@@ -33,6 +33,34 @@
         width: 0px;
         background: transparent;
       }
+      
+      /* Visualizer Bars Animation */
+      @keyframes sound-bar {
+         0%, 100% { height: 10%; }
+         50% { height: 100%; }
+      }
+      
+      /* Aurora Background Animation */
+      @keyframes aurora {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+      }
+
+      .aurora-bg {
+        background-size: 200% 200%;
+        animation: aurora 15s ease infinite;
+      }
+
+      /* View Transitions Support */
+      ::view-transition-old(root),
+      ::view-transition-new(root) {
+        animation-duration: 0.3s;
+      }
+      
+      .view-transition-cover {
+        view-transition-name: cover-art;
+      }
     </style>
   <script type="importmap">
 {

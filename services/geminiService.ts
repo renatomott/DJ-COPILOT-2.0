@@ -314,8 +314,17 @@ export const generatePlaylist = async (playlist: Track[], vibe: string, isVocal:
 export const enrichPlaylistData = async (playlist: Track[]): Promise<Partial<Track>[]> => {
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const tracksText = playlist.slice(0, 20).map(t => `ID:${t.id}|${t.name}|${t.artist}`).join('\n');
-    const prompt = `Classifique subgênero e energia (1-5) destas faixas. Retorne JSON com array "enrichments":\n\n${tracksText}`;
+    // Increased slice to 50 tracks for better coverage in demo
+    const tracksText = playlist.slice(0, 50).map(t => `ID:${t.id}|${t.name}|${t.artist}`).join('\n');
+    
+    const prompt = `Analise estas faixas. Para cada uma:
+    1. Classifique Subgênero (ex: Tech House).
+    2. Nível Energia (1-5).
+    3. Sugira 3 Cue Points estruturais (ex: Intro, Drop, Break, Outro).
+    
+    Retorne JSON com array "enrichments" (id, subgenre, energy, cuePoints: string[]).
+    \n\n${tracksText}`;
+
     const response = await ai.models.generateContent({
       model: textModel,
       contents: prompt,
@@ -331,7 +340,8 @@ export const enrichPlaylistData = async (playlist: Track[]): Promise<Partial<Tra
                 properties: {
                   id: { type: Type.STRING },
                   subgenre: { type: Type.STRING },
-                  energy: { type: Type.NUMBER }
+                  energy: { type: Type.NUMBER },
+                  cuePoints: { type: Type.ARRAY, items: { type: Type.STRING } }
                 }
               }
             }

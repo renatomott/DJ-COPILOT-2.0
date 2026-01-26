@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import type { Track, Suggestion, ViewMode, GroupingMode } from '../types';
 import { translations } from '../utils/translations';
 import { 
@@ -17,7 +17,10 @@ import {
     ImageIcon,
     XIcon,
     StarIcon,
-    AlertTriangleIcon
+    AlertTriangleIcon,
+    GitMergeIcon,
+    PlusIcon,
+    ZapIcon
 } from './icons';
 import { NowPlaying } from './NowPlaying';
 import { SuggestionPanel } from './SuggestionPanel';
@@ -28,6 +31,7 @@ import { Header } from './Header';
 import { identifyTrackFromImage } from '../services/geminiService';
 import { fileToBase64 } from '../utils/fileUtils';
 import { detectClash } from '../utils/harmonicUtils';
+import { MashupFinder } from './MashupFinder';
 
 interface MainScreenProps {
   playlist: Track[];
@@ -96,14 +100,18 @@ export const MainScreen: React.FC<MainScreenProps> = ({
   groupingMode,
   onGroupingModeChange
 }) => {
-  const [activeTab, setActiveTab] = useState<'deck' | 'library' | 'builder' | 'setup'>('library');
+  const [activeTab, setActiveTab] = useState<'deck' | 'library' | 'mashup' | 'builder' | 'setup'>('library');
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState<FilterState>({ minBpm: '', maxBpm: '', keys: [], genres: [] });
   const [expandedFolders, setExpandedFolders] = useState<string[]>([]);
+  const [expandedTrackId, setExpandedTrackId] = useState<string | null>(null);
   const [isIdentifying, setIsIdentifying] = useState(false);
   const [showImageSourceModal, setShowImageSourceModal] = useState(false);
   
-  // Two separate refs for different behaviors on mobile
+  // Swipe Logic Refs
+  const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
+
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
@@ -113,18 +121,71 @@ export const MainScreen: React.FC<MainScreenProps> = ({
     if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(10);
   };
 
+  // REACTIVE BACKGROUND COLOR
+  const bgGradient = useMemo(() => {
+    if (!currentTrack || isHighContrast) return 'bg-[#020617]';
+    
+    // Determine color based on Key (Camelot simplified) or Energy
+    const key = currentTrack.key || '';
+    let fromColor = 'from-slate-900';
+    let toColor = 'to-black';
+
+    if (key.includes('m')) { // Minor keys = Cooler colors
+        if (key.startsWith('1') || key.startsWith('2')) fromColor = 'from-indigo-950'; // 1A-2A
+        else if (key.startsWith('3') || key.startsWith('4')) fromColor = 'from-green-950'; // 3A-4A
+        else if (key.startsWith('8') || key.startsWith('9')) fromColor = 'from-rose-950'; // 8A-9A (High energy)
+        else fromColor = 'from-slate-900';
+    } else { // Major keys = Warmer colors
+        if (key.startsWith('8') || key.startsWith('9')) fromColor = 'from-orange-950';
+        else fromColor = 'from-cyan-950';
+    }
+
+    return `bg-gradient-to-br ${fromColor} via-slate-950 ${toColor}`;
+  }, [currentTrack, isHighContrast]);
+
+  const handleSwipeStart = (e: React.TouchEvent) => {
+      touchStartX.current = e.touches[0].clientX;
+      touchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleSwipeEnd = (e: React.TouchEvent) => {
+      const touchEndX = e.changedTouches[0].clientX;
+      const touchEndY = e.changedTouches[0].clientY;
+      
+      const diffX = touchEndX - touchStartX.current;
+      const diffY = touchEndY - touchStartY.current;
+
+      // Only horizontal swipes
+      if (Math.abs(diffX) > 80 && Math.abs(diffY) < 60) {
+          const tabs: ('deck' | 'library' | 'mashup' | 'builder' | 'setup')[] = ['deck', 'library', 'mashup', 'builder', 'setup'];
+          const currentIndex = tabs.indexOf(activeTab);
+          
+          if (diffX < 0 && currentIndex < tabs.length - 1) {
+              setActiveTab(tabs[currentIndex + 1]);
+          } else if (diffX > 0 && currentIndex > 0) {
+              setActiveTab(tabs[currentIndex - 1]);
+          }
+      }
+  };
+
   const handleSelectTrack = (track: Track) => {
     setCurrentTrack(track);
     setActiveTab('deck');
     triggerHaptic();
   };
 
+  const handleToggleExpandTrack = (trackId: string) => {
+      setExpandedTrackId(prev => (prev === trackId ? null : trackId));
+  };
+
   const handleAddToQueue = (e: React.MouseEvent, track: Track) => {
     e.stopPropagation();
     setQueue(prev => [...prev, track]);
+    // Enhanced Visual Feedback could be a toast here, but haptic for now
     triggerHaptic();
   };
 
+  // ... (Identical helper functions from original file: toggleDirectory, toggleFolderAccordion, handleImageUpload, useMemos) ...
   const toggleDirectory = (dir: string) => {
     setEnabledDirectories(
         enabledDirectories.includes(dir) 
@@ -142,43 +203,23 @@ export const MainScreen: React.FC<MainScreenProps> = ({
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    setShowImageSourceModal(false); // Close modal if open
+    setShowImageSourceModal(false);
     setIsIdentifying(true);
     try {
         const base64 = await fileToBase64(file);
         const { title, artist } = await identifyTrackFromImage(base64);
-        
         if (title || artist) {
-            // Fuzzy search in playlist
-            const searchTerms = [title, artist].filter(Boolean).join(' ').toLowerCase();
             const found = playlist.find(t => {
                 const trackStr = `${t.name} ${t.artist}`.toLowerCase();
-                return trackStr.includes(title?.toLowerCase() || '_____') || 
-                       (title && t.name.toLowerCase().includes(title.toLowerCase()));
+                return trackStr.includes(title?.toLowerCase() || '_____') || (title && t.name.toLowerCase().includes(title.toLowerCase()));
             });
-
-            if (found) {
-                handleSelectTrack(found);
-                alert(t.trackFound + ` ${found.name}`);
-            } else {
-                alert(`${t.trackNotFound} (${title} - ${artist})`);
-            }
-        } else {
-            alert(t.errorIdentify);
-        }
-    } catch (err) {
-        console.error(err);
-        alert(t.errorIdentify);
-    } finally {
-        setIsIdentifying(false);
-        // Reset inputs
-        if (cameraInputRef.current) cameraInputRef.current.value = '';
-        if (galleryInputRef.current) galleryInputRef.current.value = '';
-    }
+            if (found) { handleSelectTrack(found); alert(t.trackFound + ` ${found.name}`); } 
+            else { alert(`${t.trackNotFound} (${title} - ${artist})`); }
+        } else { alert(t.errorIdentify); }
+    } catch (err) { console.error(err); alert(t.errorIdentify); } 
+    finally { setIsIdentifying(false); if (cameraInputRef.current) cameraInputRef.current.value = ''; if (galleryInputRef.current) galleryInputRef.current.value = ''; }
   };
 
-  // Clash Detector Check (Current vs Next)
   const nextTrackInfo = useMemo(() => {
     if (queue.length === 0) return null;
     const currentIndex = currentTrack ? queue.findIndex(t => t.id === currentTrack.id) : -1;
@@ -186,453 +227,214 @@ export const MainScreen: React.FC<MainScreenProps> = ({
     if (nextIndex < queue.length) {
         const nextTrack = queue[nextIndex];
         const clashInfo = currentTrack ? detectClash(currentTrack.key, currentTrack.bpm, nextTrack.key, nextTrack.bpm) : null;
-        return { 
-            track: nextTrack, 
-            currentNum: nextIndex + 1, 
-            totalNum: queue.length,
-            clash: clashInfo
-        };
+        return { track: nextTrack, clash: clashInfo };
     }
     return null;
   }, [queue, currentTrack]);
 
   const availableKeys = useMemo(() => Array.from(new Set(playlist.map(t => t.key))).sort(), [playlist]);
   const availableGenres = useMemo(() => Array.from(new Set(playlist.map(t => t.genre))).sort(), [playlist]);
-  
   const uniqueDirectories = useMemo(() => {
-      const validTracks = playlist.filter(t => {
-         const [m, s] = t.duration.split(':').map(Number);
-         return (m * 60 + s) >= 60;
-      });
+      const validTracks = playlist.filter(t => { const [m, s] = t.duration.split(':').map(Number); return (m * 60 + s) >= 60; });
       return Array.from(new Set(validTracks.map(t => t.location))).sort();
   }, [playlist]);
 
   const filteredPlaylist = useMemo(() => {
     return playlist.filter(track => {
-      // 0. Duration Check (Ignore < 60s)
       const [m, s] = track.duration.split(':').map(Number);
       if ((m * 60 + s) < 60) return false;
-
-      // 1. Directory Filter
       if (!enabledDirectories.includes(track.location)) return false;
-
-      // 2. Search
-      const matchesSearch = track.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                            track.artist.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      // 3. Filters
+      const matchesSearch = track.name.toLowerCase().includes(searchQuery.toLowerCase()) || track.artist.toLowerCase().includes(searchQuery.toLowerCase());
       const bpm = parseFloat(track.bpm);
       const matchesMinBpm = !filters.minBpm || bpm >= parseFloat(filters.minBpm);
       const matchesMaxBpm = !filters.maxBpm || bpm <= parseFloat(filters.maxBpm);
       const matchesKeys = filters.keys.length === 0 || filters.keys.includes(track.key);
       const matchesGenres = filters.genres.length === 0 || filters.genres.includes(track.genre);
-
       return matchesSearch && matchesMinBpm && matchesMaxBpm && matchesKeys && matchesGenres;
     });
   }, [playlist, searchQuery, filters, enabledDirectories]);
 
   const groupedPlaylist = useMemo(() => {
     const groups: Record<string, Track[]> = {};
-    filteredPlaylist.forEach(track => {
-      if (!groups[track.location]) groups[track.location] = [];
-      groups[track.location].push(track);
-    });
+    filteredPlaylist.forEach(track => { if (!groups[track.location]) groups[track.location] = []; groups[track.location].push(track); });
     return groups;
   }, [filteredPlaylist]);
 
-  useMemo(() => {
-      if (searchQuery || filters.keys.length > 0 || filters.genres.length > 0) {
-          setExpandedFolders(Object.keys(groupedPlaylist));
-      }
-  }, [searchQuery, filters, groupedPlaylist]);
+  useMemo(() => { if (searchQuery || filters.keys.length > 0 || filters.genres.length > 0) { setExpandedFolders(Object.keys(groupedPlaylist)); } }, [searchQuery, filters, groupedPlaylist]);
+
+  // SMART CHIPS LOGIC
+  const smartChips = useMemo(() => {
+      if (!currentTrack) return [];
+      const bpm = Math.round(parseFloat(currentTrack.bpm));
+      return [
+          { label: `~${bpm} BPM`, action: () => setFilters(prev => ({ ...prev, minBpm: (bpm-5).toString(), maxBpm: (bpm+5).toString() })) },
+          { label: `${currentTrack.key}`, action: () => setFilters(prev => ({ ...prev, keys: [currentTrack.key] })) },
+          { label: `Mesma Pasta`, action: () => { setSearchQuery(currentTrack.location); onGroupingModeChange('all'); } }
+      ];
+  }, [currentTrack, onGroupingModeChange]);
 
   return (
-    <div className={`min-h-screen bg-[#020617] text-slate-200 font-sans selection:bg-cyan-500/30 ${isHighContrast ? 'contrast-125 grayscale' : ''}`}>
+    <div 
+        className={`min-h-screen text-slate-200 font-sans selection:bg-cyan-500/30 transition-colors duration-1000 ease-in-out ${isHighContrast ? 'contrast-125 grayscale bg-black' : bgGradient} ${!isHighContrast && 'aurora-bg'}`}
+        onTouchStart={handleSwipeStart}
+        onTouchEnd={handleSwipeEnd}
+    >
       <Header onReset={onReset} />
       
-      {/* Hidden Inputs for different sources */}
-      <input 
-          type="file" 
-          ref={galleryInputRef} 
-          className="hidden" 
-          accept="image/*" 
-          onChange={handleImageUpload} 
-      />
-      <input 
-          type="file" 
-          ref={cameraInputRef} 
-          className="hidden" 
-          accept="image/*" 
-          capture="environment" 
-          onChange={handleImageUpload} 
-      />
+      {/* Hidden Inputs */}
+      <input type="file" ref={galleryInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
+      <input type="file" ref={cameraInputRef} className="hidden" accept="image/*" capture="environment" onChange={handleImageUpload} />
 
       {/* Image Source Selection Modal */}
       {showImageSourceModal && (
         <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-4 animate-in fade-in duration-200">
             <div className="bg-slate-900 border border-slate-700 w-full max-w-sm rounded-3xl p-6 shadow-2xl space-y-4 animate-in slide-in-from-bottom-10 duration-300">
                 <div className="flex justify-between items-start">
-                    <div>
-                        <h3 className="text-xl font-bold text-white uppercase italic tracking-wider">{t.identifyPhoto}</h3>
-                        {/* Description removed for cleaner UI */}
-                    </div>
-                    <button onClick={() => setShowImageSourceModal(false)} className="bg-slate-800 p-2 rounded-full text-slate-400 hover:text-white">
-                        <XIcon className="w-5 h-5" />
-                    </button>
+                    <div><h3 className="text-xl font-bold text-white uppercase italic tracking-wider">{t.identifyPhoto}</h3></div>
+                    <button onClick={() => setShowImageSourceModal(false)} className="bg-slate-800 p-2 rounded-full text-slate-400 hover:text-white"><XIcon className="w-5 h-5" /></button>
                 </div>
-                
                 <div className="grid grid-cols-1 gap-3 pt-2">
-                    <button 
-                        onClick={() => cameraInputRef.current?.click()}
-                        className="flex items-center gap-4 p-4 bg-cyan-600 hover:bg-cyan-500 rounded-2xl transition-all group active:scale-95"
-                    >
-                        <div className="bg-black/20 p-3 rounded-xl group-hover:bg-black/30 transition-colors">
-                            <CameraIcon className="w-6 h-6 text-white" />
-                        </div>
-                        <div className="text-left">
-                            <span className="block text-sm font-bold text-white uppercase tracking-widest">{t.takePhoto}</span>
-                            <span className="block text-[10px] text-cyan-100">{t.openCamera}</span>
-                        </div>
-                    </button>
-
-                    <button 
-                        onClick={() => galleryInputRef.current?.click()}
-                        className="flex items-center gap-4 p-4 bg-slate-800 hover:bg-slate-700 rounded-2xl transition-all group active:scale-95 border border-slate-700"
-                    >
-                         <div className="bg-black/20 p-3 rounded-xl group-hover:bg-black/30 transition-colors">
-                            <ImageIcon className="w-6 h-6 text-cyan-400" />
-                        </div>
-                        <div className="text-left">
-                            <span className="block text-sm font-bold text-white uppercase tracking-widest">{t.chooseGallery}</span>
-                            <span className="block text-[10px] text-slate-400">{t.openPhotos}</span>
-                        </div>
-                    </button>
+                    <button onClick={() => cameraInputRef.current?.click()} className="flex items-center gap-4 p-4 bg-cyan-600 hover:bg-cyan-500 rounded-2xl transition-all group active:scale-95"><div className="bg-black/20 p-3 rounded-xl group-hover:bg-black/30 transition-colors"><CameraIcon className="w-6 h-6 text-white" /></div><div className="text-left"><span className="block text-sm font-bold text-white uppercase tracking-widest">{t.takePhoto}</span><span className="block text-[10px] text-cyan-100">{t.openCamera}</span></div></button>
+                    <button onClick={() => galleryInputRef.current?.click()} className="flex items-center gap-4 p-4 bg-slate-800 hover:bg-slate-700 rounded-2xl transition-all group active:scale-95 border border-slate-700"><div className="bg-black/20 p-3 rounded-xl group-hover:bg-black/30 transition-colors"><ImageIcon className="w-6 h-6 text-cyan-400" /></div><div className="text-left"><span className="block text-sm font-bold text-white uppercase tracking-widest">{t.chooseGallery}</span><span className="block text-[10px] text-slate-400">{t.openPhotos}</span></div></button>
                 </div>
             </div>
         </div>
       )}
 
-      <main className="container mx-auto px-4 pt-20 pb-20 max-w-lg">
+      {/* Main Container */}
+      <main className="container mx-auto px-4 pt-20 pb-24 md:pb-8 md:pt-24 max-w-xl md:max-w-5xl transition-all duration-300">
+        
+        {/* TAB: DECK */}
         {activeTab === 'deck' && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             {currentTrack ? (
               <>
-                {/* Clash Alert in Deck View if next track is set and clashes */}
                 {nextTrackInfo?.clash?.hasClash && (
                     <div className="mb-4 bg-red-950/40 border border-red-500/30 rounded-xl p-3 flex items-center gap-3 animate-pulse">
                         <AlertTriangleIcon className="w-6 h-6 text-red-500" />
-                        <div>
-                            <p className="text-xs font-bold text-red-400 uppercase tracking-widest">Clash Warning</p>
-                            <p className="text-[10px] text-red-300/80">{nextTrackInfo.clash.reasons.join(', ')}</p>
-                        </div>
+                        <div><p className="text-xs font-bold text-red-400 uppercase tracking-widest">Clash Warning</p><p className="text-[10px] text-red-300/80">{nextTrackInfo.clash.reasons.join(', ')}</p></div>
                     </div>
                 )}
-
-                <NowPlaying track={currentTrack} language={language} />
-                <SuggestionPanel 
-                  currentTrack={currentTrack} 
-                  playlist={playlist.filter(t => enabledDirectories.includes(t.location))} 
-                  suggestions={suggestions}
-                  setSuggestions={setSuggestions}
-                  onSelectTrack={handleSelectTrack}
-                  onAddToQueue={(t) => setQueue(prev => [...prev, t])}
-                  language={language}
-                />
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                    <div className="md:col-span-12"><NowPlaying track={currentTrack} language={language} /></div>
+                    <div className="md:col-span-12"><SuggestionPanel currentTrack={currentTrack} playlist={playlist.filter(t => enabledDirectories.includes(t.location))} suggestions={suggestions} setSuggestions={setSuggestions} onSelectTrack={handleSelectTrack} onAddToQueue={(t) => setQueue(prev => [...prev, t])} language={language} /></div>
+                </div>
               </>
             ) : (
               <div className="text-center py-20 flex flex-col items-center">
-                <div className="w-24 h-24 bg-slate-800/50 rounded-full flex items-center justify-center mb-6 relative">
-                    <PlayIcon className="w-10 h-10 text-slate-500" />
-                    <div className="absolute -bottom-2 -right-2 bg-cyan-600 rounded-full p-2 animate-bounce">
-                        <CameraIcon className="w-5 h-5 text-white" />
-                    </div>
-                </div>
-                
+                <div className="w-24 h-24 bg-slate-800/50 rounded-full flex items-center justify-center mb-6 relative"><PlayIcon className="w-10 h-10 text-slate-500" /><div className="absolute -bottom-2 -right-2 bg-cyan-600 rounded-full p-2 animate-bounce"><CameraIcon className="w-5 h-5 text-white" /></div></div>
                 <h2 className="text-xl font-bold uppercase tracking-widest text-white mb-2">{t.deckEmptyTitle}</h2>
                 <p className="text-sm text-slate-400 max-w-xs">{t.deckEmptyMsg}</p>
-                
                 <div className="mt-8 flex flex-col gap-3 w-full max-w-xs">
-                    <button 
-                        onClick={() => setShowImageSourceModal(true)}
-                        disabled={isIdentifying}
-                        className="w-full py-4 bg-cyan-600 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-cyan-500 transition-all flex items-center justify-center gap-2 shadow-lg shadow-cyan-900/20"
-                    >
-                        {isIdentifying ? (
-                            <RefreshCwIcon className="w-4 h-4 animate-spin" />
-                        ) : (
-                            <CameraIcon className="w-4 h-4" />
-                        )}
-                        {isIdentifying ? t.analyzing : t.identifyBtn}
-                    </button>
-                    
-                    <button 
-                        onClick={() => setActiveTab('library')}
-                        className="w-full py-4 bg-slate-800 text-slate-300 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-700 transition-all border border-slate-700"
-                    >
-                        {t.openLib}
-                    </button>
+                    <button onClick={() => setShowImageSourceModal(true)} disabled={isIdentifying} className="w-full py-4 bg-cyan-600 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-cyan-500 transition-all flex items-center justify-center gap-2 shadow-lg shadow-cyan-900/20">{isIdentifying ? (<RefreshCwIcon className="w-4 h-4 animate-spin" />) : (<CameraIcon className="w-4 h-4" />)} {isIdentifying ? t.analyzing : t.identifyBtn}</button>
+                    <button onClick={() => setActiveTab('library')} className="w-full py-4 bg-slate-800 text-slate-300 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-700 transition-all border border-slate-700">{t.openLib}</button>
                 </div>
               </div>
             )}
-            
-            {nextTrackInfo && (
-                <div className="fixed bottom-16 left-4 right-4 z-[100] pointer-events-none">
-                    <div className={`pointer-events-auto w-full backdrop-blur-xl text-white rounded-2xl p-3 shadow-[0_10px_40px_rgba(0,0,0,0.4)] border flex items-center min-h-[70px] animate-in slide-in-from-bottom-5 active:scale-[0.98] transition-all ${nextTrackInfo.clash?.hasClash ? 'bg-red-950/90 border-red-500/40' : 'bg-cyan-600/90 border-cyan-400/30'}`}>
-                        <button 
-                            onClick={(e) => { e.stopPropagation(); triggerHaptic(); handleSelectTrack(nextTrackInfo.track); }}
-                            className="bg-black/30 p-3 rounded-xl flex-shrink-0 shadow-inner hover:bg-black/50 transition-colors mr-3 active:scale-90"
-                        >
-                            <PlayIcon className="w-5 h-5 text-white" />
-                        </button>
-                        <div className="flex-1 overflow-hidden">
-                             <div className="flex justify-between items-center mb-0.5">
-                                <p className="text-[9px] font-bold uppercase tracking-[0.2em] opacity-80 flex items-center gap-2">
-                                    {nextTrackInfo.clash?.hasClash && <AlertTriangleIcon className="w-3 h-3 text-white animate-pulse" />}
-                                    {t.nextInQueue}
-                                </p>
-                                <div className="flex items-center gap-1.5 opacity-80">
-                                    <span className="text-[9px] font-mono text-white">{nextTrackInfo.track.duration}</span>
-                                    {renderRatingMini(nextTrackInfo.track.rating)}
-                                </div>
-                             </div>
-                             <p className="text-sm font-bold truncate text-white tracking-tight leading-tight">{nextTrackInfo.track.name}</p>
-                             <p className="text-[10px] truncate opacity-70 mt-0.5">{nextTrackInfo.track.location}</p>
-                        </div>
-                    </div>
-                </div>
-            )}
+            {nextTrackInfo && (<div className="fixed bottom-24 left-4 right-4 z-[80] pointer-events-none flex justify-center"><div className={`pointer-events-auto w-full max-w-lg backdrop-blur-xl text-white rounded-2xl p-3 shadow-[0_10px_40px_rgba(0,0,0,0.4)] border flex items-center min-h-[70px] animate-in slide-in-from-bottom-5 active:scale-[0.98] transition-all ${nextTrackInfo.clash?.hasClash ? 'bg-red-950/90 border-red-500/40' : 'bg-cyan-600/90 border-cyan-400/30'}`}><button onClick={(e) => { e.stopPropagation(); triggerHaptic(); handleSelectTrack(nextTrackInfo.track); }} className="bg-black/30 p-3 rounded-xl flex-shrink-0 shadow-inner hover:bg-black/50 transition-colors mr-3 active:scale-90"><PlayIcon className="w-5 h-5 text-white" /></button><div className="flex-1 overflow-hidden"><div className="flex justify-between items-center mb-0.5"><p className="text-[9px] font-bold uppercase tracking-[0.2em] opacity-80 flex items-center gap-2">{nextTrackInfo.clash?.hasClash && <AlertTriangleIcon className="w-3 h-3 text-white animate-pulse" />}{t.nextInQueue}</p><div className="flex items-center gap-1.5 opacity-80"><span className="text-[9px] font-mono text-white">{nextTrackInfo.track.duration}</span>{renderRatingMini(nextTrackInfo.track.rating)}</div></div><p className="text-sm font-bold truncate text-white tracking-tight leading-tight">{nextTrackInfo.track.name}</p><p className="text-[10px] truncate opacity-70 mt-0.5">{nextTrackInfo.track.location}</p></div></div></div>)}
           </div>
         )}
 
-        {/* ... Library, Builder, Setup tabs ... */}
+        {/* TAB: LIBRARY */}
         {activeTab === 'library' && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="flex gap-2 mb-4">
+            <div className="flex gap-2 mb-2">
                 <div className="relative flex-1">
-                    <input 
-                        type="text" 
-                        placeholder={t.searchPlaceholder}
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-800 rounded-2xl px-5 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all pl-11 min-h-[50px]"
-                    />
+                    <input type="text" placeholder={t.searchPlaceholder} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-2xl px-5 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all pl-11 min-h-[50px]" />
                     <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                 </div>
-                
-                {/* View Mode Toggle (Card/List) */}
-                <button 
-                    onClick={() => onViewModeChange(viewMode === 'card' ? 'list' : 'card')} 
-                    className={`px-4 rounded-2xl border transition-all flex items-center justify-center ${viewMode === 'list' ? 'bg-cyan-600 border-cyan-400 text-white' : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-cyan-400'}`}
-                    title="Alternar Visualização"
-                >
-                    {viewMode === 'card' ? <LayersIcon className="w-5 h-5" /> : <ListIcon className="w-5 h-5" />}
-                </button>
-                
-                {/* Grouping Toggle (All/Folder) */}
-                <button 
-                    onClick={() => onGroupingModeChange(groupingMode === 'all' ? 'folder' : 'all')} 
-                    className={`px-4 rounded-2xl border transition-all flex items-center justify-center ${groupingMode === 'folder' ? 'bg-cyan-600 border-cyan-400 text-white' : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-cyan-400'}`}
-                    title="Agrupar por Pastas"
-                >
-                    <FolderIcon className="w-5 h-5" />
-                </button>
+                <button onClick={() => onViewModeChange(viewMode === 'card' ? 'list' : 'card')} className={`px-4 rounded-2xl border transition-all flex items-center justify-center ${viewMode === 'list' ? 'bg-cyan-600 border-cyan-400 text-white' : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-cyan-400'}`} title="Alternar Visualização">{viewMode === 'card' ? <LayersIcon className="w-5 h-5" /> : <ListIcon className="w-5 h-5" />}</button>
+                <button onClick={() => onGroupingModeChange(groupingMode === 'all' ? 'folder' : 'all')} className={`px-4 rounded-2xl border transition-all flex items-center justify-center ${groupingMode === 'folder' ? 'bg-cyan-600 border-cyan-400 text-white' : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-cyan-400'}`} title="Agrupar por Pastas"><FolderIcon className="w-5 h-5" /></button>
             </div>
 
-            <LibraryFilters 
-                availableKeys={availableKeys}
-                availableGenres={availableGenres}
-                onFilterChange={setFilters}
-                initialFilters={filters}
-            />
+            {/* Smart Chips */}
+            {currentTrack && (
+                <div className="flex gap-2 mb-3 overflow-x-auto custom-scrollbar pb-1">
+                    {smartChips.map((chip, idx) => (
+                        <button key={idx} onClick={chip.action} className="bg-white/10 hover:bg-cyan-600 hover:text-white px-3 py-1 rounded-full text-[10px] font-bold text-cyan-300 border border-white/5 whitespace-nowrap transition-colors">
+                            {chip.label}
+                        </button>
+                    ))}
+                </div>
+            )}
 
+            <LibraryFilters availableKeys={availableKeys} availableGenres={availableGenres} onFilterChange={setFilters} initialFilters={filters} />
+            
             <div className="mt-4">
                  <div className="flex justify-between items-center px-1 mb-2">
                     <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">{t.navLib}</span>
                     <div className="flex gap-2">
-                         <button onClick={onEnrich} disabled={isEnriching} className="text-[10px] font-bold text-cyan-500 flex items-center gap-1 disabled:opacity-50">
-                            <RefreshCwIcon className={`w-3 h-3 ${isEnriching ? 'animate-spin' : ''}`} /> ENRICH
-                         </button>
+                         <button onClick={onEnrich} disabled={isEnriching} className="text-[10px] font-bold text-cyan-500 flex items-center gap-1 disabled:opacity-50"><RefreshCwIcon className={`w-3 h-3 ${isEnriching ? 'animate-spin' : ''}`} /> ENRICH</button>
                     </div>
                 </div>
-
                 {groupingMode === 'all' ? (
-                    <div className={viewMode === 'card' ? 'space-y-2' : 'space-y-1.5'}>
-                        {filteredPlaylist.map(track => (
-                            <TrackItem 
-                                key={track.id} 
-                                track={track} 
-                                onSelect={handleSelectTrack}
-                                isSelected={currentTrack?.id === track.id}
-                                onAddToQueue={handleAddToQueue}
-                                variant={viewMode}
-                            />
-                        ))}
+                    <div className={viewMode === 'card' ? 'grid grid-cols-1 md:grid-cols-2 gap-2' : 'space-y-1.5'}>
+                        {filteredPlaylist.map(track => (<TrackItem key={track.id} track={track} onSelect={handleSelectTrack} isSelected={currentTrack?.id === track.id} isExpanded={expandedTrackId === track.id} onToggleExpand={() => handleToggleExpandTrack(track.id)} onAddToQueue={handleAddToQueue} variant={viewMode} />))}
                     </div>
                 ) : (
                     <div className="space-y-3">
                         {Object.entries(groupedPlaylist).map(([folder, tracks]: [string, Track[]]) => (
                             <div key={folder} className="bg-slate-900/40 rounded-2xl border border-slate-800 overflow-hidden">
-                                <button 
-                                    onClick={() => toggleFolderAccordion(folder)}
-                                    className="w-full p-4 flex items-center justify-between hover:bg-white/5 transition-colors sticky top-0 z-10 bg-slate-900/90 backdrop-blur-sm"
-                                >
-                                    <div className="flex items-center gap-3 overflow-hidden">
-                                        <FolderIcon className="w-4 h-4 text-cyan-500 flex-shrink-0" />
-                                        <span className="text-xs font-bold uppercase text-white break-words text-left">{folder}</span>
-                                        <span className="text-xs font-bold text-slate-500 bg-black/40 px-2 py-0.5 rounded-full flex-shrink-0">{tracks.length}</span>
-                                    </div>
-                                    <ChevronDownIcon className={`w-4 h-4 text-slate-500 transition-transform duration-300 flex-shrink-0 ${expandedFolders.includes(folder) ? 'rotate-180' : ''}`} />
-                                </button>
-                                {expandedFolders.includes(folder) && (
-                                    <div className={`p-2 ${viewMode === 'card' ? 'space-y-1' : 'space-y-0.5'} border-t border-slate-800 bg-black/20 animate-in slide-in-from-top-2`}>
-                                        {tracks.map(track => (
-                                            <TrackItem 
-                                                key={track.id} 
-                                                track={track} 
-                                                onSelect={handleSelectTrack}
-                                                isSelected={currentTrack?.id === track.id}
-                                                onAddToQueue={handleAddToQueue}
-                                                variant={viewMode}
-                                            />
-                                        ))}
-                                    </div>
-                                )}
+                                <button onClick={() => toggleFolderAccordion(folder)} className="w-full p-4 flex items-center justify-between hover:bg-white/5 transition-colors sticky top-0 z-10 bg-slate-900/90 backdrop-blur-sm"><div className="flex items-center gap-3 overflow-hidden"><FolderIcon className="w-4 h-4 text-cyan-500 flex-shrink-0" /><span className="text-xs font-bold uppercase text-white break-words text-left">{folder}</span><span className="text-xs font-bold text-slate-500 bg-black/40 px-2 py-0.5 rounded-full flex-shrink-0">{tracks.length}</span></div><ChevronDownIcon className={`w-4 h-4 text-slate-500 transition-transform duration-300 flex-shrink-0 ${expandedFolders.includes(folder) ? 'rotate-180' : ''}`} /></button>
+                                {expandedFolders.includes(folder) && (<div className={`p-2 border-t border-slate-800 bg-black/20 animate-in slide-in-from-top-2 ${viewMode === 'card' ? 'grid grid-cols-1 md:grid-cols-2 gap-2' : 'space-y-0.5'}`}>{tracks.map(track => (<TrackItem key={track.id} track={track} onSelect={handleSelectTrack} isSelected={currentTrack?.id === track.id} isExpanded={expandedTrackId === track.id} onToggleExpand={() => handleToggleExpandTrack(track.id)} onAddToQueue={handleAddToQueue} variant={viewMode} />))}</div>)}
                             </div>
                         ))}
                     </div>
                 )}
             </div>
+            {/* Contextual FAB for Library */}
+            <div className="fixed bottom-24 right-4 z-50">
+                 <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="w-12 h-12 bg-cyan-600 rounded-full shadow-2xl flex items-center justify-center text-white active:scale-90 transition-transform"><SearchIcon className="w-5 h-5" /></button>
+            </div>
           </div>
         )}
-
-        {activeTab === 'builder' && (
-          <SetBuilder 
-            queue={queue}
-            setQueue={setQueue}
-            onSelectTrack={handleSelectTrack}
-            currentTrackId={currentTrack?.id}
-            language={language}
-            fullPlaylist={playlist}
-          />
+        
+        {/* TAB: MASHUPS (New) */}
+        {activeTab === 'mashup' && (
+            <MashupFinder playlist={playlist} onSelectTrack={handleSelectTrack} onAddToQueue={(t) => setQueue(prev => [...prev, t])} language={language} />
         )}
 
+        {/* TAB: BUILDER */}
+        {activeTab === 'builder' && (
+          <SetBuilder queue={queue} setQueue={setQueue} onSelectTrack={handleSelectTrack} currentTrackId={currentTrack?.id} language={language} fullPlaylist={playlist} />
+        )}
+
+        {/* TAB: SETUP */}
         {activeTab === 'setup' && (
-            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-4">
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-4 max-w-2xl mx-auto">
                 <h2 className="text-2xl font-bold text-white px-2 mb-2">{t.settingsTitle}</h2>
-                
-                {/* 1. AUTOMAÇÃO IA */}
-                <section className="bg-slate-900/50 border border-slate-800 rounded-3xl p-6 transition-all hover:bg-slate-900/70">
-                    <h3 className="text-sm font-bold text-cyan-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                        <RefreshCwIcon className="w-4 h-4" /> {t.automationTitle}
-                    </h3>
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-sm font-bold text-white">{t.autoEnrichTitle}</p>
-                        </div>
-                        <button onClick={() => onAutoEnrichChange(!autoEnrichEnabled)} className={`w-12 h-6 rounded-full transition-colors relative ${autoEnrichEnabled ? 'bg-cyan-500' : 'bg-slate-800'}`}>
-                            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${autoEnrichEnabled ? 'right-1' : 'left-1'}`} />
-                        </button>
-                    </div>
-                </section>
-
-                {/* 2. IDIOMA */}
-                <section className="bg-slate-900/50 border border-slate-800 rounded-3xl p-6 transition-all hover:bg-slate-900/70">
-                    <h3 className="text-sm font-bold text-cyan-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                        <GlobeIcon className="w-4 h-4" /> {t.langTitle}
-                    </h3>
-                    <div className="flex p-1 bg-black/60 rounded-xl border border-white/5">
-                        <button onClick={() => setLanguage('pt-BR')} className={`flex-1 py-3 text-[10px] font-bold uppercase rounded-lg transition-all ${language === 'pt-BR' ? 'bg-cyan-600 text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}>
-                            Português
-                        </button>
-                        <button onClick={() => setLanguage('en-US')} className={`flex-1 py-3 text-[10px] font-bold uppercase rounded-lg transition-all ${language === 'en-US' ? 'bg-cyan-600 text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}>
-                            English
-                        </button>
-                    </div>
-                </section>
-
-                {/* 3. LISTA DE DIRETÓRIOS */}
-                <section className="bg-slate-900/50 border border-slate-800 rounded-3xl p-6 transition-all hover:bg-slate-900/70">
-                    <h3 className="text-sm font-bold text-cyan-400 uppercase tracking-widest mb-2 flex items-center gap-2">
-                        <FolderIcon className="w-4 h-4" /> {t.filterPlaylists}
-                    </h3>
-                    {/* Description text removed */}
-                    <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar pr-2">
-                        {uniqueDirectories.length > 0 ? uniqueDirectories.map(dir => (
-                            <div key={dir} className="flex items-center justify-between p-3 bg-black/40 rounded-xl border border-white/5 cursor-pointer active:scale-95 transition-transform" onClick={() => toggleDirectory(dir)}>
-                                <div className="flex items-center gap-3 overflow-hidden">
-                                    <FolderIcon className={`w-4 h-4 ${enabledDirectories.includes(dir) ? 'text-cyan-500' : 'text-slate-700'}`} />
-                                    <span className={`text-[11px] font-bold truncate ${enabledDirectories.includes(dir) ? 'text-white' : 'text-slate-600'}`}>{dir}</span>
-                                </div>
-                                <button className={`w-10 h-5 rounded-full transition-colors relative flex-shrink-0 ${enabledDirectories.includes(dir) ? 'bg-cyan-500' : 'bg-slate-800'}`}>
-                                    <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${enabledDirectories.includes(dir) ? 'right-1' : 'left-1'}`} />
-                                </button>
-                            </div>
-                        )) : (
-                            <p className="text-[10px] text-slate-600 italic p-2 text-center">Nenhum diretório válido encontrado (faixas {'>'} 60s)</p>
-                        )}
-                    </div>
-                </section>
-
-                {/* 4. ACESSIBILIDADE */}
-                <section className="bg-slate-900/50 border border-slate-800 rounded-3xl p-6 transition-all hover:bg-slate-900/70">
-                    <h3 className="text-sm font-bold text-cyan-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                        <ContrastIcon className="w-4 h-4" /> {t.accessTitle}
-                    </h3>
-                    
-                    <div className="flex items-center justify-between mb-6">
-                        <div>
-                            <p className="text-sm font-bold text-white">{t.highContrastTitle}</p>
-                            {/* Text removed as requested */}
-                        </div>
-                        <button onClick={() => onHighContrastChange(!isHighContrast)} className={`w-12 h-6 rounded-full transition-colors relative ${isHighContrast ? 'bg-white' : 'bg-slate-800'}`}>
-                            <div className={`absolute top-1 w-4 h-4 rounded-full transition-all ${isHighContrast ? 'bg-black right-1' : 'bg-white left-1'}`} />
-                        </button>
-                    </div>
-
-                    <div>
-                        <div className="flex items-center justify-between mb-2">
-                             <span className="text-[10px] font-bold text-white/60 uppercase">Zoom: {fontScale}%</span>
-                        </div>
-                        <div className="relative h-10 flex items-center px-2 bg-black/60 rounded-xl border border-white/5">
-                            <span className="text-xs font-bold text-gray-500 mr-2">A</span>
-                            <input 
-                                type="range" 
-                                min="100" 
-                                max="175" 
-                                step="25" 
-                                value={fontScale}
-                                onChange={(e) => onFontScaleChange(parseInt(e.target.value))}
-                                className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-cyan-500"
-                            />
-                            <span className="text-lg font-bold text-white ml-2">A</span>
-                        </div>
-                         <div className="flex justify-between px-1 mt-1">
-                             <span className="text-[8px] text-gray-300">100%</span>
-                             <span className="text-[8px] text-gray-300">175%</span>
-                        </div>
-                    </div>
-                </section>
-                
-                {/* 5. GERENCIAMENTO CRÍTICO */}
-                 <div className="p-1">
-                     <div className="p-4 rounded-3xl bg-red-950/20 border border-red-900/30">
-                        <h3 className="text-sm font-bold text-red-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-                             {t.criticalMgmt}
-                        </h3>
-                        <button onClick={onReset} className="w-full py-4 bg-red-600 hover:bg-red-500 text-white rounded-2xl font-bold text-xs uppercase tracking-widest transition-all shadow-lg active:scale-95">
-                            {t.clearAll}
-                        </button>
-                    </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <section className="bg-slate-900/50 border border-slate-800 rounded-3xl p-6 transition-all hover:bg-slate-900/70">
+                        <h3 className="text-sm font-bold text-cyan-400 uppercase tracking-widest mb-4 flex items-center gap-2"><RefreshCwIcon className="w-4 h-4" /> {t.automationTitle}</h3>
+                        <div className="flex items-center justify-between"><div><p className="text-sm font-bold text-white">{t.autoEnrichTitle}</p></div><button onClick={() => onAutoEnrichChange(!autoEnrichEnabled)} className={`w-12 h-6 rounded-full transition-colors relative ${autoEnrichEnabled ? 'bg-cyan-500' : 'bg-slate-800'}`}><div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${autoEnrichEnabled ? 'right-1' : 'left-1'}`} /></button></div>
+                    </section>
+                    <section className="bg-slate-900/50 border border-slate-800 rounded-3xl p-6 transition-all hover:bg-slate-900/70">
+                        <h3 className="text-sm font-bold text-cyan-400 uppercase tracking-widest mb-4 flex items-center gap-2"><GlobeIcon className="w-4 h-4" /> {t.langTitle}</h3>
+                        <div className="flex p-1 bg-black/60 rounded-xl border border-white/5"><button onClick={() => setLanguage('pt-BR')} className={`flex-1 py-3 text-[10px] font-bold uppercase rounded-lg transition-all ${language === 'pt-BR' ? 'bg-cyan-600 text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}>Português</button><button onClick={() => setLanguage('en-US')} className={`flex-1 py-3 text-[10px] font-bold uppercase rounded-lg transition-all ${language === 'en-US' ? 'bg-cyan-600 text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}>English</button></div>
+                    </section>
                 </div>
+                <section className="bg-slate-900/50 border border-slate-800 rounded-3xl p-6 transition-all hover:bg-slate-900/70">
+                    <h3 className="text-sm font-bold text-cyan-400 uppercase tracking-widest mb-2 flex items-center gap-2"><FolderIcon className="w-4 h-4" /> {t.filterPlaylists}</h3>
+                    <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar pr-2">
+                        {uniqueDirectories.length > 0 ? uniqueDirectories.map(dir => (<div key={dir} className="flex items-center justify-between p-3 bg-black/40 rounded-xl border border-white/5 cursor-pointer active:scale-95 transition-transform" onClick={() => toggleDirectory(dir)}><div className="flex items-center gap-3 overflow-hidden"><FolderIcon className={`w-4 h-4 ${enabledDirectories.includes(dir) ? 'text-cyan-500' : 'text-slate-700'}`} /><span className={`text-[11px] font-bold truncate ${enabledDirectories.includes(dir) ? 'text-white' : 'text-slate-600'}`}>{dir}</span></div><button className={`w-10 h-5 rounded-full transition-colors relative flex-shrink-0 ${enabledDirectories.includes(dir) ? 'bg-cyan-500' : 'bg-slate-800'}`}><div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${enabledDirectories.includes(dir) ? 'right-1' : 'left-1'}`} /></button></div>)) : (<p className="text-[10px] text-slate-600 italic p-2 text-center">Nenhum diretório válido encontrado (faixas {'>'} 60s)</p>)}
+                    </div>
+                </section>
+                <section className="bg-slate-900/50 border border-slate-800 rounded-3xl p-6 transition-all hover:bg-slate-900/70">
+                    <h3 className="text-sm font-bold text-cyan-400 uppercase tracking-widest mb-4 flex items-center gap-2"><ContrastIcon className="w-4 h-4" /> {t.accessTitle}</h3>
+                    <div className="flex items-center justify-between mb-6"><div><p className="text-sm font-bold text-white">{t.highContrastTitle}</p></div><button onClick={() => onHighContrastChange(!isHighContrast)} className={`w-12 h-6 rounded-full transition-colors relative ${isHighContrast ? 'bg-white' : 'bg-slate-800'}`}><div className={`absolute top-1 w-4 h-4 rounded-full transition-all ${isHighContrast ? 'bg-black right-1' : 'bg-white left-1'}`} /></button></div>
+                    <div><div className="flex items-center justify-between mb-2"><span className="text-[10px] font-bold text-white/60 uppercase">Zoom: {fontScale}%</span></div><div className="relative h-10 flex items-center px-2 bg-black/60 rounded-xl border border-white/5"><span className="text-xs font-bold text-gray-500 mr-2">A</span><input type="range" min="100" max="175" step="25" value={fontScale} onChange={(e) => onFontScaleChange(parseInt(e.target.value))} className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-cyan-500" /><span className="text-lg font-bold text-white ml-2">A</span></div><div className="flex justify-between px-1 mt-1"><span className="text-[8px] text-gray-300">100%</span><span className="text-[8px] text-gray-300">175%</span></div></div>
+                </section>
+                 <div className="p-1"><div className="p-4 rounded-3xl bg-red-950/20 border border-red-900/30"><h3 className="text-sm font-bold text-red-500 uppercase tracking-widest mb-4 flex items-center gap-2">{t.criticalMgmt}</h3><button onClick={onReset} className="w-full py-4 bg-red-600 hover:bg-red-500 text-white rounded-2xl font-bold text-xs uppercase tracking-widest transition-all shadow-lg active:scale-95">{t.clearAll}</button></div></div>
             </div>
         )}
       </main>
 
-      {/* ... Nav ... */}
+      {/* Nav */}
       <nav className="fixed bottom-0 left-0 right-0 bg-slate-950/80 backdrop-blur-xl border-t border-slate-800/50 py-2 z-[90]">
-        <div className="container mx-auto flex justify-between items-center max-w-lg">
+        <div className="container mx-auto flex justify-between items-center max-w-xl md:max-w-5xl px-4">
             <NavButton active={activeTab === 'deck'} onClick={() => setActiveTab('deck')} icon={<PlayIcon className="w-5 h-5" />} label={t.navDeck} />
             <NavButton active={activeTab === 'library'} onClick={() => setActiveTab('library')} icon={<ListIcon className="w-5 h-5" />} label={t.navLib} />
+            <NavButton active={activeTab === 'mashup'} onClick={() => setActiveTab('mashup')} icon={<GitMergeIcon className="w-5 h-5" />} label="MASH" />
             <NavButton active={activeTab === 'builder'} onClick={() => setActiveTab('builder')} icon={<LayersIcon className="w-5 h-5" />} label={t.navBuilder} badge={queue.length > 0 ? queue.length : undefined} />
             <NavButton active={activeTab === 'setup'} onClick={() => setActiveTab('setup')} icon={<SettingsIcon className="w-5 h-5" />} label={t.navSetup} />
         </div>
@@ -646,6 +448,5 @@ const NavButton: React.FC<NavButtonProps> = ({ active, onClick, icon, label, bad
     <button onClick={onClick} className={`flex flex-col items-center justify-center flex-1 py-1 rounded-2xl transition-all relative ${active ? 'text-cyan-400 bg-cyan-400/5' : 'text-slate-500 hover:text-slate-300'}`}>
         <div className="relative">{icon}{badge !== undefined && (<span className="absolute -top-2 -right-2 bg-cyan-600 text-white text-[8px] font-bold px-1 rounded-full border border-slate-950">{badge}</span>)}</div>
         <span className="text-[8px] font-bold mt-1 uppercase tracking-widest">{label}</span>
-        {/* Removed indicator dot as requested */}
     </button>
 );
