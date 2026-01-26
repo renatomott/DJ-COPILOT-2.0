@@ -20,6 +20,78 @@ interface SetBuilderProps {
   fullPlaylist?: Track[];
 }
 
+// Componente auxiliar para Swipe to Delete
+const SwipeableRow = ({ children, onDelete }: { children: React.ReactNode, onDelete: () => void }) => {
+    const [offsetX, setOffsetX] = useState(0);
+    const [isSwiping, setIsSwiping] = useState(false);
+    const startX = useRef(0);
+    const startY = useRef(0); // Para detectar scroll vertical
+
+    const handleTouchStart = (e: React.TouchEvent) => {
+        startX.current = e.touches[0].clientX;
+        startY.current = e.touches[0].clientY;
+        setIsSwiping(false);
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+        const currentX = e.touches[0].clientX;
+        const currentY = e.touches[0].clientY;
+        const diffX = currentX - startX.current;
+        const diffY = currentY - startY.current;
+
+        // Se o movimento for mais vertical que horizontal, ignore (deixe o scroll nativo funcionar)
+        if (Math.abs(diffY) > Math.abs(diffX)) return;
+
+        // Apenas permitir swipe para a esquerda (valores negativos)
+        if (diffX < 0) {
+            // Evita scroll da página enquanto faz swipe horizontal
+            if (e.cancelable && Math.abs(diffX) > 10) e.preventDefault();
+            
+            setIsSwiping(true);
+            // Limita o swipe a -120px
+            setOffsetX(Math.max(diffX, -120));
+        }
+    };
+
+    const handleTouchEnd = () => {
+        if (offsetX < -80) {
+            // Se arrastou mais que 80px, confirma deleção
+            setOffsetX(-500); // Anima para fora
+            setTimeout(() => {
+                onDelete();
+                setOffsetX(0); // Reseta para o próximo item que ocupar este lugar
+            }, 300);
+        } else {
+            // Snap back
+            setOffsetX(0);
+        }
+        setIsSwiping(false);
+    };
+
+    return (
+        <div className="relative overflow-hidden rounded-xl">
+            {/* Camada de Fundo (Ação de Deletar) */}
+            <div className="absolute inset-0 bg-red-600 flex items-center justify-end pr-6 rounded-xl">
+                <TrashIcon className="w-6 h-6 text-white animate-pulse" />
+            </div>
+
+            {/* Camada de Frente (Conteúdo) */}
+            <div
+                className="relative bg-[#020617] transition-transform duration-200 ease-out will-change-transform"
+                style={{ 
+                    transform: `translateX(${offsetX}px)`,
+                    // Adiciona uma borda escura sutil para separar do fundo vermelho visualmente
+                }}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+            >
+                {children}
+            </div>
+        </div>
+    );
+};
+
 export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelectTrack, currentTrackId, language, fullPlaylist = [] }) => {
   const t = translations[language];
   const [showPlanner, setShowPlanner] = useState(false);
@@ -53,8 +125,7 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
     }));
   };
   
-  const handleRemove = (e: React.MouseEvent, index: number) => {
-    e.stopPropagation();
+  const handleRemove = (index: number) => {
     setQueue(prev => prev.filter((_, i) => i !== index));
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
         navigator.vibrate(20);
@@ -515,33 +586,35 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
                 return (
                     <div key={`${track.id}-${index}`} className="animate-in slide-in-from-left-2" style={{ animationDelay: `${index * 50}ms` }}>
                         {transitionInfo}
-                        <div className="relative group flex items-stretch gap-2">
-                            <div className="flex-shrink-0 w-5 flex flex-col items-center justify-center">
-                                <div className={`text-[10px] font-bold ${isOnAir ? 'text-cyan-400' : 'text-slate-500 opacity-30'} mb-0.5`}>{index + 1}</div>
-                                <div className={`flex-1 w-[1px] bg-gradient-to-b ${isOnAir ? 'from-cyan-400' : 'from-slate-700/30'} to-transparent`}></div>
-                            </div>
-                            <div className="flex-1 relative pb-1">
-                                <div className={`relative overflow-hidden rounded-xl transition-all duration-300 ${isOnAir ? 'ring-2 ring-cyan-400 ring-offset-1 ring-offset-black scale-[1.01] shadow-[0_0_20px_rgba(6,182,212,0.15)]' : 'opacity-80 hover:opacity-100'}`}>
-                                    <TrackItem 
-                                        track={track} 
-                                        onSelect={(t) => onSelectTrack(t)} 
-                                        isSelected={currentTrackId === track.id} 
-                                        isOnAir={isOnAir}
-                                    />
-                                    {mustHaves.find(m => m.id === track.id) && !isOnAir && (
-                                        <div className="absolute top-1 left-1 bg-yellow-500 text-black text-[7px] font-bold px-1 py-0.5 rounded shadow-sm uppercase z-10">
-                                            PICKED
-                                        </div>
-                                    )}
-                                    <button 
-                                        onClick={(e) => handleRemove(e, index)} 
-                                        className="absolute left-2 bottom-2 p-1.5 bg-black/60 hover:bg-red-600 text-red-500 hover:text-white rounded-lg transition-all opacity-0 group-hover:opacity-100 border border-white/10 hover:border-red-500 flex items-center justify-center min-h-[28px] min-w-[28px] z-20 shadow-lg active:scale-90 backdrop-blur-sm"
-                                    >
-                                        <TrashIcon className="w-3.5 h-3.5" />
-                                    </button>
+                        <SwipeableRow onDelete={() => handleRemove(index)}>
+                            <div className="relative group flex items-stretch gap-2">
+                                <div className="flex-shrink-0 w-5 flex flex-col items-center justify-center">
+                                    <div className={`text-[10px] font-bold ${isOnAir ? 'text-cyan-400' : 'text-slate-500 opacity-30'} mb-0.5`}>{index + 1}</div>
+                                    <div className={`flex-1 w-[1px] bg-gradient-to-b ${isOnAir ? 'from-cyan-400' : 'from-slate-700/30'} to-transparent`}></div>
+                                </div>
+                                <div className="flex-1 relative pb-1">
+                                    <div className={`relative overflow-hidden rounded-xl transition-all duration-300 ${isOnAir ? 'ring-2 ring-cyan-400 ring-offset-1 ring-offset-black scale-[1.01] shadow-[0_0_20px_rgba(6,182,212,0.15)]' : 'opacity-80 hover:opacity-100'}`}>
+                                        <TrackItem 
+                                            track={track} 
+                                            onSelect={(t) => onSelectTrack(t)} 
+                                            isSelected={currentTrackId === track.id} 
+                                            isOnAir={isOnAir}
+                                        />
+                                        {mustHaves.find(m => m.id === track.id) && !isOnAir && (
+                                            <div className="absolute top-1 left-1 bg-yellow-500 text-black text-[7px] font-bold px-1 py-0.5 rounded shadow-sm uppercase z-10">
+                                                PICKED
+                                            </div>
+                                        )}
+                                        <button 
+                                            onClick={(e) => { e.stopPropagation(); handleRemove(index); }} 
+                                            className="absolute left-2 bottom-2 p-1.5 bg-black/60 hover:bg-red-600 text-red-500 hover:text-white rounded-lg transition-all opacity-0 group-hover:opacity-100 border border-white/10 hover:border-red-500 flex items-center justify-center min-h-[28px] min-w-[28px] z-20 shadow-lg active:scale-90 backdrop-blur-sm"
+                                        >
+                                            <TrashIcon className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        </SwipeableRow>
                     </div>
                 );
             })}

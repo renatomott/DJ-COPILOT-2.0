@@ -598,8 +598,8 @@ export const MainScreen: React.FC<MainScreenProps> = ({
                             <input 
                                 type="range" 
                                 min="100" 
-                                max="150" 
-                                step="10" 
+                                max="175" 
+                                step="25" 
                                 value={fontScale}
                                 onChange={(e) => onFontScaleChange(parseInt(e.target.value))}
                                 className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-cyan-500"
@@ -607,8 +607,8 @@ export const MainScreen: React.FC<MainScreenProps> = ({
                             <span className="text-lg font-bold text-white ml-2">A</span>
                         </div>
                          <div className="flex justify-between px-1 mt-1">
-                             <span className="text-[8px] text-gray-400">100%</span>
-                             <span className="text-[8px] text-gray-400">150%</span>
+                             <span className="text-[8px] text-gray-300">100%</span>
+                             <span className="text-[8px] text-gray-300">175%</span>
                         </div>
                     </div>
                 </section>
