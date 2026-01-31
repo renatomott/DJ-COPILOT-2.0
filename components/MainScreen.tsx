@@ -346,41 +346,32 @@ export const MainScreen: React.FC<MainScreenProps> = ({
   }, [currentTrack, filters, searchQuery, onGroupingModeChange]);
 
   const renderTrackItem = (track: Track) => {
-      const item = (
-          <TrackItem 
+      // Swipeable Wrapper for BOTH Card and List views
+      // Swipe Right (->) : onLeftAction : Add Queue
+      // Swipe Left (<-) : onRightAction : Load On Air
+      return (
+          <SwipeableItem 
               key={track.id} 
-              track={track} 
-              onSelect={handleSelectTrack} 
-              isSelected={currentTrack?.id === track.id} 
-              isExpanded={expandedTrackId === track.id} 
-              onToggleExpand={() => handleToggleExpandTrack(track.id)} 
-              onAddToQueue={handleAddToQueue} 
-              variant={viewMode} 
-              searchQuery={searchQuery}
-              referenceTrack={currentTrack} // Pass current track as reference for comparison
-          />
+              onLeftAction={() => handleAddToQueue(undefined, track)}
+              leftColor="bg-green-600"
+              leftIcon={<PlusIcon className="w-8 h-8 text-white" />}
+              onRightAction={() => handleSelectTrack(track)}
+              rightColor="bg-cyan-600"
+              rightIcon={<PlayIcon className="w-8 h-8 text-white" />}
+          >
+              <TrackItem 
+                  track={track} 
+                  onSelect={handleSelectTrack} 
+                  isSelected={currentTrack?.id === track.id} 
+                  isExpanded={expandedTrackId === track.id} 
+                  onToggleExpand={() => handleToggleExpandTrack(track.id)} 
+                  onAddToQueue={handleAddToQueue} 
+                  variant={viewMode} 
+                  searchQuery={searchQuery}
+                  referenceTrack={currentTrack}
+              />
+          </SwipeableItem>
       );
-
-      // Only enable SwipeableItem for CARD view
-      if (viewMode === 'card') {
-          return (
-              <SwipeableItem 
-                  key={track.id} 
-                  // Left to Right -> Add to Queue (Green)
-                  onLeftAction={() => handleAddToQueue(undefined, track)}
-                  leftColor="bg-green-600"
-                  leftIcon={<PlusIcon className="w-8 h-8 text-white" />}
-                  // Right to Left -> Load Deck (Cyan)
-                  onRightAction={() => handleSelectTrack(track)}
-                  rightColor="bg-cyan-600"
-                  rightIcon={<PlayIcon className="w-8 h-8 text-white" />}
-              >
-                  {item}
-              </SwipeableItem>
-          );
-      }
-
-      return item;
   };
 
   // Helper to find predominant color for a folder
