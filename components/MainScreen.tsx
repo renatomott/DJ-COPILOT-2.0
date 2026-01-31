@@ -524,167 +524,32 @@ export const MainScreen: React.FC<MainScreenProps> = ({
         {activeTab === 'library' && (
           // CHANGED: Use grid with 5/7 proportion for tablet/desktop to match Deck layout
           <div className="flex-1 md:h-full md:grid md:grid-cols-12 md:gap-6 md:px-6 md:pb-6 relative flex flex-col h-full px-4 pb-24 md:overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
-            
-            {/* --- COLUMN 1: SIDEBAR (Search, Filters, Folders) --- */}
-            {/* Mobile: Top block. Tablet: Left Sidebar (5/12 cols) */}
+            {/* ... Library Content ... */}
             <div className="w-full md:col-span-5 lg:col-span-5 flex-shrink-0 md:h-full md:border-r md:border-white/5 bg-[#020617]/95 md:bg-slate-950/40 backdrop-blur-xl md:backdrop-blur-none z-40 transition-all duration-300 flex flex-col rounded-xl overflow-hidden">
-                
-                {/* SEARCH & TOGGLES Container */}
                 <div className="p-4 border-b border-white/5 space-y-3">
                      <div className="flex gap-2">
                         <div className="relative flex-1">
-                            <input 
-                                type="text" 
-                                placeholder={t.searchPlaceholder} 
-                                value={searchQuery} 
-                                onChange={(e) => setSearchQuery(e.target.value)} 
-                                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-5 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all pl-11 min-h-[50px] text-white placeholder-slate-500" 
-                            />
+                            <input type="text" placeholder={t.searchPlaceholder} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-xl px-5 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all pl-11 min-h-[50px] text-white placeholder-slate-500" />
                             <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                         </div>
-                        <button 
-                            onClick={() => onViewModeChange(viewMode === 'card' ? 'list' : 'card')} 
-                            className={`px-4 rounded-xl border transition-all flex items-center justify-center ${viewMode === 'list' ? 'bg-cyan-600 border-cyan-400 text-white' : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-cyan-400'}`} 
-                            title="Alternar Visualização"
-                        >
-                            {viewMode === 'card' ? <LayersIcon className="w-5 h-5" /> : <ListIcon className="w-5 h-5" />}
-                        </button>
+                        <button onClick={() => onViewModeChange(viewMode === 'card' ? 'list' : 'card')} className={`px-4 rounded-xl border transition-all flex items-center justify-center ${viewMode === 'list' ? 'bg-cyan-600 border-cyan-400 text-white' : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-cyan-400'}`}>{viewMode === 'card' ? <LayersIcon className="w-5 h-5" /> : <ListIcon className="w-5 h-5" />}</button>
                     </div>
-
-                    {/* Quick Context Pills */}
-                    {currentTrack && (
-                        <div className="flex gap-2 overflow-x-auto custom-scrollbar pb-2">
-                            {filterPills.map((pill, idx) => (
-                                <button 
-                                    key={idx} 
-                                    onClick={pill.action} 
-                                    className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider border whitespace-nowrap transition-all shadow-sm flex-shrink-0 ${pill.active ? 'bg-cyan-600 text-white border-cyan-400' : 'bg-slate-900/80 text-slate-400 border-slate-700 hover:border-cyan-500 hover:text-white'}`}
-                                >
-                                    {pill.label}
-                                </button>
-                            ))}
-                        </div>
-                    )}
-
+                    {currentTrack && (<div className="flex gap-2 overflow-x-auto custom-scrollbar pb-2">{filterPills.map((pill, idx) => (<button key={idx} onClick={pill.action} className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider border whitespace-nowrap transition-all shadow-sm flex-shrink-0 ${pill.active ? 'bg-cyan-600 text-white border-cyan-400' : 'bg-slate-900/80 text-slate-400 border-slate-700 hover:border-cyan-500 hover:text-white'}`}>{pill.label}</button>))}</div>)}
                     <LibraryFilters availableKeys={availableKeys} availableGenres={availableGenres} onFilterChange={setFilters} initialFilters={filters} />
-                    
-                    {/* Enrich Button */}
-                    <button onClick={onEnrich} disabled={isEnriching} className="w-full py-2 text-[10px] font-bold text-cyan-500 bg-cyan-900/20 border border-cyan-500/30 rounded-lg flex items-center justify-center gap-2 hover:bg-cyan-900/40 transition-colors disabled:opacity-50">
-                        <RefreshCwIcon className={`w-3 h-3 ${isEnriching ? 'animate-spin' : ''}`} /> 
-                        {isEnriching ? t.analyzing : t.enrichBtn.toUpperCase()}
-                    </button>
+                    <button onClick={onEnrich} disabled={isEnriching} className="w-full py-2 text-[10px] font-bold text-cyan-500 bg-cyan-900/20 border border-cyan-500/30 rounded-lg flex items-center justify-center gap-2 hover:bg-cyan-900/40 transition-colors disabled:opacity-50"><RefreshCwIcon className={`w-3 h-3 ${isEnriching ? 'animate-spin' : ''}`} /> {isEnriching ? t.analyzing : t.enrichBtn.toUpperCase()}</button>
                 </div>
-                
-                {/* DIRECTORY LIST (Visible on Tablet, Hidden/Accordion on Mobile handled by Right Column logic) */}
                 <div className="hidden md:flex flex-col flex-1 overflow-y-auto custom-scrollbar p-2">
                     <div className="space-y-1">
-                        <button 
-                            onClick={selectAllDirectories}
-                            className={`w-full text-left px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-between group ${enabledDirectories.length === uniqueDirectories.length ? 'bg-white/10 text-white' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}
-                        >
-                            <span>Todas as Faixas</span>
-                            {enabledDirectories.length === uniqueDirectories.length && <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full"></div>}
-                        </button>
-                        
-                        {uniqueDirectories.map(dir => {
-                            // CHANGED: Get directory specific color for the icon
-                            const dirColor = getFolderColor(dir);
-                            return (
-                                <button 
-                                    key={dir}
-                                    onClick={() => selectDirectoryExclusive(dir)}
-                                    className={`w-full text-left px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-between group truncate ${enabledDirectories.length === 1 && enabledDirectories[0] === dir ? 'bg-cyan-600/20 text-cyan-400 border border-cyan-500/20' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}
-                                >
-                                    <div className="flex items-center gap-2 truncate">
-                                        <div style={{ color: dirColor || '#475569' }}>
-                                            <FolderIcon className="w-4 h-4 flex-shrink-0" />
-                                        </div>
-                                        <span className="truncate">{dir}</span>
-                                    </div>
-                                    {enabledDirectories.length === 1 && enabledDirectories[0] === dir && <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full"></div>}
-                                </button>
-                            )
-                        })}
+                        <button onClick={selectAllDirectories} className={`w-full text-left px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-between group ${enabledDirectories.length === uniqueDirectories.length ? 'bg-white/10 text-white' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}><span>Todas as Faixas</span>{enabledDirectories.length === uniqueDirectories.length && <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full"></div>}</button>
+                        {uniqueDirectories.map(dir => { const dirColor = getFolderColor(dir); return (<button key={dir} onClick={() => selectDirectoryExclusive(dir)} className={`w-full text-left px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-between group truncate ${enabledDirectories.length === 1 && enabledDirectories[0] === dir ? 'bg-cyan-600/20 text-cyan-400 border border-cyan-500/20' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}><div className="flex items-center gap-2 truncate"><div style={{ color: dirColor || '#475569' }}><FolderIcon className="w-4 h-4 flex-shrink-0" /></div><span className="truncate">{dir}</span></div>{enabledDirectories.length === 1 && enabledDirectories[0] === dir && <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full"></div>}</button>) })}
                     </div>
                 </div>
             </div>
-
-            {/* --- COLUMN 2: CONTENT (Cards) --- */}
-            {/* Mobile: Main List. Tablet: Right Content Area (7/12 cols) */}
             <div className="md:col-span-7 lg:col-span-7 flex-1 md:h-full md:overflow-y-auto custom-scrollbar md:pr-2 pt-4 md:pt-0 relative">
-                
-                {/* Mobile Only: Header Info */}
-                <div className="md:hidden flex justify-between items-center mb-2">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">{t.navLib}</span>
-                </div>
-
-                {/* Content Render Logic */}
-                {(groupingMode === 'all' || window.innerWidth >= 768) ? (
-                    // GRID LAYOUT
-                    <div className={viewMode === 'card' ? 'grid grid-cols-1 md:grid-cols-1 gap-2 md:gap-3' : 'space-y-1.5'}>
-                        {filteredPlaylist.length > 0 ? (
-                            filteredPlaylist.map(track => renderTrackItem(track))
-                        ) : (
-                            <div className="col-span-full py-20 text-center opacity-50 flex flex-col items-center">
-                                <FilterIcon className="w-12 h-12 mb-4 text-slate-600" />
-                                <p className="text-sm font-bold uppercase tracking-widest text-slate-500">{t.noTracksFound}</p>
-                            </div>
-                        )}
-                    </div>
-                ) : (
-                    // MOBILE ACCORDION LAYOUT
-                    <div className="space-y-3">
-                        {Object.entries(groupedPlaylist).map(([folder, tracks]: [string, Track[]]) => {
-                            const folderColor = getPredominantColor(tracks) || '';
-                            
-                            return (
-                                <div key={folder} className="bg-slate-900/40 rounded-2xl border border-slate-800 overflow-hidden">
-                                    <button onClick={() => toggleFolderAccordion(folder)} className="w-full p-4 flex items-center justify-between hover:bg-white/5 transition-colors sticky top-0 z-10 bg-slate-900/90 backdrop-blur-sm"><div className="flex items-center gap-3 overflow-hidden">
-                                        <div style={{ color: folderColor || '#06b6d4' }}>
-                                            <FolderIcon className="w-4 h-4 flex-shrink-0" />
-                                        </div>
-                                        <span className="text-xs md:text-sm font-bold uppercase text-white break-words text-left">{folder}</span><span className="text-xs font-bold text-slate-500 bg-black/40 px-2 py-0.5 rounded-full flex-shrink-0">{tracks.length}</span></div><ChevronDownIcon className={`w-4 h-4 text-slate-500 transition-transform duration-300 flex-shrink-0 ${expandedFolders.includes(folder) ? 'rotate-180' : ''}`} /></button>
-                                    {expandedFolders.includes(folder) && (
-                                        <div className={`p-2 border-t border-slate-800 bg-black/20 animate-in slide-in-from-top-2 ${viewMode === 'card' ? 'grid grid-cols-1 gap-2' : 'space-y-0.5'}`}>
-                                            {tracks.map(track => renderTrackItem(track))}
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
+                <div className="md:hidden flex justify-between items-center mb-2"><span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">{t.navLib}</span></div>
+                {(groupingMode === 'all' || window.innerWidth >= 768) ? (<div className={viewMode === 'card' ? 'grid grid-cols-1 md:grid-cols-1 gap-2 md:gap-3' : 'space-y-1.5'}>{filteredPlaylist.length > 0 ? (filteredPlaylist.map(track => renderTrackItem(track))) : (<div className="col-span-full py-20 text-center opacity-50 flex flex-col items-center"><FilterIcon className="w-12 h-12 mb-4 text-slate-600" /><p className="text-sm font-bold uppercase tracking-widest text-slate-500">{t.noTracksFound}</p></div>)}</div>) : (<div className="space-y-3">{Object.entries(groupedPlaylist).map(([folder, tracks]: [string, Track[]]) => { const folderColor = getPredominantColor(tracks) || ''; return (<div key={folder} className="bg-slate-900/40 rounded-2xl border border-slate-800 overflow-hidden"><button onClick={() => toggleFolderAccordion(folder)} className="w-full p-4 flex items-center justify-between hover:bg-white/5 transition-colors sticky top-0 z-10 bg-slate-900/90 backdrop-blur-sm"><div className="flex items-center gap-3 overflow-hidden"><div style={{ color: folderColor || '#06b6d4' }}><FolderIcon className="w-4 h-4 flex-shrink-0" /></div><span className="text-xs md:text-sm font-bold uppercase text-white break-words text-left">{folder}</span><span className="text-xs font-bold text-slate-500 bg-black/40 px-2 py-0.5 rounded-full flex-shrink-0">{tracks.length}</span></div><ChevronDownIcon className={`w-4 h-4 text-slate-500 transition-transform duration-300 flex-shrink-0 ${expandedFolders.includes(folder) ? 'rotate-180' : ''}`} /></button>{expandedFolders.includes(folder) && (<div className={`p-2 border-t border-slate-800 bg-black/20 animate-in slide-in-from-top-2 ${viewMode === 'card' ? 'grid grid-cols-1 gap-2' : 'space-y-0.5'}`}>{tracks.map(track => renderTrackItem(track))}</div>)}</div>); })}</div>)}
             </div>
-            
-            {/* Scroll Progress FAB */}
-            <div className={`fixed right-4 z-50 ${currentTrack ? 'bottom-32 md:bottom-24' : 'bottom-24 md:bottom-8'}`}>
-                    <button 
-                    onClick={() => {
-                        // Target the correct scroll container based on device
-                        const el = document.querySelector('.md\\:col-span-7.custom-scrollbar') || document.querySelector('main .overflow-y-auto');
-                        if (el) {
-                            el.scrollTo({ top: 0, behavior: 'smooth' });
-                        } else {
-                            window.scrollTo({ top: 0, behavior: 'smooth' });
-                        }
-                    }} 
-                    className="w-12 h-12 bg-cyan-600 rounded-full shadow-2xl flex items-center justify-center text-white active:scale-90 transition-transform relative group overflow-hidden"
-                    >
-                    <svg className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none" viewBox="0 0 100 100">
-                        <circle cx="50" cy="50" r="46" stroke="rgba(0,0,0,0.2)" strokeWidth="8" fill="none" />
-                        <circle 
-                            cx="50" cy="50" r="46" 
-                            stroke="white" 
-                            strokeWidth="8" 
-                            fill="none" 
-                            strokeDasharray="289" 
-                            strokeDashoffset={289 - (289 * scrollProgress)} 
-                            className="transition-all duration-100 ease-linear"
-                        />
-                    </svg>
-                    <ArrowUpIcon className="w-5 h-5 relative z-10" />
-                    </button>
-            </div>
+            <div className={`fixed right-4 z-50 ${currentTrack ? 'bottom-32 md:bottom-24' : 'bottom-24 md:bottom-8'}`}><button onClick={() => { const el = document.querySelector('.md\\:col-span-7.custom-scrollbar') || document.querySelector('main .overflow-y-auto'); if (el) { el.scrollTo({ top: 0, behavior: 'smooth' }); } else { window.scrollTo({ top: 0, behavior: 'smooth' }); } }} className="w-12 h-12 bg-cyan-600 rounded-full shadow-2xl flex items-center justify-center text-white active:scale-90 transition-transform relative group overflow-hidden"><svg className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" stroke="rgba(0,0,0,0.2)" strokeWidth="8" fill="none" /><circle cx="50" cy="50" r="46" stroke="white" strokeWidth="8" fill="none" strokeDasharray="289" strokeDashoffset={289 - (289 * scrollProgress)} className="transition-all duration-100 ease-linear" /></svg><ArrowUpIcon className="w-5 h-5 relative z-10" /></button></div>
           </div>
         )}
         
@@ -698,7 +563,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({
         {/* TAB: BUILDER (Renovated Layout) */}
         {activeTab === 'builder' && (
           <div className="flex-1 h-full md:overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
-             <SetBuilder queue={queue} setQueue={setQueue} onSelectTrack={handleSelectTrack} currentTrackId={currentTrack?.id} language={language} fullPlaylist={playlist} />
+             <SetBuilder queue={queue} setQueue={setQueue} onSelectTrack={handleSelectTrack} currentTrackId={currentTrack?.id} language={language} fullPlaylist={playlist} enabledDirectories={enabledDirectories} />
           </div>
         )}
         
@@ -709,6 +574,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({
         {activeTab === 'setup' && (
             <div className="flex-1 overflow-y-auto custom-scrollbar px-4 pb-24 md:pb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="space-y-4 max-w-2xl mx-auto">
+                    {/* ... Setup Content ... */}
                     <h2 className="text-2xl font-bold text-white px-2 mb-2">{t.settingsTitle}</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <section className="bg-slate-900/50 border border-slate-800 rounded-3xl p-6 transition-all hover:bg-slate-900/70">

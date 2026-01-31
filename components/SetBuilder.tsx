@@ -2,10 +2,11 @@
 import React, { useState, useMemo, useRef } from 'react';
 import type { Track } from '../types';
 import { TrackItem } from './TrackItem';
-import { TrashIcon, DownloadIcon, WandSparklesIcon, BrainIcon, SparklesIcon, PlusIcon, SearchIcon, XIcon, ZapIcon, BarChartIcon, TrendingUpIcon, UploadIcon, LayersIcon } from './icons';
+import { TrashIcon, DownloadIcon, WandSparklesIcon, BrainIcon, SparklesIcon, PlusIcon, SearchIcon, XIcon, ZapIcon, BarChartIcon, TrendingUpIcon, UploadIcon, LayersIcon, ChevronDownIcon, PlayIcon, ArrowUpIcon } from './icons';
 import { translations } from '../utils/translations';
 import { planAutoSet } from '../services/geminiService';
 import { detectClash } from '../utils/harmonicUtils';
+import { SwipeableItem } from './SwipeableItem';
 // @ts-ignore
 import { jsPDF } from 'jspdf';
 // @ts-ignore
@@ -18,72 +19,13 @@ interface SetBuilderProps {
   currentTrackId: string | undefined;
   language: 'pt-BR' | 'en-US';
   fullPlaylist?: Track[];
+  enabledDirectories?: string[];
 }
-
-interface SwipeableRowProps {
-    children: React.ReactNode;
-    onDelete: () => void;
-}
-
-// SwipeableRow implementation
-const SwipeableRow: React.FC<SwipeableRowProps> = ({ children, onDelete }) => {
-    const [offsetX, setOffsetX] = useState(0);
-    const [isSwiping, setIsSwiping] = useState(false);
-    const startX = useRef(0);
-    const startY = useRef(0);
-
-    const handleTouchStart = (e: React.TouchEvent) => {
-        startX.current = e.touches[0].clientX;
-        startY.current = e.touches[0].clientY;
-        setIsSwiping(false);
-    };
-
-    const handleTouchMove = (e: React.TouchEvent) => {
-        const currentX = e.touches[0].clientX;
-        const currentY = e.touches[0].clientY;
-        const diffX = currentX - startX.current;
-        const diffY = currentY - startY.current;
-        if (Math.abs(diffY) > Math.abs(diffX)) return;
-        if (diffX < 0) {
-            if (e.cancelable && Math.abs(diffX) > 10) e.preventDefault();
-            setIsSwiping(true);
-            setOffsetX(Math.max(diffX, -120));
-        }
-    };
-
-    const handleTouchEnd = () => {
-        if (offsetX < -80) {
-            setOffsetX(-500);
-            setTimeout(() => {
-                onDelete();
-                setOffsetX(0);
-            }, 300);
-        } else {
-            setOffsetX(0);
-        }
-        setIsSwiping(false);
-    };
-
-    return (
-        <div className="relative overflow-hidden rounded-xl">
-            <div className="absolute inset-0 bg-red-600 flex items-center justify-end pr-6 rounded-xl">
-                <TrashIcon className="w-6 h-6 text-white animate-pulse" />
-            </div>
-            <div
-                className="relative bg-[#020617] transition-transform duration-200 ease-out will-change-transform"
-                style={{ transform: `translateX(${offsetX}px)` }}
-                onTouchStart={handleTouchStart}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
-            >
-                {children}
-            </div>
-        </div>
-    );
-};
 
 // Simple Energy Timeline Component
 const EnergyTimeline: React.FC<{ queue: Track[] }> = ({ queue }) => {
+    const [isExpanded, setIsExpanded] = useState(false);
+
     if (queue.length < 2) return null;
 
     const points = queue.map((t, i) => {
@@ -94,43 +36,53 @@ const EnergyTimeline: React.FC<{ queue: Track[] }> = ({ queue }) => {
     }).join(' ');
 
     return (
-        <div className="mb-4 bg-slate-900/50 rounded-xl p-3 border border-white/5">
-            <div className="flex items-center gap-2 mb-2">
-                <BarChartIcon className="w-3 h-3 text-cyan-400" />
-                <span className="text-[9px] font-bold text-white/60 uppercase tracking-widest">Fluxo de Energia</span>
-            </div>
-            <div className="h-12 w-full relative">
-                <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full overflow-visible">
-                    <defs>
-                        <linearGradient id="energyGradient" x1="0" x2="0" y1="0" y2="1">
-                            <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.5" />
-                            <stop offset="100%" stopColor="#22d3ee" stopOpacity="0" />
-                        </linearGradient>
-                    </defs>
-                    <path d={`M0,100 ${points} 100,100`} fill="url(#energyGradient)" />
-                    <polyline points={points} fill="none" stroke="#22d3ee" strokeWidth="2" vectorEffect="non-scaling-stroke" />
-                    {queue.map((t, i) => (
-                        <circle 
-                            key={i} 
-                            cx={(i / (queue.length - 1)) * 100} 
-                            cy={100 - ((t.energy || 3) * 20)} 
-                            r="1.5" 
-                            fill="#fff" 
-                        />
-                    ))}
-                </svg>
-            </div>
+        <div className="mb-4 bg-slate-900/50 rounded-xl border border-white/5 overflow-hidden">
+            <button 
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="w-full flex items-center justify-between p-3 hover:bg-white/5 transition-colors"
+            >
+                <div className="flex items-center gap-2">
+                    <BarChartIcon className="w-4 h-4 text-cyan-400" />
+                    <span className="text-xs font-bold text-white uppercase tracking-widest">Fluxo de Energia</span>
+                </div>
+                <ChevronDownIcon className={`w-4 h-4 text-slate-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+            </button>
+            
+            {isExpanded && (
+                <div className="h-24 w-full relative p-3 animate-in slide-in-from-top-2">
+                    <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full overflow-visible">
+                        <defs>
+                            <linearGradient id="energyGradient" x1="0" x2="0" y1="0" y2="1">
+                                <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.5" />
+                                <stop offset="100%" stopColor="#22d3ee" stopOpacity="0" />
+                            </linearGradient>
+                        </defs>
+                        <path d={`M0,100 ${points} 100,100`} fill="url(#energyGradient)" />
+                        <polyline points={points} fill="none" stroke="#22d3ee" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+                        {queue.map((t, i) => (
+                            <circle 
+                                key={i} 
+                                cx={(i / (queue.length - 1)) * 100} 
+                                cy={100 - ((t.energy || 3) * 20)} 
+                                r="1.5" 
+                                fill="#fff" 
+                            />
+                        ))}
+                    </svg>
+                </div>
+            )}
         </div>
     );
 };
 
-export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelectTrack, currentTrackId, language, fullPlaylist = [] }) => {
+export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelectTrack, currentTrackId, language, fullPlaylist = [], enabledDirectories = [] }) => {
   const t = translations[language];
   const [showPlanner, setShowPlanner] = useState(false);
   const [isPlanning, setIsPlanning] = useState(false);
   const [mustHaves, setMustHaves] = useState<Track[]>([]);
   const [planSearch, setPlanSearch] = useState('');
-  const [expandedKey, setExpandedKey] = useState<string | null>(null); // Manage expansion by unique key
+  const [expandedKey, setExpandedKey] = useState<string | null>(null);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
 
   const [plannerParams, setPlannerParams] = useState({
@@ -145,10 +97,10 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
   });
 
   const availableFolders = useMemo(() => {
-    const folders = new Set<string>();
-    fullPlaylist.forEach(t => folders.add(t.location));
-    return Array.from(folders).sort();
-  }, [fullPlaylist]);
+    // Show only folders that are currently enabled in the main settings
+    const validDirs = enabledDirectories.length > 0 ? enabledDirectories : Array.from(new Set(fullPlaylist.map(t => t.location)));
+    return validDirs.sort();
+  }, [fullPlaylist, enabledDirectories]);
 
   const toggleTargetPlaylist = (folder: string) => {
     setPlannerParams(p => ({
@@ -359,16 +311,42 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
       }).length;
   }, [fullPlaylist, plannerParams]);
 
+  // Drag and Drop Handlers
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+      setDraggedIndex(index);
+      e.dataTransfer.effectAllowed = 'move';
+      // Set invisible drag image or standard
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+      e.preventDefault(); // Necessary for Drop
+      if (draggedIndex === null || draggedIndex === index) return;
+      
+      // We could add visual indicators here, but keeping it simple for now
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+      e.preventDefault();
+      if (draggedIndex === null) return;
+
+      const newQueue = [...queue];
+      const draggedItem = newQueue[draggedIndex];
+      newQueue.splice(draggedIndex, 1);
+      newQueue.splice(index, 0, draggedItem);
+      
+      setQueue(newQueue);
+      setDraggedIndex(null);
+  };
+
   return (
     <div className="h-full md:grid md:grid-cols-12 md:gap-6 md:px-6 md:pb-6 relative flex flex-col px-4 pb-24 md:overflow-hidden">
       <input type="file" ref={importFileRef} className="hidden" accept=".txt" onChange={handleImport} />
       
       {/* --- Column 1: Planner & Tools (Sticky on Desktop) --- */}
-      {/* SIDEBAR STYLE from Library Tab */}
       <div className="w-full md:col-span-5 lg:col-span-5 flex-shrink-0 md:h-full md:border-r md:border-white/5 bg-[#020617]/95 md:bg-slate-950/40 backdrop-blur-xl md:backdrop-blur-none z-40 transition-all duration-300 flex flex-col rounded-xl overflow-hidden mb-4 md:mb-0">
           <div className="p-4 border-b border-white/5 space-y-4 overflow-y-auto custom-scrollbar h-full">
                 
-                {/* Header for Mobile/Desktop Unified */}
+                {/* Header */}
                 <div className="flex items-center justify-between relative z-30">
                     <h2 className="text-xl font-bold text-white uppercase tracking-widest flex items-center gap-2">
                         <LayersIcon className="w-5 h-5 text-cyan-400" />
@@ -416,31 +394,31 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
                                         <BrainIcon className="w-4 h-4 text-white" />
                                     </div>
                                     <div>
-                                        <h3 className="text-xs font-bold text-white uppercase tracking-widest">{t.plannerTitle}</h3>
-                                        <p className="text-[9px] text-cyan-300 font-bold opacity-80">{t.plannerSub}</p>
+                                        <h3 className="text-sm font-bold text-white uppercase tracking-widest">{t.plannerTitle}</h3>
+                                        <p className="text-[10px] text-cyan-300 font-bold opacity-80">{t.plannerSub}</p>
                                     </div>
                                 </div>
                                 <div className="flex flex-col items-end">
-                                    <span className="text-[8px] font-bold text-white/40 uppercase">{t.matchingTracks}</span>
-                                    <span className="text-xs font-mono font-bold text-cyan-400">{matchingCount}</span>
+                                    <span className="text-[10px] font-bold text-white/40 uppercase">{t.matchingTracks}</span>
+                                    <span className="text-sm font-mono font-bold text-cyan-400">{matchingCount}</span>
                                 </div>
                             </div>
 
-                            <div className="p-4 space-y-4">
+                            <div className="p-5 space-y-5">
                                 {/* Row 1: Mode & Length */}
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div className="flex p-0.5 bg-black/60 rounded-lg border border-white/5">
-                                        <button onClick={() => setPlannerParams(p => ({...p, isStrict: false}))} className={`flex-1 flex items-center justify-center gap-1 py-2 text-[8px] font-bold uppercase rounded-md transition-all ${!plannerParams.isStrict ? 'bg-slate-800 text-cyan-400 shadow-lg' : 'text-gray-500'}`}>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="flex p-1 bg-black/60 rounded-xl border border-white/5">
+                                        <button onClick={() => setPlannerParams(p => ({...p, isStrict: false}))} className={`flex-1 flex items-center justify-center gap-1 py-3 text-[10px] font-bold uppercase rounded-lg transition-all ${!plannerParams.isStrict ? 'bg-slate-800 text-cyan-400 shadow-lg' : 'text-gray-500'}`}>
                                             Pref.
                                         </button>
-                                        <button onClick={() => setPlannerParams(p => ({...p, isStrict: true}))} className={`flex-1 flex items-center justify-center gap-1 py-2 text-[8px] font-bold uppercase rounded-md transition-all ${plannerParams.isStrict ? 'bg-cyan-600 text-white shadow-lg' : 'text-gray-500'}`}>
+                                        <button onClick={() => setPlannerParams(p => ({...p, isStrict: true}))} className={`flex-1 flex items-center justify-center gap-1 py-3 text-[10px] font-bold uppercase rounded-lg transition-all ${plannerParams.isStrict ? 'bg-cyan-600 text-white shadow-lg' : 'text-gray-500'}`}>
                                             Obg.
                                         </button>
                                     </div>
                                     
-                                    <div className="flex p-0.5 bg-black/60 rounded-lg border border-white/5">
+                                    <div className="flex p-1 bg-black/60 rounded-xl border border-white/5">
                                         {[5, 10, 15, 20].map(len => (
-                                            <button key={len} onClick={() => setPlannerParams(p => ({...p, length: len}))} className={`flex-1 py-1 text-[9px] font-bold rounded-md transition-all ${plannerParams.length === len ? 'bg-cyan-600 text-white' : 'text-gray-500 hover:text-white'}`}>
+                                            <button key={len} onClick={() => setPlannerParams(p => ({...p, length: len}))} className={`flex-1 py-2 text-[10px] font-bold rounded-lg transition-all ${plannerParams.length === len ? 'bg-cyan-600 text-white' : 'text-gray-500 hover:text-white'}`}>
                                                 {len}
                                             </button>
                                         ))}
@@ -449,13 +427,13 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
 
                                 {/* Row 2: Progression */}
                                 <div>
-                                    <label className="text-[8px] font-bold text-white/50 uppercase tracking-wider block mb-1.5">{t.progression}</label>
+                                    <label className="text-xs font-bold text-white/70 uppercase tracking-wider block mb-2">{t.progression}</label>
                                     <div className="flex gap-2">
                                         {['Linear', 'Rising', 'Chaos'].map(prog => (
                                             <button 
                                                 key={prog}
                                                 onClick={() => setPlannerParams(p => ({...p, progression: prog}))}
-                                                className={`flex-1 py-2 rounded-lg border text-[9px] font-bold uppercase tracking-wider transition-all ${plannerParams.progression === prog ? 'bg-cyan-900/40 border-cyan-500 text-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.2)]' : 'bg-black/40 border-white/5 text-gray-500 hover:border-white/20'}`}
+                                                className={`flex-1 py-3 rounded-xl border text-[10px] font-bold uppercase tracking-wider transition-all ${plannerParams.progression === prog ? 'bg-cyan-900/40 border-cyan-500 text-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.2)]' : 'bg-black/40 border-white/5 text-gray-500 hover:border-white/20'}`}
                                             >
                                                 {prog === 'Rising' && <TrendingUpIcon className="w-3 h-3 inline mr-1" />}
                                                 {prog}
@@ -465,38 +443,38 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
                                 </div>
 
                                 {/* Row 3: Technical Filters */}
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-2 gap-4">
                                     {/* BPM Range */}
                                     <div>
-                                        <label className="text-[8px] font-bold text-white/50 uppercase tracking-wider block mb-1.5">BPM Range</label>
+                                        <label className="text-xs font-bold text-white/70 uppercase tracking-wider block mb-2">BPM Range</label>
                                         <div className="flex items-center gap-2">
                                             <input 
                                                 type="number" 
                                                 placeholder="Min" 
                                                 value={plannerParams.bpmMin} 
                                                 onChange={(e) => setPlannerParams(p => ({...p, bpmMin: e.target.value}))}
-                                                className="w-full bg-black/60 border border-white/10 rounded-lg p-1.5 text-center text-[10px] font-mono text-white focus:border-cyan-500 outline-none" 
+                                                className="w-full bg-black/60 border border-white/10 rounded-xl p-3 text-center text-xs font-mono text-white focus:border-cyan-500 outline-none font-bold" 
                                             />
-                                            <span className="text-white/20">-</span>
+                                            <span className="text-white/20 font-bold">-</span>
                                             <input 
                                                 type="number" 
                                                 placeholder="Max" 
                                                 value={plannerParams.bpmMax} 
                                                 onChange={(e) => setPlannerParams(p => ({...p, bpmMax: e.target.value}))}
-                                                className="w-full bg-black/60 border border-white/10 rounded-lg p-1.5 text-center text-[10px] font-mono text-white focus:border-cyan-500 outline-none" 
+                                                className="w-full bg-black/60 border border-white/10 rounded-xl p-3 text-center text-xs font-mono text-white focus:border-cyan-500 outline-none font-bold" 
                                             />
                                         </div>
                                     </div>
 
                                     {/* Energy */}
                                     <div>
-                                        <label className="text-[8px] font-bold text-white/50 uppercase tracking-wider block mb-1.5">Min Energy</label>
-                                        <div className="flex gap-1 h-[28px]">
+                                        <label className="text-xs font-bold text-white/70 uppercase tracking-wider block mb-2">Min Energy</label>
+                                        <div className="flex gap-1 h-[42px]">
                                             {[0, 1, 2, 3, 4, 5].map(lvl => (
                                                 <button 
                                                     key={lvl} 
                                                     onClick={() => setPlannerParams(p => ({...p, minEnergy: lvl}))}
-                                                    className={`flex-1 rounded text-[9px] font-bold border transition-all ${plannerParams.minEnergy === lvl ? 'bg-cyan-600 border-cyan-400 text-white' : 'bg-black/40 border-white/5 text-gray-600 hover:bg-white/5'}`}
+                                                    className={`flex-1 rounded-lg text-[10px] font-bold border transition-all ${plannerParams.minEnergy === lvl ? 'bg-cyan-600 border-cyan-400 text-white' : 'bg-black/40 border-white/5 text-gray-600 hover:bg-white/5'}`}
                                                 >
                                                     {lvl === 0 ? 'All' : lvl}
                                                 </button>
@@ -506,14 +484,14 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
                                 </div>
 
                                 {/* Mandatory Tracks */}
-                                <div className="bg-black/30 rounded-lg p-3 border border-white/5">
-                                    <label className="text-[8px] font-bold text-white/50 uppercase tracking-wider block mb-2">{t.mandatoryTracks}</label>
+                                <div className="bg-black/30 rounded-xl p-4 border border-white/5">
+                                    <label className="text-xs font-bold text-white/70 uppercase tracking-wider block mb-2">{t.mandatoryTracks}</label>
                                     
                                     {/* List Selected */}
                                     {mustHaves.length > 0 && (
                                         <div className="flex flex-wrap gap-2 mb-3">
                                             {mustHaves.map(m => (
-                                                <span key={m.id} className="flex items-center gap-1 bg-cyan-900/30 text-cyan-300 border border-cyan-500/30 px-2 py-1 rounded text-[9px] font-bold">
+                                                <span key={m.id} className="flex items-center gap-1 bg-cyan-900/30 text-cyan-300 border border-cyan-500/30 px-2 py-1 rounded text-[10px] font-bold">
                                                     {m.name}
                                                     <button onClick={() => toggleMustHave(m)} className="hover:text-white"><XIcon className="w-3 h-3" /></button>
                                                 </span>
@@ -528,9 +506,9 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
                                             placeholder={t.searchToPlan} 
                                             value={planSearch}
                                             onChange={(e) => setPlanSearch(e.target.value)}
-                                            className="w-full bg-black/60 border border-white/10 rounded-lg pl-7 pr-3 py-1.5 text-[10px] text-white focus:border-cyan-500 outline-none"
+                                            className="w-full bg-black/60 border border-white/10 rounded-xl pl-9 pr-3 py-2.5 text-xs font-bold text-white focus:border-cyan-500 outline-none"
                                         />
-                                        <SearchIcon className="absolute left-2 top-2 w-3 h-3 text-gray-500" />
+                                        <SearchIcon className="absolute left-3 top-2.5 w-4 h-4 text-gray-500" />
                                     </div>
 
                                     {/* Search Results Dropdown */}
@@ -540,32 +518,34 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
                                                 <div 
                                                     key={t.id} 
                                                     onClick={() => toggleMustHave(t)}
-                                                    className="flex items-center justify-between p-1.5 hover:bg-white/10 rounded-md cursor-pointer group"
+                                                    className="flex items-center justify-between p-2 hover:bg-white/10 rounded-lg cursor-pointer group"
                                                 >
                                                     <div className="min-w-0">
-                                                        <p className="text-[10px] font-bold text-white truncate">{t.name}</p>
-                                                        <p className="text-[9px] text-gray-500 truncate">{t.artist}</p>
+                                                        <p className="text-xs font-bold text-white truncate">{t.name}</p>
+                                                        <p className="text-[10px] text-gray-500 truncate">{t.artist}</p>
                                                     </div>
-                                                    <PlusIcon className="w-3 h-3 text-cyan-500 opacity-0 group-hover:opacity-100" />
+                                                    <PlusIcon className="w-4 h-4 text-cyan-500 opacity-0 group-hover:opacity-100" />
                                                 </div>
                                             ))}
                                         </div>
                                     )}
                                 </div>
 
-                                {/* Playlists */}
+                                {/* Playlists - Enhanced Filtering */}
                                 <div className="space-y-2">
-                                    <label className="text-[8px] font-bold text-white/50 uppercase tracking-wider block">{t.targetPlaylists}</label>
-                                    <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto custom-scrollbar p-1">
-                                        {availableFolders.map(folder => (
-                                            <button key={folder} onClick={() => toggleTargetPlaylist(folder)} className={`px-2 py-1.5 rounded-md border text-[9px] font-bold transition-all ${plannerParams.targetPlaylists.includes(folder) ? 'bg-cyan-600 border-cyan-400 text-white' : 'bg-black/40 border-white/5 text-gray-500 hover:border-white/20'}`}>
+                                    <label className="text-xs font-bold text-white/70 uppercase tracking-wider block">{t.targetPlaylists}</label>
+                                    <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto custom-scrollbar p-1">
+                                        {availableFolders.length > 0 ? availableFolders.map(folder => (
+                                            <button key={folder} onClick={() => toggleTargetPlaylist(folder)} className={`px-3 py-2 rounded-lg border text-[10px] font-bold transition-all ${plannerParams.targetPlaylists.includes(folder) ? 'bg-cyan-600 border-cyan-400 text-white' : 'bg-black/40 border-white/5 text-gray-500 hover:border-white/20'}`}>
                                                 {folder}
                                             </button>
-                                        ))}
+                                        )) : (
+                                            <p className="text-[10px] text-slate-500 italic">Nenhuma playlist habilitada nas configurações.</p>
+                                        )}
                                     </div>
                                 </div>
                                 
-                                <button onClick={handleAutoPlan} disabled={isPlanning || fullPlaylist.length === 0} className="w-full py-3 bg-white text-black rounded-xl font-bold text-xs uppercase tracking-widest shadow-xl hover:bg-cyan-50 transition-all flex items-center justify-center gap-3 disabled:opacity-50 min-h-[44px]">
+                                <button onClick={handleAutoPlan} disabled={isPlanning || fullPlaylist.length === 0} className="w-full py-4 bg-white text-black rounded-xl font-bold text-xs uppercase tracking-widest shadow-xl hover:bg-cyan-50 transition-all flex items-center justify-center gap-3 disabled:opacity-50 min-h-[50px]">
                                     {isPlanning ? (<><div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div> {t.addingToQueue}</>) : (<><ZapIcon className="w-4 h-4 text-cyan-600" /> {t.btnPlan}</>)}
                                 </button>
                             </div>
@@ -575,19 +555,19 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
       </div>
       
       {/* --- Column 2: List content (Right Side) --- */}
-      {/* CONTENT STYLE from Library Tab */}
       <div className="md:col-span-7 lg:col-span-7 flex-1 md:h-full md:overflow-y-auto custom-scrollbar md:pr-2 pt-4 md:pt-0 relative">
           <div className="hidden md:flex items-center justify-between mb-4 sticky top-0 bg-[#020617]/95 backdrop-blur-sm p-2 z-10 border-b border-white/5">
               <h2 className="text-xl font-bold text-white">{t.yourSet} ({queue.length})</h2>
           </div>
 
           {queue.length > 0 ? (
-            <div className="space-y-3 px-1">
+            <div className="space-y-4 px-1 pb-20">
                 {queue.map((track, index) => {
                     let transitionInfo = null;
                     const isOnAir = track.id === currentTrackId;
                     const uniqueKey = `${track.id}-${index}`;
                     const isExpanded = expandedKey === uniqueKey;
+                    const isDragging = draggedIndex === index;
 
                     if (index > 0) {
                         const prev = queue[index-1];
@@ -604,29 +584,48 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
                             : 'text-green-400';
 
                         transitionInfo = (
-                            <div className="flex justify-center items-center py-1 relative">
+                            <div className="flex justify-center items-center py-2 relative">
                                 {/* Visual Connection Line */}
-                                <div className={`h-6 w-0.5 ${lineColor} absolute top-[-0.75rem] opacity-50`}></div>
-                                <div className={`bg-black/80 border border-white/5 rounded-full px-3 py-1 text-[8px] font-mono font-bold flex gap-3 shadow-lg z-10 scale-90 ${textColor}`}>
-                                    <span className={track.key === prev.key ? 'text-white' : 'text-slate-400'}>{prev.key} → {track.key}</span>
-                                    <div className="w-px h-2 bg-slate-700/50 self-center"></div>
-                                    <span>{bpmDiff} BPM</span>
+                                <div className={`h-8 w-0.5 ${lineColor} absolute top-[-1rem] opacity-50`}></div>
+                                <div className={`bg-black/90 border border-white/10 rounded-full px-4 py-1.5 font-mono font-bold flex gap-4 shadow-xl z-10 ${textColor}`}>
+                                    <span className={`text-xs md:text-sm ${track.key === prev.key ? 'text-white' : 'text-slate-400'}`}>{prev.key} → {track.key}</span>
+                                    <div className="w-px h-3 bg-slate-700/50 self-center"></div>
+                                    <span className="text-xs md:text-sm">{bpmDiff} BPM</span>
                                 </div>
                             </div>
                         );
                     }
 
                     return (
-                        <div key={uniqueKey} className="animate-in slide-in-from-left-2" style={{ animationDelay: `${index * 50}ms` }}>
+                        <div 
+                            key={uniqueKey} 
+                            className={`animate-in slide-in-from-left-2 transition-opacity ${isDragging ? 'opacity-50' : 'opacity-100'}`}
+                            draggable={!isExpanded} // Disable drag when expanded to avoid conflicts
+                            onDragStart={(e) => handleDragStart(e, index)}
+                            onDragOver={(e) => handleDragOver(e, index)}
+                            onDrop={(e) => handleDrop(e, index)}
+                        >
                             {transitionInfo}
-                            <SwipeableRow onDelete={() => handleRemove(index)}>
-                                <div className="relative group flex items-stretch gap-2">
-                                    <div className="flex-shrink-0 w-5 flex flex-col items-center justify-center">
-                                        <div className={`text-[10px] font-bold ${isOnAir ? 'text-cyan-400' : 'text-slate-500 opacity-30'} mb-0.5`}>{index + 1}</div>
-                                        <div className={`flex-1 w-[1px] bg-gradient-to-b ${isOnAir ? 'from-cyan-400' : 'from-slate-700/30'} to-transparent`}></div>
+                            
+                            <SwipeableItem 
+                                // Drag Right (>>): Delete
+                                onLeftAction={() => handleRemove(index)}
+                                leftColor="bg-red-600"
+                                leftIcon={<TrashIcon className="w-8 h-8 text-white" />}
+                                // Drag Left (<<): Load On Air
+                                onRightAction={() => onSelectTrack(track)}
+                                rightColor="bg-cyan-600"
+                                rightIcon={<PlayIcon className="w-8 h-8 text-white" />}
+                            >
+                                <div className="relative group flex items-stretch gap-3">
+                                    {/* Drag Handle Area */}
+                                    <div className="flex-shrink-0 w-6 flex flex-col items-center justify-center cursor-grab active:cursor-grabbing">
+                                        <div className={`text-xs font-black ${isOnAir ? 'text-cyan-400' : 'text-slate-600'} mb-0.5`}>{index + 1}</div>
+                                        <div className={`flex-1 w-[2px] bg-gradient-to-b ${isOnAir ? 'from-cyan-400' : 'from-slate-800'} to-transparent rounded-full`}></div>
                                     </div>
+                                    
                                     <div className="flex-1 relative pb-1">
-                                        <div className={`relative overflow-hidden rounded-xl transition-all duration-300 ${isOnAir ? 'ring-2 ring-cyan-400 ring-offset-1 ring-offset-black scale-[1.01] shadow-[0_0_20px_rgba(6,182,212,0.15)]' : 'hover:scale-[1.01]'}`}>
+                                        <div className={`relative overflow-hidden rounded-xl transition-all duration-300 ${isOnAir ? 'ring-2 ring-cyan-400 ring-offset-2 ring-offset-black scale-[1.01] shadow-[0_0_20px_rgba(6,182,212,0.2)]' : 'hover:scale-[1.01]'}`}>
                                             <TrackItem 
                                                 track={track} 
                                                 onSelect={(t) => onSelectTrack(t)} 
@@ -635,19 +634,10 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
                                                 isExpanded={isExpanded}
                                                 onToggleExpand={() => handleToggleExpand(uniqueKey)}
                                             />
-                                            {/* Only show delete button when NOT expanded to avoid overlaying detail info */}
-                                            {!isExpanded && (
-                                                <button 
-                                                    onClick={(e) => { e.stopPropagation(); handleRemove(index); }} 
-                                                    className="absolute left-2 bottom-2 p-1.5 bg-black/60 hover:bg-red-600 text-red-500 hover:text-white rounded-lg transition-all opacity-0 group-hover:opacity-100 border border-white/10 hover:border-red-500 flex items-center justify-center min-h-[28px] min-w-[28px] z-20 shadow-lg active:scale-90 backdrop-blur-sm"
-                                                >
-                                                    <TrashIcon className="w-3.5 h-3.5" />
-                                                </button>
-                                            )}
                                         </div>
                                     </div>
                                 </div>
-                            </SwipeableRow>
+                            </SwipeableItem>
                         </div>
                     );
                 })}
