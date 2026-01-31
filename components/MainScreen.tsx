@@ -408,6 +408,13 @@ export const MainScreen: React.FC<MainScreenProps> = ({
       return dominant;
   };
 
+  // Helper for folder icon color in sidebar
+  const getFolderColor = (folderName: string) => {
+      // We look at the full playlist to find tracks in this location
+      const tracks = playlist.filter(t => t.location === folderName);
+      return getPredominantColor(tracks);
+  };
+
   return (
     <div 
         className={`min-h-screen text-slate-200 font-sans selection:bg-cyan-500/30 transition-colors duration-1000 ease-in-out ${isHighContrast ? 'contrast-125 grayscale bg-black' : `bg-gradient-to-br ${theme.gradientFrom} via-slate-950 ${theme.gradientTo}`} ${!isHighContrast && 'aurora-bg'}`}
@@ -473,11 +480,6 @@ export const MainScreen: React.FC<MainScreenProps> = ({
       </aside>
 
       {/* --- MAIN CONTENT CONTAINER --- */}
-      {/* 
-          Desktop Logic: Fixed Height Dashboard Layout. 
-          The main container moves right based on sidebar width.
-          It does NOT scroll itself; internal divs handle scrolling.
-      */}
       <main 
         className={`pt-20 transition-all duration-300 flex flex-col
             ${sidebarExpanded ? 'md:ml-64' : 'md:ml-20'} 
@@ -527,11 +529,12 @@ export const MainScreen: React.FC<MainScreenProps> = ({
 
         {/* TAB: LIBRARY (SPLIT VIEW) */}
         {activeTab === 'library' && (
-          <div className="flex-1 md:h-full md:flex flex-col md:flex-row animate-in fade-in slide-in-from-bottom-4 duration-500 md:overflow-hidden">
+          // CHANGED: Use grid with 5/7 proportion for tablet/desktop to match Deck layout
+          <div className="flex-1 md:h-full md:grid md:grid-cols-12 md:gap-6 md:px-6 md:pb-6 relative flex flex-col h-full px-4 pb-24 md:overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
             
             {/* --- COLUMN 1: SIDEBAR (Search, Filters, Folders) --- */}
-            {/* Mobile: Top block. Tablet: Left Sidebar */}
-            <div className="w-full md:w-80 lg:w-96 flex-shrink-0 md:h-full md:border-r md:border-white/5 bg-[#020617]/95 md:bg-slate-950/40 backdrop-blur-xl md:backdrop-blur-none z-40 transition-all duration-300 flex flex-col">
+            {/* Mobile: Top block. Tablet: Left Sidebar (5/12 cols) */}
+            <div className="w-full md:col-span-5 lg:col-span-5 flex-shrink-0 md:h-full md:border-r md:border-white/5 bg-[#020617]/95 md:bg-slate-950/40 backdrop-blur-xl md:backdrop-blur-none z-40 transition-all duration-300 flex flex-col rounded-xl overflow-hidden">
                 
                 {/* SEARCH & TOGGLES Container */}
                 <div className="p-4 border-b border-white/5 space-y-3">
@@ -593,23 +596,30 @@ export const MainScreen: React.FC<MainScreenProps> = ({
                             {enabledDirectories.length === uniqueDirectories.length && <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full"></div>}
                         </button>
                         
-                        {uniqueDirectories.map(dir => (
-                            <button 
-                                key={dir}
-                                onClick={() => selectDirectoryExclusive(dir)}
-                                className={`w-full text-left px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-between group truncate ${enabledDirectories.length === 1 && enabledDirectories[0] === dir ? 'bg-cyan-600/20 text-cyan-400 border border-cyan-500/20' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}
-                            >
-                                <span className="truncate">{dir}</span>
-                                {enabledDirectories.length === 1 && enabledDirectories[0] === dir && <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full"></div>}
-                            </button>
-                        ))}
+                        {uniqueDirectories.map(dir => {
+                            // CHANGED: Get directory specific color for the icon
+                            const dirColor = getFolderColor(dir);
+                            return (
+                                <button 
+                                    key={dir}
+                                    onClick={() => selectDirectoryExclusive(dir)}
+                                    className={`w-full text-left px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-between group truncate ${enabledDirectories.length === 1 && enabledDirectories[0] === dir ? 'bg-cyan-600/20 text-cyan-400 border border-cyan-500/20' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}
+                                >
+                                    <div className="flex items-center gap-2 truncate">
+                                        <FolderIcon className="w-4 h-4 flex-shrink-0" style={{ color: dirColor || '#475569' }} />
+                                        <span className="truncate">{dir}</span>
+                                    </div>
+                                    {enabledDirectories.length === 1 && enabledDirectories[0] === dir && <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full"></div>}
+                                </button>
+                            )
+                        })}
                     </div>
                 </div>
             </div>
 
             {/* --- COLUMN 2: CONTENT (Cards) --- */}
-            {/* Mobile: Main List. Tablet: Right Content Area */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar px-4 pb-24 md:pb-8 pt-4 md:pt-4 relative">
+            {/* Mobile: Main List. Tablet: Right Content Area (7/12 cols) */}
+            <div className="md:col-span-7 lg:col-span-7 flex-1 md:h-full md:overflow-y-auto custom-scrollbar md:pr-2 pt-4 md:pt-0 relative">
                 
                 {/* Mobile Only: Header Info */}
                 <div className="md:hidden flex justify-between items-center mb-2">
@@ -623,7 +633,8 @@ export const MainScreen: React.FC<MainScreenProps> = ({
                 */}
                 {(groupingMode === 'all' || window.innerWidth >= 768) ? (
                     // GRID LAYOUT
-                    <div className={viewMode === 'card' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-2 md:gap-4' : 'space-y-1.5'}>
+                    // CHANGED: 'md:grid-cols-1' ensures 1 card per line on tablet/desktop as requested.
+                    <div className={viewMode === 'card' ? 'grid grid-cols-1 md:grid-cols-1 gap-2 md:gap-3' : 'space-y-1.5'}>
                         {filteredPlaylist.length > 0 ? (
                             filteredPlaylist.map(track => renderTrackItem(track))
                         ) : (
@@ -663,7 +674,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({
                     <button 
                     onClick={() => {
                         // Target the correct scroll container based on device
-                        const el = document.querySelector('.md\\:flex-1.overflow-y-auto') || document.querySelector('main .overflow-y-auto');
+                        const el = document.querySelector('.md\\:col-span-7.custom-scrollbar') || document.querySelector('main .overflow-y-auto');
                         if (el) {
                             el.scrollTo({ top: 0, behavior: 'smooth' });
                         } else {

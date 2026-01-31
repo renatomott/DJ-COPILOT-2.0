@@ -70,8 +70,8 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
   else if (energy >= 3.5) energyGradient = 'bg-gradient-to-r from-orange-900/10 via-transparent to-transparent'; 
   else if (energy <= 2) energyGradient = 'bg-gradient-to-r from-blue-900/10 via-transparent to-transparent'; 
 
-  // Base classes
-  const baseClasses = `rounded-xl cursor-pointer transition-all duration-300 border relative group overflow-hidden ${energyGradient}`;
+  // CHANGED: Added md:border-l-[6px] for tablet view to show directory color strip
+  const baseClasses = `rounded-xl cursor-pointer transition-all duration-300 border md:border-l-[6px] relative group overflow-hidden ${energyGradient}`;
   const selectedClasses = "bg-cyan-950/40 border-cyan-500 shadow-md ring-1 ring-cyan-500/30";
   const onAirClasses = "bg-cyan-500/10 border-cyan-400 shadow-[0_0_20px_rgba(34,211,238,0.3)] animate-pulse-onair ring-2 ring-cyan-400/50 ring-offset-2 ring-offset-black";
   const defaultClasses = "bg-slate-900/40 border-slate-800 hover:bg-slate-800 hover:border-slate-600";
@@ -115,6 +115,12 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
         <div 
             onClick={handleCardClick} 
             className={`${baseClasses} flex items-center gap-3 px-3 py-2 ${isOnAir ? onAirClasses : isSelected ? selectedClasses : defaultClasses}`}
+            // In List view, we generally don't show the big left border, but we can if desired. 
+            // For now keeping it consistent with card view request only for big border.
+            // Overriding md:border-l-[6px] back to 0 or keeping it?
+            // The prompt specified "nos cards", implies card view.
+            // Let's hide the big border in list view.
+            style={{ borderLeftWidth: '1px', borderLeftColor: 'transparent' }}
         >
             {/* Left: BPM & Key */}
             <div className="flex flex-col items-center justify-center gap-1.5 min-w-[3rem] border-r border-white/5 pr-3">
@@ -204,6 +210,8 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
         ref={cardRef}
         onClick={handleCardClick}
         className={`${baseClasses} flex flex-col ${isOnAir ? onAirClasses : isSelected ? selectedClasses : defaultClasses} ${cardHeightClass}`}
+        // CHANGED: Apply the directory color to the left border
+        style={{ borderLeftColor: track.color || '#334155' }}
       >
         {/* Main Content Row */}
         <div className="flex items-center gap-2.5 p-2 w-full relative h-full">
