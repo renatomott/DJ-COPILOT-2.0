@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import type { Track, Suggestion, MashupPair, SetReport, SuggestionResult } from "../types";
 
@@ -229,25 +228,51 @@ export const getMashupPairs = async (playlist: Track[]): Promise<MashupPair[]> =
 export const getTrackSuggestions = async (currentTrack: Track, playlist: Track[], excludeIds: string[] = [], language: 'pt-BR' | 'en-US' = 'pt-BR'): Promise<SuggestionResult> => {
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const currentBpm = parseFloat(currentTrack.bpm) || 120;
+
+    // 1. INTELLIGENT PRE-SORTING
+    // Instead of random tracks, we explicitly feed the AI tracks that are numerically close in BPM first.
+    // This solves the issue of the AI receiving 80 random tracks that are totally unmatched and returning nothing.
     const candidates = playlist.filter(t => t.id !== currentTrack.id && !excludeIds.includes(t.id));
-    const availableTracks = candidates.sort(() => 0.5 - Math.random()).slice(0, 80).map(t => `ID: ${t.id}, "${t.name}" (${t.bpm} BPM, Tom: ${t.key})`).join('\n');
-    if (!availableTracks) return { suggestions: [], cuePoints: [] };
+    
+    // Sort by BPM proximity to current track
+    const sortedCandidates = candidates.sort((a, b) => {
+        const bpmA = parseFloat(a.bpm) || 0;
+        const bpmB = parseFloat(b.bpm) || 0;
+        const diffA = Math.abs(bpmA - currentBpm);
+        const diffB = Math.abs(bpmB - currentBpm);
+        return diffA - diffB;
+    });
+
+    // Strategy: Take top 60 relevant tracks + 20 random tracks (for variety/genre switching)
+    const closestTracks = sortedCandidates.slice(0, 60);
+    const remainingTracks = sortedCandidates.slice(60);
+    const randomTracks = remainingTracks.sort(() => 0.5 - Math.random()).slice(0, 20);
+    
+    const finalPool = [...closestTracks, ...randomTracks];
+    
+    // Fallback if playlist is small
+    const tracksToSend = finalPool.length > 0 ? finalPool : candidates.slice(0, 80);
+
+    const availableTracksStr = tracksToSend.map(t => `ID: ${t.id}, "${t.name}" (${t.bpm} BPM, Tom: ${t.key}, Gênero: ${t.genre})`).join('\n');
+    
+    if (!availableTracksStr) return { suggestions: [], cuePoints: [] };
+    
     const langInstruction = language === 'pt-BR' ? 'Português do Brasil' : 'Inglês (English)';
     
-    // Updated prompt with stricter BPM constraints
+    // Relaxed prompt to ensure results
     const prompt = `
     Faixa atual: "${currentTrack.name}" (${currentTrack.bpm} BPM, Tom ${currentTrack.key}). 
     
-    Analise as faixas disponíveis e sugira as 5 melhores combinações para um set de DJ.
+    Analise as faixas fornecidas e sugira as 5 melhores opções.
     
     REGRAS DE MATCH SCORE (0.0 a 1.0):
-    1. PROXIMIDADE DE BPM É CRÍTICA. Se a diferença for maior que 8%, o matchScore DEVE ser menor que 0.5.
-    2. Priorize BPMs compatíveis (+/- 4%).
-    3. Considere mistura harmônica (Camelot Wheel).
-    4. matchScore acima de 0.9 deve ter BPM quase idêntico e tom perfeito.
+    1. Idealmente busque BPM próximo (+/- 8%) e harmonia compatível.
+    2. IMPORTANTE: Se não houver matches perfeitos, retorne as melhores opções disponíveis, mesmo com matchScore mais baixo. NÃO RETORNE LISTA VAZIA.
+    3. Se sugerir uma troca de gênero ou BPM drástica, explique o motivo criativo.
     
     Retorne JSON com "suggestions" (id, matchScore, reason em ${langInstruction}) e "cuePoints" (strings).
-    \n\n${availableTracks}`;
+    \n\n${availableTracksStr}`;
     
     const response = await ai.models.generateContent({
       model: textModel,
@@ -281,6 +306,7 @@ export const getTrackSuggestions = async (currentTrack: Track, playlist: Track[]
     }).filter((s: any) => s !== null);
     return { suggestions, cuePoints: data.cuePoints || [] };
   } catch (err) {
+    console.error("Suggestion Error:", err);
     return { suggestions: [], cuePoints: [] };
   }
 };
