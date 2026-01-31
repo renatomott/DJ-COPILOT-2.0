@@ -22,6 +22,7 @@ export const SuggestionPanel: React.FC<SuggestionPanelProps> = ({ currentTrack, 
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   
   const t = translations[language];
   const isFetching = useRef(false);
@@ -29,6 +30,7 @@ export const SuggestionPanel: React.FC<SuggestionPanelProps> = ({ currentTrack, 
 
   const handleDismiss = (trackId: string) => {
     setSuggestions(prev => prev.filter(s => s.id !== trackId));
+    if (expandedId === trackId) setExpandedId(null);
   };
 
   const loadSuggestions = useCallback(async (force: boolean = false) => {
@@ -50,6 +52,7 @@ export const SuggestionPanel: React.FC<SuggestionPanelProps> = ({ currentTrack, 
     // Clear old suggestions if track changed to avoid confusion
     if (trackChanged) {
         setSuggestions([]);
+        setExpandedId(null);
         lastTrackId.current = currentTrack.id;
     }
 
@@ -104,6 +107,10 @@ export const SuggestionPanel: React.FC<SuggestionPanelProps> = ({ currentTrack, 
     loadSuggestions(true);
   };
 
+  const toggleExpand = (id: string) => {
+      setExpandedId(prev => prev === id ? null : id);
+  };
+
   return (
     <div className="my-6 p-4 bg-gray-900 rounded-2xl border border-gray-800">
       <div className="flex items-center justify-between mb-4">
@@ -154,6 +161,8 @@ export const SuggestionPanel: React.FC<SuggestionPanelProps> = ({ currentTrack, 
                   onDismiss={handleDismiss}
                   onAddToQueue={onAddToQueue}
                   language={language}
+                  isExpanded={expandedId === suggestion.id}
+                  onToggleExpand={() => toggleExpand(suggestion.id)}
                 />
               ))}
             </div>

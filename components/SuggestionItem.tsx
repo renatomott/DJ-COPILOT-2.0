@@ -1,11 +1,12 @@
 
-import React, { useState } from 'react';
+import React, { useRef, useEffect } from 'react';
 import type { Suggestion, Track } from '../types';
-import { ClockIcon, PlayIcon, PlayIcon as PlayIconSolid, XIcon, PlusIcon, FolderIcon, ZapIcon, ActivityIcon, StarIcon } from './icons';
+import { ClockIcon, PlayIcon, XIcon, ActivityIcon, StarIcon, FolderIcon, ZapIcon, BrainIcon, PlusIcon } from './icons';
 import { CoverArt } from './CoverArt';
 import { translations } from '../utils/translations';
+import { SwipeableItem } from './SwipeableItem';
 
-const renderRating = (rating: number) => {
+const renderRating = (rating: number, sizeClass = "w-3 h-3") => {
   const stars = [];
   const normalizedRating = rating > 5 ? Math.round(rating / 20) : rating;
   for (let i = 1; i <= 5; i++) {
@@ -13,12 +14,20 @@ const renderRating = (rating: number) => {
     stars.push(
       <StarIcon 
         key={i} 
-        className={`w-[0.7em] h-[0.7em] ${isFilled ? 'text-yellow-400 fill-current' : 'text-white/10 stroke-white/40'}`} 
+        className={`${sizeClass} ${isFilled ? 'text-yellow-400 fill-current' : 'text-white/10 stroke-white/30'}`} 
         filled={isFilled} 
       />
     );
   }
   return <div className="flex items-center gap-0.5">{stars}</div>;
+};
+
+const hexToRgba = (hex: string | undefined, alpha: number) => {
+    if (!hex) return `rgba(6, 182, 212, ${alpha})`; 
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
 
 interface SuggestionItemProps {
@@ -28,211 +37,225 @@ interface SuggestionItemProps {
   onDismiss: (trackId: string) => void;
   onAddToQueue?: (track: Track) => void;
   language: 'pt-BR' | 'en-US';
+  isExpanded: boolean;
+  onToggleExpand: () => void;
 }
 
-export const SuggestionItem: React.FC<SuggestionItemProps> = ({ suggestion, currentTrack, onSelect, onDismiss, onAddToQueue, language }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
+export const SuggestionItem: React.FC<SuggestionItemProps> = ({ 
+    suggestion, 
+    currentTrack, 
+    onSelect, 
+    onDismiss, 
+    onAddToQueue,
+    language, 
+    isExpanded, 
+    onToggleExpand 
+}) => {
   const t = translations[language];
+  const itemRef = useRef<HTMLDivElement>(null);
 
-  // Calculate BPM difference
-  const currentBpm = parseFloat(currentTrack.bpm);
-  const suggestedBpm = parseFloat(suggestion.bpm);
-  const bpmDiff = suggestedBpm - currentBpm;
-  const bpmDiffFormatted = bpmDiff > 0 ? `+${bpmDiff.toFixed(1)}` : bpmDiff.toFixed(1);
+  useEffect(() => {
+    if (isExpanded && itemRef.current) {
+        setTimeout(() => {
+            // Increased to ensure visibility
+            const headerOffset = 110; 
+            const elementPosition = itemRef.current?.getBoundingClientRect().top || 0;
+            const offsetPosition = elementPosition + window.scrollY - headerOffset;
+            window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
+        }, 150);
+    }
+  }, [isExpanded]);
+
+  const matchScoreDisplay = suggestion.matchScore <= 1 
+    ? Math.round(suggestion.matchScore * 100) 
+    : Math.round(suggestion.matchScore);
+
+  const scoreColor = matchScoreDisplay >= 90 ? 'text-green-400' : 
+                     matchScoreDisplay >= 75 ? 'text-cyan-400' : 'text-yellow-400';
+
+  const isBpmMatch = Math.abs(parseFloat(currentTrack.bpm) - parseFloat(suggestion.bpm)) < 1.0;
+  const isKeyMatch = currentTrack.key === suggestion.key;
   
-  // Match Logic
-  const isBpmClose = Math.abs(bpmDiff) <= 1.5; // Consider "match" if within 1.5 BPM
-  const isKeyMatch = suggestion.key === currentTrack.key;
-  
-  // Determine color for match score
-  const scoreColor = suggestion.matchScore >= 90 ? 'text-green-400 border-green-500/30 bg-green-950/40' : 
-                     suggestion.matchScore >= 75 ? 'text-cyan-400 border-cyan-500/30 bg-cyan-950/40' : 'text-yellow-400 border-yellow-500/30 bg-yellow-950/40';
+  // Gold Outline Logic
+  const goldBorderClass = "ring-1 ring-yellow-500/80 bg-yellow-900/20";
+  const defaultBorderClass = "border border-white/10 bg-black/40";
 
-  // Dynamic Theme Color based on Folder/Genre Color
-  const themeColor = suggestion.color || '#22d3ee'; // Default to cyan if no color
-
-  // Match Style Helper: Gold Outline for matches, White text always
-  const getBoxStyle = (isMatch: boolean) => {
-      if (isMatch) {
-          return `border-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.3)] bg-yellow-500/5 text-white`;
-      }
-      return `border-white/10 bg-transparent text-slate-300`;
-  };
+  const glowColor = hexToRgba(suggestion.color, 0.4);
+  const containerStyle = isExpanded 
+    ? { boxShadow: `0 0 30px -5px ${glowColor}`, borderColor: 'rgba(255,255,255,0.2)' }
+    : { borderColor: 'rgba(255,255,255,0.1)' };
 
   return (
-    <div 
-      className={`relative group bg-slate-900/40 border transition-all duration-300 cursor-pointer overflow-hidden ${isExpanded ? 'rounded-2xl' : 'rounded-xl'}`}
-      style={{ 
-          borderColor: 'transparent',
-          // Intense outer glow based on folder color
-          boxShadow: `0 0 ${isExpanded ? '40px' : '20px'} ${themeColor}${isExpanded ? '66' : '33'}` 
-      }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      onClick={() => setIsExpanded(!isExpanded)}
+    <SwipeableItem
+        onLeftAction={() => onAddToQueue && onAddToQueue(suggestion)}
+        leftColor="bg-green-600"
+        leftIcon={<PlusIcon className="w-8 h-8 text-white" />}
+        onRightAction={() => onSelect(suggestion)}
+        rightColor="bg-cyan-600"
+        rightIcon={<PlayIcon className="w-8 h-8 text-white" />}
     >
-      {/* Top Section: Always visible summary (Row) */}
-      <div className="flex p-3 gap-3 relative z-10">
-        {/* Cover Art Section */}
         <div 
-            className="relative w-16 h-16 sm:w-16 sm:h-16 flex-shrink-0 rounded-lg overflow-hidden shadow-lg border border-transparent transition-colors"
+          ref={itemRef}
+          onClick={onToggleExpand}
+          className={`relative overflow-hidden transition-all duration-300 border cursor-pointer ${isExpanded ? 'bg-slate-900/90 rounded-xl' : 'bg-black/40 backdrop-blur-md hover:bg-black/50 rounded-lg'}`}
+          style={containerStyle}
         >
-          <CoverArt 
-            id={suggestion.id} 
-            artist={suggestion.artist} 
-            name={suggestion.name} 
-            className="w-full h-full"
-          />
-          <div className={`absolute inset-0 bg-black/60 flex items-center justify-center transition-opacity duration-200 ${isHovered ? 'opacity-100' : 'opacity-0'}`}>
-            <button 
-              onClick={(e) => { e.stopPropagation(); onSelect(suggestion); }}
-              className="text-white p-2 rounded-full transform hover:scale-110 transition-transform shadow-lg bg-blue-600 hover:bg-blue-500"
-              title={t.loadDeck}
-            >
-              <PlayIcon className="w-4 h-4 fill-current" />
-            </button>
-          </div>
-        </div>
-
-        {/* Info Section */}
-        <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5 gap-1">
-          {/* Header: Title & Score */}
-          <div className="flex justify-between items-start gap-3">
-             <h4 className="font-black text-sm text-white leading-tight break-words transition-colors group-hover:text-cyan-100">
-                {suggestion.name}
-             </h4>
-             {/* Score Badge */}
-             <span className={`flex-shrink-0 text-xs font-black font-mono ${scoreColor} px-2 py-1 rounded-md border shadow-sm`}>
-                {Math.round(suggestion.matchScore)}%
-             </span>
-          </div>
-          
-          <p className="text-xs font-bold text-slate-300 leading-tight break-words">{suggestion.artist}</p>
-
-          {/* Row 3: Technical Stats (BPM, Key, Time) */}
-          <div className="flex flex-wrap items-center gap-2 mt-1.5">
-             {/* BPM Box */}
-             <div 
-                className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono border transition-all ${getBoxStyle(isBpmClose)}`} 
-                title="BPM & Diff"
-             >
-                <ActivityIcon className={`w-3 h-3 ${isBpmClose ? 'text-yellow-400' : 'text-slate-500'}`} />
-                <span className="font-bold">{suggestion.bpm}</span>
-                <span className={`ml-0.5 ${Math.abs(bpmDiff) > 5 ? 'text-red-400' : 'text-slate-500'} opacity-80`}>
-                   ({bpmDiffFormatted})
-                </span>
-             </div>
-             
-             {/* Key Box */}
-             <div 
-                className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold border transition-all ${getBoxStyle(isKeyMatch)}`}
-                title="Key"
-             >
-                <span>
-                   {suggestion.key}
-                </span>
-             </div>
-
-             {/* Duration (White Text) */}
-             <div className="flex items-center gap-1 ml-1">
-                <ClockIcon className="w-3 h-3 text-slate-500" />
-                <span className="text-[10px] font-mono font-bold text-white">{suggestion.duration}</span>
-             </div>
-          </div>
-
-           {/* Row 4: Folder & Rating (Visible in Collapsed) */}
-           {!isExpanded && (
-               <div className="flex items-center justify-between mt-1 pt-1 border-t border-white/5">
-                    <div className="flex items-center gap-1.5 max-w-[70%]">
-                        <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: themeColor }} />
-                        <FolderIcon className="w-3 h-3 flex-shrink-0 text-slate-500" />
-                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wide truncate">{suggestion.location}</span>
-                    </div>
-                    {renderRating(suggestion.rating)}
-               </div>
-           )}
-        </div>
-      </div>
-      
-      {/* EXPANDABLE CONTENT - FULL WIDTH */}
-      {isExpanded && (
-        <div className="px-3 pb-3 pt-0 animate-in slide-in-from-top-2 fade-in duration-200 space-y-2 relative z-10">
-            {/* Divider */}
-            <div className="w-full h-px bg-white/5 mb-2"></div>
+          {/* --- CONTENT CONTAINER --- */}
+          <div className={`flex ${isExpanded ? 'flex-col gap-3 p-3' : 'flex-row items-center gap-3 p-2.5'}`}>
             
-            {/* Extended Info Row: Folder, Plays, Rating */}
-            <div className="flex items-center justify-between gap-2 bg-white/5 p-2 rounded-lg border border-white/5">
-                <div className="flex items-center gap-2 min-w-0">
-                    <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: themeColor }} />
-                    <FolderIcon className="w-3.5 h-3.5 flex-shrink-0 text-slate-500" />
-                    <span className="text-[10px] font-bold text-white uppercase tracking-wider truncate">{suggestion.location || 'N/A'}</span>
+            {/* 1. COVER ART (Left Aligned in both states) */}
+            <div className={`relative flex-shrink-0 transition-all duration-300 ${isExpanded ? 'w-20 h-20' : 'w-14 h-14'}`}>
+              <div className="w-full h-full rounded-md overflow-hidden shadow-lg border border-white/10 bg-black relative">
+                <CoverArt 
+                  id={suggestion.id} 
+                  artist={suggestion.artist} 
+                  name={suggestion.name} 
+                  className="w-full h-full"
+                  priority={isExpanded}
+                />
+                {/* Play Overlay */}
+                <div className={`absolute inset-0 bg-black/30 flex items-center justify-center ${isExpanded ? 'opacity-100' : 'opacity-0'}`}>
+                    {isExpanded && <PlayIcon className="w-8 h-8 text-white/80" />}
                 </div>
-                <div className="flex items-center gap-3 flex-shrink-0">
-                    <div className="flex items-center gap-1" title="Plays">
-                        <PlayIconSolid className="w-3 h-3 text-slate-500" />
-                        <span className="text-[10px] font-mono font-bold text-slate-300">{suggestion.playCount}</span>
-                    </div>
-                    {renderRating(suggestion.rating)}
-                </div>
+              </div>
             </div>
 
-            {/* AI Cues */}
-            {suggestion.cuePoints && suggestion.cuePoints.length > 0 ? (
-                <div 
-                    className="flex flex-col gap-1.5 mt-1 p-2 rounded-lg border"
-                    style={{ backgroundColor: `${themeColor}08`, borderColor: `${themeColor}20` }}
-                >
-                    <div className="flex items-center gap-1">
-                            <ZapIcon className="w-3 h-3 text-white" />
-                            <span className="text-[9px] font-bold text-white uppercase tracking-widest">Sugestão de Cues</span>
+            {/* 2. HEADER INFO (Right of Art) */}
+            <div className="flex-1 min-w-0 flex flex-col justify-center">
+                {/* Title - Larger */}
+                <h4 className={`font-black text-white leading-tight break-words ${isExpanded ? 'text-lg mb-0.5' : 'text-base'}`}>
+                    {suggestion.name}
+                </h4>
+                
+                {/* Artist - Bold & Colored */}
+                <p className={`font-bold text-cyan-100 break-words leading-tight ${isExpanded ? 'text-sm mb-2' : 'text-xs mb-1.5'}`}>
+                    {suggestion.artist}
+                </p>
+
+                {/* RETRACTED: Compact Stats Row */}
+                {!isExpanded && (
+                    <div className="flex items-center flex-wrap gap-2">
+                         {/* Match % */}
+                         <div className="flex items-center gap-1 bg-black/40 px-1.5 py-0.5 rounded text-[10px]">
+                            <BrainIcon className={`w-3 h-3 ${scoreColor}`} />
+                            <span className={`font-black ${scoreColor}`}>{matchScoreDisplay}%</span>
+                         </div>
+                         
+                         {/* BPM */}
+                         <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ${isBpmMatch ? 'text-yellow-400 ring-1 ring-yellow-500/50' : 'text-gray-400 bg-white/5'}`}>
+                            {suggestion.bpm}
+                         </span>
+
+                         {/* Key */}
+                         <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ${isKeyMatch ? 'text-yellow-400 ring-1 ring-yellow-500/50' : suggestion.key.includes('m') ? 'text-cyan-300 bg-cyan-950/30' : 'text-pink-300 bg-pink-950/30'}`}>
+                            {suggestion.key}
+                         </span>
+                        
+                        {/* Dot Location */}
+                        {suggestion.location && (
+                             <div className="flex items-center gap-1 ml-auto opacity-70">
+                                {suggestion.color ? (
+                                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: suggestion.color }} />
+                                ) : (
+                                    <FolderIcon className="w-3 h-3 text-gray-500" />
+                                )}
+                             </div>
+                        )}
                     </div>
-                    <div className="flex flex-wrap gap-1.5">
-                        {suggestion.cuePoints.slice(0, 4).map((cue, idx) => (
-                            <span 
-                                key={idx} 
-                                className="text-[10px] font-bold px-2 py-0.5 rounded border"
-                                style={{ color: themeColor, borderColor: `${themeColor}40`, backgroundColor: `${themeColor}10` }}
-                            >
+                )}
+
+                {/* EXPANDED: Location & Rating */}
+                {isExpanded && (
+                    <div className="flex items-center gap-3">
+                         <div className="flex items-center gap-1.5 bg-black/30 px-2 py-1 rounded-md border border-white/5 max-w-fit">
+                            {suggestion.color && <span className="w-2 h-2 rounded-full shadow-[0_0_5px_currentColor]" style={{ backgroundColor: suggestion.color, color: suggestion.color }} />}
+                            <span className="text-[10px] text-gray-300 font-bold uppercase break-all line-clamp-1">{suggestion.location}</span>
+                         </div>
+                         {renderRating(suggestion.rating, "w-2.5 h-2.5")}
+                    </div>
+                )}
+            </div>
+            
+            {/* Close Button (Retracted) */}
+            {!isExpanded && (
+                <button onClick={(e) => { e.stopPropagation(); onDismiss(suggestion.id); }} className="p-2 text-gray-600 hover:text-white">
+                    <XIcon className="w-4 h-4" />
+                </button>
+            )}
+          </div>
+
+          {/* 3. EXPANDED DETAILS (Below Header) */}
+          {isExpanded && (
+            <div className="px-3 pb-3 space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                
+                {/* A. Data Grid (Match, BPM, Key, Time) */}
+                <div className="grid grid-cols-4 gap-2">
+                    {/* Match */}
+                    <div className="bg-black/40 rounded border border-white/10 p-1.5 flex flex-col items-center">
+                        <BrainIcon className={`w-3.5 h-3.5 mb-0.5 ${scoreColor}`} />
+                        <span className={`text-sm font-black ${scoreColor}`}>{matchScoreDisplay}%</span>
+                    </div>
+                    {/* BPM */}
+                    <div className={`rounded p-1.5 flex flex-col items-center ${isBpmMatch ? goldBorderClass : defaultBorderClass}`}>
+                        <span className="text-[9px] text-gray-500 uppercase font-bold">BPM</span>
+                        <span className={`text-sm font-mono font-black ${isBpmMatch ? 'text-yellow-400' : 'text-white'}`}>{suggestion.bpm}</span>
+                    </div>
+                    {/* Key */}
+                    <div className={`rounded p-1.5 flex flex-col items-center ${isKeyMatch ? goldBorderClass : defaultBorderClass}`}>
+                        <span className="text-[9px] text-gray-500 uppercase font-bold">Key</span>
+                        <span className={`text-sm font-mono font-black ${isKeyMatch ? 'text-yellow-400' : suggestion.key.includes('m') ? 'text-cyan-400' : 'text-pink-400'}`}>{suggestion.key}</span>
+                    </div>
+                    {/* Time */}
+                    <div className="bg-black/40 rounded border border-white/10 p-1.5 flex flex-col items-center">
+                        <ClockIcon className="w-3.5 h-3.5 mb-0.5 text-gray-500" />
+                        <span className="text-sm font-mono font-black text-gray-300">{suggestion.duration}</span>
+                    </div>
+                </div>
+
+                {/* B. Reason */}
+                <div className="bg-white/5 rounded-lg p-2.5 border border-white/5">
+                    <p className="text-[11px] text-gray-300 italic leading-relaxed text-center">
+                        "{suggestion.reason}"
+                    </p>
+                </div>
+
+                {/* C. Cues */}
+                {suggestion.cuePoints && suggestion.cuePoints.length > 0 && (
+                    <div className="flex flex-wrap justify-center gap-1.5">
+                        {suggestion.cuePoints.map((cue, idx) => (
+                            <span key={idx} className="bg-slate-800 text-cyan-200 text-[9px] font-bold px-2 py-1 rounded border border-slate-700">
                                 {cue}
                             </span>
                         ))}
                     </div>
-                </div>
-            ) : (
-                <div className="flex items-center gap-1 mt-0.5 opacity-40 px-1">
-                    <ZapIcon className="w-2.5 h-2.5 text-slate-600" />
-                    <span className="text-[9px] text-slate-500 italic">Auto-Cues available</span>
-                </div>
-            )}
-            
-            {/* Footer: AI Reason */}
-            <div className="bg-gradient-to-r from-gray-800/50 to-transparent p-2.5 rounded border-l-2 mt-1" style={{ borderLeftColor: themeColor }}>
-                <p className="text-xs text-slate-200 italic leading-snug">
-                    "{suggestion.reason}"
-                </p>
-            </div>
-            
-            {/* Action Buttons Footer */}
-            <div className="flex gap-2 justify-end pt-2">
-                <button 
-                    onClick={(e) => { e.stopPropagation(); onDismiss(suggestion.id); }}
-                    className="flex-1 px-3 py-2 text-[10px] font-bold text-slate-400 hover:text-white hover:bg-red-900/30 rounded-lg border border-white/5 hover:border-red-500/30 transition-all uppercase"
-                >
-                    DISPENSAR
-                </button>
-                {onAddToQueue && (
-                    <button 
-                        onClick={(e) => { e.stopPropagation(); onAddToQueue(suggestion); }}
-                        className="flex-1 px-3 py-2 text-white text-[10px] font-bold rounded-lg border shadow-lg active:scale-95 transition-all uppercase flex items-center justify-center gap-1.5 bg-blue-600 border-blue-600 hover:bg-blue-500"
-                    >
-                        <PlusIcon className="w-3.5 h-3.5" />
-                        ADD QUEUE
-                    </button>
                 )}
+
+                {/* D. Actions */}
+                <div className="grid grid-cols-[1fr_auto_auto] gap-2 pt-1">
+                     <button 
+                        onClick={(e) => { e.stopPropagation(); onSelect(suggestion); }}
+                        className="bg-cyan-600 hover:bg-cyan-500 text-white h-10 rounded-lg font-bold text-xs uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 active:scale-95"
+                     >
+                        <PlayIcon className="w-4 h-4" /> Load
+                     </button>
+                     {onAddToQueue && (
+                         <button 
+                            onClick={(e) => { e.stopPropagation(); onAddToQueue(suggestion); }}
+                            className="bg-green-600 hover:bg-green-500 text-white w-12 h-10 rounded-lg flex items-center justify-center shadow-lg active:scale-95"
+                         >
+                            <PlusIcon className="w-5 h-5" />
+                         </button>
+                     )}
+                     <button 
+                        onClick={(e) => { e.stopPropagation(); onDismiss(suggestion.id); }}
+                        className="bg-slate-800 text-gray-400 hover:text-red-400 w-10 h-10 rounded-lg border border-slate-700 flex items-center justify-center active:scale-95"
+                     >
+                        <XIcon className="w-4 h-4" />
+                     </button>
+                </div>
             </div>
+          )}
         </div>
-      )}
-    </div>
+    </SwipeableItem>
   );
 };

@@ -1,10 +1,11 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import type { Track, MashupPair } from '../types';
 import { getMashupPairs } from '../services/geminiService';
-import { GitMergeIcon, RefreshCwIcon, PlayIcon, PlusIcon } from './icons';
+import { GitMergeIcon, RefreshCwIcon, PlayIcon, PlusIcon, TagIcon, WandSparklesIcon } from './icons';
 import { SkeletonLoader } from './SkeletonLoader';
 import { RadarChart } from './RadarChart';
+import { translations } from '../utils/translations';
 
 interface MashupFinderProps {
   playlist: Track[];
@@ -13,14 +14,51 @@ interface MashupFinderProps {
   language: 'pt-BR' | 'en-US';
 }
 
+const STORAGE_KEY_MASHUPS = 'dj_copilot_mashups_v2';
+
 export const MashupFinder: React.FC<MashupFinderProps> = ({ playlist, onSelectTrack, onAddToQueue, language }) => {
   const [mashups, setMashups] = useState<MashupPair[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Filters
+  const [targetGenre, setTargetGenre] = useState<string>('');
+  const [harmonicOnly, setHarmonicOnly] = useState<boolean>(true);
+
+  const t = translations[language];
+
+  // Load from Storage on Mount
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY_MASHUPS);
+    if (saved) {
+        try {
+            setMashups(JSON.parse(saved));
+        } catch (e) {
+            console.error("Failed to load saved mashups");
+        }
+    }
+  }, []);
+
+  // Save to Storage on Update
+  useEffect(() => {
+    if (mashups.length > 0) {
+        localStorage.setItem(STORAGE_KEY_MASHUPS, JSON.stringify(mashups));
+    }
+  }, [mashups]);
 
   const loadMashups = async () => {
     setIsLoading(true);
     try {
-        const pairs = await getMashupPairs(playlist);
+        // Apply filters before sending to AI to reduce noise
+        let candidates = playlist;
+        
+        if (targetGenre) {
+            candidates = candidates.filter(t => t.genre && t.genre.toLowerCase().includes(targetGenre.toLowerCase()));
+        }
+
+        // We pass the filtered list to the service
+        // Ideally the service would handle more complex filtering, but this is a start
+        const pairs = await getMashupPairs(candidates.length > 10 ? candidates : playlist);
+        
         setMashups(pairs);
     } catch (e) {
         console.error(e);
@@ -29,22 +67,23 @@ export const MashupFinder: React.FC<MashupFinderProps> = ({ playlist, onSelectTr
     }
   };
 
-  useEffect(() => {
-    if (mashups.length === 0) loadMashups();
-  }, []);
+  const availableGenres = useMemo(() => {
+      const genres = new Set<string>();
+      playlist.forEach(t => { if (t.genre) genres.add(t.genre); });
+      return Array.from(genres).slice(0, 15); // Limit to top/first 15
+  }, [playlist]);
 
-  // Helper to generate fake metrics for the Radar Chart (since we don't have real danceability/popularity yet)
-  // In a real app, this would come from the API/Enrichment
+  // Helper to generate fake metrics for the Radar Chart
   const getMetrics = (track: Track) => [
       { label: 'Energy', value: (track.energy || 3) * 20 },
-      { label: 'BPM', value: Math.min(parseFloat(track.bpm) / 1.8, 100) }, // Norm approx
+      { label: 'BPM', value: Math.min(parseFloat(track.bpm) / 1.8, 100) }, 
       { label: 'Pop', value: track.playCount > 10 ? 90 : 40 },
       { label: 'Vibe', value: Math.random() * 60 + 40 }
   ];
 
   return (
     <div className="pb-24 animate-in fade-in duration-500">
-        <div className="flex items-center justify-between mb-6 px-1">
+        <div className="flex items-center justify-between mb-4 px-1">
             <h2 className="text-xl font-bold text-white flex items-center gap-2">
                 <GitMergeIcon className="w-6 h-6 text-purple-500" />
                 Mashup Lab
@@ -58,10 +97,61 @@ export const MashupFinder: React.FC<MashupFinderProps> = ({ playlist, onSelectTr
             </button>
         </div>
 
+        {/* Filters Section */}
+        <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-4 mb-6">
+            <div className="flex flex-wrap gap-4 mb-4">
+                <div className="flex-1 min-w-[150px]">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">Gênero Alvo</label>
+                    <div className="relative">
+                        <select 
+                            value={targetGenre} 
+                            onChange={(e) => setTargetGenre(e.target.value)}
+                            className="w-full bg-black/60 border border-white/10 rounded-lg p-2 text-xs font-bold text-white appearance-none outline-none focus:border-purple-500"
+                        >
+                            <option value="">Todos</option>
+                            {availableGenres.map(g => <option key={g} value={g}>{g}</option>)}
+                        </select>
+                        <TagIcon className="absolute right-3 top-2.5 w-3.5 h-3.5 text-gray-500 pointer-events-none" />
+                    </div>
+                </div>
+                 <div className="flex-1 min-w-[150px]">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">Opções</label>
+                    <button 
+                        onClick={() => setHarmonicOnly(!harmonicOnly)}
+                        className={`w-full py-2 px-3 rounded-lg border text-xs font-bold transition-all ${harmonicOnly ? 'bg-purple-600 border-purple-400 text-white' : 'bg-black/60 border-white/10 text-gray-500'}`}
+                    >
+                        Harmonia Compatível
+                    </button>
+                </div>
+            </div>
+            
+            <button 
+                onClick={loadMashups}
+                disabled={isLoading}
+                className="w-full py-3 bg-purple-600 hover:bg-purple-500 text-white font-black text-xs uppercase tracking-widest rounded-xl shadow-lg shadow-purple-900/20 active:scale-95 transition-all flex items-center justify-center gap-2"
+            >
+                {isLoading ? (
+                    <>Processando Biblioteca...</>
+                ) : (
+                    <>
+                        <WandSparklesIcon className="w-4 h-4" />
+                        ANALISAR COM IA
+                    </>
+                )}
+            </button>
+        </div>
+
         {isLoading && (
             <div className="space-y-4">
                 <SkeletonLoader variant="card" />
                 <SkeletonLoader variant="card" />
+            </div>
+        )}
+
+        {!isLoading && mashups.length === 0 && (
+            <div className="text-center py-10 border-2 border-dashed border-slate-800 rounded-3xl">
+                <p className="text-slate-500 text-sm font-bold uppercase tracking-widest">Nenhum Mashup Gerado</p>
+                <p className="text-xs text-slate-600 mt-2">Ajuste os filtros e clique em Analisar</p>
             </div>
         )}
 

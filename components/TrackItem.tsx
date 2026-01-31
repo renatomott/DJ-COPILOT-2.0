@@ -14,7 +14,8 @@ interface TrackItemProps {
   isOnAir?: boolean;
   onAddToQueue?: (e: React.MouseEvent, track: Track) => void;
   variant?: ViewMode;
-  searchQuery?: string; // New prop for highlighting
+  searchQuery?: string;
+  referenceTrack?: Track | null; // Faixa "NO AR" para comparação
 }
 
 const renderRating = (rating: number) => {
@@ -51,16 +52,23 @@ const HighlightText: React.FC<{ text: string; query?: string; className?: string
     );
 };
 
-export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelected, isExpanded = false, onToggleExpand, isOnAir, onAddToQueue, variant = 'card', searchQuery }) => {
+export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelected, isExpanded = false, onToggleExpand, isOnAir, onAddToQueue, variant = 'card', searchQuery, referenceTrack }) => {
   const cardRef = useRef<HTMLDivElement>(null);
   const isList = variant === 'list';
   
+  // Logic to highlight matching BPM/Key with On Air track
+  const isBpmMatch = referenceTrack && !isOnAir && Math.abs(parseFloat(track.bpm) - parseFloat(referenceTrack.bpm)) < 0.1;
+  const isKeyMatch = referenceTrack && !isOnAir && track.key === referenceTrack.key;
+
+  // Gold Outline Style (does not affect font color)
+  const matchStyle = "ring-1 ring-yellow-500/80 shadow-[0_0_8px_rgba(234,179,8,0.3)]";
+
   // Energy Heatmap Color (Subtle gradient overlay)
   const energy = track.energy || 3;
   let energyGradient = '';
-  if (energy >= 4.5) energyGradient = 'bg-gradient-to-r from-red-900/10 via-transparent to-transparent'; // High Energy
+  if (energy >= 4.5) energyGradient = 'bg-gradient-to-r from-red-900/10 via-transparent to-transparent'; 
   else if (energy >= 3.5) energyGradient = 'bg-gradient-to-r from-orange-900/10 via-transparent to-transparent'; 
-  else if (energy <= 2) energyGradient = 'bg-gradient-to-r from-blue-900/10 via-transparent to-transparent'; // Low Energy
+  else if (energy <= 2) energyGradient = 'bg-gradient-to-r from-blue-900/10 via-transparent to-transparent'; 
 
   // Base classes
   const baseClasses = `rounded-xl cursor-pointer transition-all duration-300 border relative group overflow-hidden ${energyGradient}`;
@@ -71,13 +79,7 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
   useEffect(() => {
     if (isExpanded && cardRef.current && !isList) {
         setTimeout(() => {
-            const element = cardRef.current;
-            if (element) {
-                const headerOffset = 85; 
-                const elementPosition = element.getBoundingClientRect().top;
-                const offsetPosition = elementPosition + window.scrollY - headerOffset;
-                window.scrollTo({ top: offsetPosition, behavior: "smooth" });
-            }
+            cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, 150);
     }
   }, [isExpanded, isList]);
@@ -112,9 +114,11 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
             className={`${baseClasses} flex items-center gap-3 px-3 py-2 ${isOnAir ? onAirClasses : isSelected ? selectedClasses : defaultClasses}`}
         >
             {/* Left: BPM & Key */}
-            <div className="flex flex-col items-center justify-center gap-0.5 min-w-[3rem] border-r border-white/5 pr-3">
-                 <span className="text-[11px] font-mono font-bold text-white">{track.bpm}</span>
-                 <span className={`text-[9px] font-mono font-bold px-1.5 rounded-sm w-full text-center ${track.key && track.key.includes('m') ? 'bg-cyan-900/40 text-cyan-300' : 'bg-pink-900/40 text-pink-300'}`}>
+            <div className="flex flex-col items-center justify-center gap-1.5 min-w-[3rem] border-r border-white/5 pr-3">
+                 <span className={`text-[11px] font-mono font-bold text-white px-1 rounded ${isBpmMatch ? matchStyle : ''}`}>
+                    {track.bpm}
+                 </span>
+                 <span className={`text-[9px] font-mono font-bold px-1.5 rounded-sm w-full text-center ${track.key && track.key.includes('m') ? 'bg-cyan-900/40 text-cyan-300' : 'bg-pink-900/40 text-pink-300'} ${isKeyMatch ? matchStyle : ''}`}>
                     {track.key || '--'}
                  </span>
             </div>
@@ -140,7 +144,7 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
                     <HighlightText 
                         text={track.artist} 
                         query={searchQuery} 
-                        className="text-[10px] text-slate-300 truncate font-bold uppercase max-w-[50%]" 
+                        className="text-[10px] text-slate-400 truncate font-bold uppercase max-w-[50%]" 
                     />
                     {track.location && (
                         <>
@@ -157,7 +161,6 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
                     {renderRating(track.rating)}
                  </div>
                  
-                 {/* Play Button */}
                  <button 
                     onClick={(e) => handlePlayAction(e)} 
                     className="p-1.5 text-cyan-400 hover:text-white transition-colors bg-cyan-900/20 hover:bg-cyan-600 rounded-lg border border-cyan-500/20"
@@ -166,7 +169,6 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
                     <PlayIcon className="w-4 h-4 fill-current" />
                  </button>
 
-                 {/* Queue Button */}
                 {onAddToQueue && (
                     <button 
                         onClick={handleAddAction} 
@@ -184,6 +186,10 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
   const bpmClass = isExpanded 
     ? "text-xs sm:text-sm font-black font-mono text-cyan-300 bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-500/40 shadow-[0_0_10px_rgba(6,182,212,0.15)] transition-all duration-300"
     : "text-[9px] font-mono font-bold text-cyan-400 bg-black/40 px-1.5 py-0.5 rounded border border-slate-700 shadow-sm transition-all duration-300";
+
+  // Apply gold outline if match, merge with existing classes
+  const finalBpmClass = `${bpmClass} ${isBpmMatch ? matchStyle : ''}`;
+  const keyClass = `font-mono px-1.5 py-0.5 rounded-md font-bold text-[11px] ${isOnAir ? 'bg-cyan-500 text-black shadow-[0_0_8px_rgba(6,182,212,0.5)]' : 'bg-slate-800 text-cyan-400 border border-slate-700'} ${isKeyMatch ? matchStyle : ''}`;
 
   // CARD VIEW LAYOUT (Default)
   return (
@@ -216,11 +222,11 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
                     <HighlightText 
                         text={track.name} 
                         query={searchQuery}
-                        className={`font-bold text-base leading-tight text-white line-clamp-1 break-words tracking-tight`}
+                        className={`font-bold text-base leading-snug text-white break-words tracking-tight`}
                     />
                     
                     {track.bpm && (
-                        <span className={`flex-shrink-0 ${bpmClass}`}>
+                        <span className={`flex-shrink-0 ${finalBpmClass}`}>
                             {track.bpm}
                         </span>
                     )}
@@ -245,7 +251,7 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
                 </div>
                 
                 <div className="flex items-center gap-2 text-xs text-white">
-                    <span className={`font-mono px-1.5 py-0.5 rounded-md font-bold text-[11px] ${isOnAir ? 'bg-cyan-500 text-black shadow-[0_0_8px_rgba(6,182,212,0.5)]' : 'bg-slate-800 text-cyan-400 border border-slate-700'}`}>{track.key || 'N/A'}</span>
+                    <span className={keyClass}>{track.key || 'N/A'}</span>
                     <div className="w-px h-3 bg-slate-700/50 ml-auto"></div>
                     <div className="flex items-center">{renderRating(track.rating)}</div>
                 </div>

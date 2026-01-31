@@ -67,6 +67,33 @@ interface MainScreenProps {
   onGroupingModeChange: (mode: GroupingMode) => void;
 }
 
+interface NavButtonProps {
+    active: boolean;
+    onClick: () => void;
+    icon: React.ReactNode;
+    label: string;
+    badge?: number;
+}
+
+const NavButton: React.FC<NavButtonProps> = ({ active, onClick, icon, label, badge }) => (
+    <button
+        onClick={onClick}
+        className={`flex flex-col items-center justify-center w-full py-1 transition-colors relative ${
+            active ? 'text-cyan-400' : 'text-slate-500 hover:text-slate-300'
+        }`}
+    >
+        <div className={`p-1 rounded-xl transition-all ${active ? 'bg-cyan-500/10' : ''}`}>
+            {icon}
+        </div>
+        <span className="text-[9px] font-bold uppercase tracking-widest mt-1">{label}</span>
+        {badge !== undefined && badge > 0 && (
+            <span className="absolute top-0 right-1/4 translate-x-1/2 min-w-[16px] h-4 bg-red-500 text-white text-[9px] font-bold flex items-center justify-center rounded-full px-1 border border-black shadow-sm animate-in zoom-in">
+                {badge}
+            </span>
+        )}
+    </button>
+);
+
 // Helper to render stars in the floating bar
 const renderRatingMini = (rating: number) => {
   const stars = rating > 5 ? Math.round(rating / 20) : rating;
@@ -122,32 +149,8 @@ export const MainScreen: React.FC<MainScreenProps> = ({
 
   const t = translations[language];
 
-  // Helper to find predominant color for a folder
-  const getPredominantColor = useMemo(() => (tracks: Track[]) => {
-      const counts: Record<string, number> = {};
-      let maxCount = 0;
-      let dominant = null;
-      for (const t of tracks) {
-          if (t.color) {
-              counts[t.color] = (counts[t.color] || 0) + 1;
-              if (counts[t.color] > maxCount) {
-                  maxCount = counts[t.color];
-                  dominant = t.color;
-              }
-          }
-      }
-      return dominant || undefined;
-  }, []);
-
   // Theme Logic
   const theme = useMemo(() => getGenreTheme(currentTrack), [currentTrack]);
-
-  // Determine current track folder color
-  const currentTrackFolderColor = useMemo(() => {
-    if (!currentTrack || !playlist) return undefined;
-    const folderTracks = playlist.filter(t => t.location === currentTrack.location);
-    return getPredominantColor(folderTracks);
-  }, [currentTrack, playlist, getPredominantColor]);
 
   // Scroll Listener for FAB
   useEffect(() => {
@@ -331,7 +334,8 @@ export const MainScreen: React.FC<MainScreenProps> = ({
               onToggleExpand={() => handleToggleExpandTrack(track.id)} 
               onAddToQueue={handleAddToQueue} 
               variant={viewMode} 
-              searchQuery={searchQuery} 
+              searchQuery={searchQuery}
+              referenceTrack={currentTrack} // Pass current track as reference for comparison
           />
       );
 
@@ -340,8 +344,14 @@ export const MainScreen: React.FC<MainScreenProps> = ({
           return (
               <SwipeableItem 
                   key={track.id} 
-                  onLeftAction={() => handleSelectTrack(track)} 
-                  onRightAction={() => handleAddToQueue(undefined, track)}
+                  // Left to Right -> Add to Queue (Green)
+                  onLeftAction={() => handleAddToQueue(undefined, track)}
+                  leftColor="bg-green-600"
+                  leftIcon={<PlusIcon className="w-8 h-8 text-white" />}
+                  // Right to Left -> Load Deck (Cyan)
+                  onRightAction={() => handleSelectTrack(track)}
+                  rightColor="bg-cyan-600"
+                  rightIcon={<PlayIcon className="w-8 h-8 text-white" />}
               >
                   {item}
               </SwipeableItem>
@@ -349,6 +359,23 @@ export const MainScreen: React.FC<MainScreenProps> = ({
       }
 
       return item;
+  };
+
+  // Helper to find predominant color for a folder
+  const getPredominantColor = (tracks: Track[]) => {
+      const counts: Record<string, number> = {};
+      let maxCount = 0;
+      let dominant = null;
+      for (const t of tracks) {
+          if (t.color) {
+              counts[t.color] = (counts[t.color] || 0) + 1;
+              if (counts[t.color] > maxCount) {
+                  maxCount = counts[t.color];
+                  dominant = t.color;
+              }
+          }
+      }
+      return dominant;
   };
 
   return (
@@ -420,13 +447,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({
                     </div>
                 )}
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-                    <div className="md:col-span-12">
-                        <NowPlaying 
-                            track={currentTrack} 
-                            language={language} 
-                            folderColor={currentTrackFolderColor}
-                        />
-                    </div>
+                    <div className="md:col-span-12"><NowPlaying track={currentTrack} language={language} /></div>
                     <div className="md:col-span-12"><SuggestionPanel currentTrack={currentTrack} playlist={playlist.filter(t => enabledDirectories.includes(t.location))} suggestions={suggestions} setSuggestions={setSuggestions} onSelectTrack={handleSelectTrack} onAddToQueue={(t) => handleAddToQueue(undefined, t)} language={language} /></div>
                 </div>
               </>
@@ -596,11 +617,3 @@ export const MainScreen: React.FC<MainScreenProps> = ({
     </div>
   );
 };
-
-interface NavButtonProps { active: boolean; onClick: () => void; icon: React.ReactNode; label: string; badge?: number; }
-const NavButton: React.FC<NavButtonProps> = ({ active, onClick, icon, label, badge }) => (
-    <button onClick={onClick} className={`flex flex-col items-center justify-center flex-1 py-1 rounded-2xl transition-all relative ${active ? 'text-cyan-400 bg-cyan-400/5' : 'text-slate-500 hover:text-slate-300'}`}>
-        <div className="relative">{icon}{badge !== undefined && (<span className="absolute -top-2 -right-2 bg-cyan-600 text-white text-[8px] font-bold px-1 rounded-full border border-slate-950">{badge}</span>)}</div>
-        <span className="text-[8px] font-bold mt-1 uppercase tracking-widest">{label}</span>
-    </button>
-);

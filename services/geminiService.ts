@@ -233,7 +233,7 @@ export const getTrackSuggestions = async (currentTrack: Track, playlist: Track[]
     const availableTracks = candidates.sort(() => 0.5 - Math.random()).slice(0, 80).map(t => `ID: ${t.id}, "${t.name}" (${t.bpm} BPM, Tom: ${t.key})`).join('\n');
     if (!availableTracks) return { suggestions: [], cuePoints: [] };
     const langInstruction = language === 'pt-BR' ? 'Português do Brasil' : 'Inglês (English)';
-    const prompt = `Faixa atual: "${currentTrack.name}" (${currentTrack.bpm} BPM, Tom ${currentTrack.key}). Analise as faixas disponíveis e sugira as 5 melhores combinações. Retorne JSON com "suggestions" (id, matchScore de 0 a 100, reason em ${langInstruction}) e "cuePoints" (strings).\n\n${availableTracks}`;
+    const prompt = `Faixa atual: "${currentTrack.name}" (${currentTrack.bpm} BPM, Tom ${currentTrack.key}). Analise as faixas disponíveis e sugira as 5 melhores combinações. Retorne JSON com "suggestions" (id, matchScore, reason em ${langInstruction}) e "cuePoints" (strings).\n\n${availableTracks}`;
     const response = await ai.models.generateContent({
       model: textModel,
       contents: prompt,
@@ -262,18 +262,7 @@ export const getTrackSuggestions = async (currentTrack: Track, playlist: Track[]
     const data = JSON.parse(response.text || "{}");
     const suggestions = (data.suggestions || []).map((s: any) => {
       const t = playlist.find(track => track.id === s.id);
-      
-      // Fix for "1%" issue: Normalize Match Score
-      let score = s.matchScore;
-      // If score is 0-1, multiply by 100. If score is ~1 (like 0.99), make it 99.
-      if (score <= 1) {
-          score = Math.round(score * 100);
-      }
-      // Safety cap
-      if (score > 100) score = 100;
-      // If after calc score is 1 (meaning it was 0.01), it's probably low confidence or scale error, but let's keep it.
-      
-      return t ? { ...t, matchScore: score, reason: s.reason } : null;
+      return t ? { ...t, matchScore: s.matchScore, reason: s.reason } : null;
     }).filter((s: any) => s !== null);
     return { suggestions, cuePoints: data.cuePoints || [] };
   } catch (err) {

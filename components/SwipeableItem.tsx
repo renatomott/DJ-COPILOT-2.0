@@ -25,11 +25,13 @@ export const SwipeableItem: React.FC<SwipeableItemProps> = ({
     const startX = useRef(0);
     const startY = useRef(0);
     const isDragging = useRef(false);
+    const wasSwiping = useRef(false);
 
     const handleTouchStart = (e: React.TouchEvent) => {
         startX.current = e.touches[0].clientX;
         startY.current = e.touches[0].clientY;
         isDragging.current = true;
+        wasSwiping.current = false;
         setOffsetX(0);
     };
 
@@ -48,7 +50,10 @@ export const SwipeableItem: React.FC<SwipeableItemProps> = ({
 
         // Limit swipe distance
         if (Math.abs(diffX) < 150) {
-            if (e.cancelable && Math.abs(diffX) > 10) e.preventDefault();
+            if (e.cancelable && Math.abs(diffX) > 10) {
+                e.preventDefault();
+                wasSwiping.current = true;
+            }
             setOffsetX(diffX);
         }
     };
@@ -57,7 +62,7 @@ export const SwipeableItem: React.FC<SwipeableItemProps> = ({
         isDragging.current = false;
         
         if (offsetX > 80 && onLeftAction) {
-            // Trigger Left Action (Load)
+            // Trigger Left Action (Load/Queue depending on prop)
             // Animate further right then snap back
             setOffsetX(300); 
             setTimeout(() => {
@@ -65,7 +70,7 @@ export const SwipeableItem: React.FC<SwipeableItemProps> = ({
                 setOffsetX(0);
             }, 200);
         } else if (offsetX < -80 && onRightAction) {
-            // Trigger Right Action (Queue)
+            // Trigger Right Action
             // Animate further left then snap back
             setOffsetX(-300);
             setTimeout(() => {
@@ -77,8 +82,16 @@ export const SwipeableItem: React.FC<SwipeableItemProps> = ({
         }
     };
 
+    const handleClickCapture = (e: React.MouseEvent) => {
+        if (wasSwiping.current) {
+            e.stopPropagation();
+            e.preventDefault();
+            wasSwiping.current = false;
+        }
+    };
+
     return (
-        <div className="relative overflow-hidden rounded-xl bg-black">
+        <div className="relative overflow-hidden rounded-2xl" onClickCapture={handleClickCapture}>
             {/* Left Action Background (Reveal when swiping right) */}
             <div className={`absolute inset-y-0 left-0 w-1/2 ${leftColor} flex items-center justify-start pl-6 transition-opacity duration-200 ${offsetX > 0 ? 'opacity-100' : 'opacity-0'}`}>
                 {leftIcon}
@@ -90,7 +103,7 @@ export const SwipeableItem: React.FC<SwipeableItemProps> = ({
             </div>
 
             <div
-                className="relative bg-[#020617] transition-transform duration-200 ease-out will-change-transform touch-pan-y"
+                className="relative bg-transparent transition-transform duration-200 ease-out will-change-transform touch-pan-y"
                 style={{ transform: `translateX(${offsetX}px)` }}
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
