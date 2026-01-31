@@ -25,8 +25,8 @@ export const Header: React.FC<HeaderProps> = ({
     onPlayerClick 
 }) => {
     return (
-        <header className="fixed top-0 left-0 right-0 bg-black/80 backdrop-blur-sm z-[90] border-b border-gray-800 transition-all duration-300">
-            <div className="container mx-auto px-4 py-3 flex justify-between items-center max-w-full">
+        <header className="fixed top-0 left-0 right-0 bg-black/90 backdrop-blur-xl z-[90] border-b border-white/5 h-[72px] transition-all duration-300">
+            <div className="container mx-auto px-4 h-full flex justify-between items-center max-w-full">
                 <div className="flex items-center gap-4">
                     {showMenuButton && (
                         <button 
@@ -42,19 +42,21 @@ export const Header: React.FC<HeaderProps> = ({
                     </h1>
                 </div>
                 
-                {/* Unified Mini Player Position */}
-                {playerTrack ? (
-                    <div className="animate-in fade-in slide-in-from-right-4 max-w-[280px] sm:max-w-md w-full">
-                        <MiniPlayer 
-                            track={playerTrack} 
-                            onClick={onPlayerClick} 
-                            variant={playerVariant}
-                            label={playerLabel}
-                        />
-                    </div>
-                ) : (
-                    <div className="w-10"></div> 
-                )}
+                {/* Unified Mini Player Position - Center Vertically in fixed height */}
+                <div className="flex items-center justify-end h-full py-1.5">
+                    {playerTrack ? (
+                        <div className="animate-in fade-in slide-in-from-right-4 max-w-[280px] sm:max-w-md w-full">
+                            <MiniPlayer 
+                                track={playerTrack} 
+                                onClick={onPlayerClick} 
+                                variant={playerVariant}
+                                label={playerLabel}
+                            />
+                        </div>
+                    ) : (
+                        <div className="w-10 h-10"></div> 
+                    )}
+                </div>
             </div>
         </header>
     );
