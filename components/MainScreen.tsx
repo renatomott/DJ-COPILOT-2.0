@@ -484,7 +484,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({
 
       {/* --- MAIN CONTENT CONTAINER --- */}
       <main 
-        className={`pt-20 transition-all duration-300 flex flex-col
+        className={`pt-28 transition-all duration-300 flex flex-col
             ${sidebarExpanded ? 'md:ml-64' : 'md:ml-20'} 
             md:h-screen md:overflow-hidden min-h-screen
         `}

@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import type { Track } from '../types';
 import { CoverArt } from './CoverArt';
-import { PlayIcon } from './icons';
+import { PlayIcon, FolderIcon } from './icons';
 
 interface MiniPlayerProps {
     track: Track;
@@ -96,7 +96,17 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ track, onClick, variant 
             <div className="flex flex-col min-w-0 flex-1 justify-center">
                 <span className="text-xs font-semibold text-white truncate leading-tight pr-6 tracking-wide">{track.name}</span>
                 
-                <div className="flex items-center gap-2 text-[10px] leading-tight mt-1">
+                {/* Directory Name for NEXT variant */}
+                {isNext && track.location && (
+                    <div className="flex items-center gap-1 mt-0.5 min-w-0">
+                        <FolderIcon className="w-2.5 h-2.5 text-indigo-300/70 flex-shrink-0" />
+                        <span className="text-[10px] text-indigo-100/80 font-medium truncate leading-tight">
+                            {track.location}
+                        </span>
+                    </div>
+                )}
+
+                <div className="flex items-center gap-2 text-xs leading-tight mt-1">
                     {/* Artist */}
                     <span className={`font-medium truncate max-w-[80px] sm:max-w-[120px] ${artistColor}`}>
                         {track.artist}
@@ -105,7 +115,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ track, onClick, variant 
                     <div className="w-px h-2.5 bg-white/10"></div>
 
                     {/* BPM */}
-                    <span className="text-slate-300 font-mono font-bold">
+                    <span className="text-slate-200 font-mono font-bold">
                         {track.bpm} <span className="text-[8px] opacity-60">BPM</span>
                     </span>
 
@@ -115,7 +125,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ track, onClick, variant 
                     </span>
 
                     {/* Duration */}
-                    <div className="flex items-center gap-0.5 ml-auto text-slate-300 font-mono font-medium bg-black/20 px-1.5 rounded">
+                    <div className="flex items-center gap-0.5 ml-auto text-slate-200 font-mono font-medium bg-black/20 px-1.5 rounded">
                         <span>{track.duration}</span>
                     </div>
                 </div>

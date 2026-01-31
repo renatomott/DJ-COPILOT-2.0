@@ -185,15 +185,15 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                                 {suggestion.color ? (
                                     <span className="w-2 h-2 rounded-full shadow-[0_0_5px_currentColor] flex-shrink-0" style={{ backgroundColor: suggestion.color, color: suggestion.color }} />
                                 ) : (
-                                    <FolderIcon className="w-2.5 h-2.5 text-slate-500 flex-shrink-0" />
+                                    <FolderIcon className="w-2.5 h-2.5 text-slate-400 flex-shrink-0" />
                                 )}
-                                <span className="text-[9px] md:text-[10px] text-slate-400 font-medium uppercase truncate tracking-wide">{suggestion.location || 'N/A'}</span>
+                                <span className="text-[9px] md:text-[10px] text-slate-300 font-medium uppercase truncate tracking-wide">{suggestion.location || 'N/A'}</span>
                             </div>
 
                             {/* Right: Duration & Stars */}
                             <div className="flex items-center gap-2 flex-shrink-0 pl-2">
                                 {/* Duration (Mobile Only - Hidden on Tablet because it's on top row) */}
-                                <span className="text-[10px] font-mono text-slate-500 font-bold md:hidden">{suggestion.duration}</span>
+                                <span className="text-[10px] font-mono text-slate-400 font-bold md:hidden">{suggestion.duration}</span>
                                 {renderRating(suggestion.rating, "w-2 h-2")}
                             </div>
                          </div>
@@ -221,7 +221,7 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                 <div className="grid grid-cols-4 gap-2">
                     {/* Match */}
                     <div className="bg-black/40 rounded border border-white/10 p-1.5 flex flex-col items-center justify-center">
-                        <span className="text-[8px] text-slate-500 uppercase font-bold mb-0.5">Match</span>
+                        <span className="text-[8px] text-slate-400 uppercase font-bold mb-0.5">Match</span>
                         <div className="flex items-center gap-1">
                             <BrainIcon className={`w-3 h-3 ${scoreColor}`} />
                             <span className={`text-xs font-bold ${scoreColor}`}>{matchScoreDisplay}%</span>
@@ -229,7 +229,7 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                     </div>
                     {/* BPM */}
                     <div className={`rounded p-1.5 flex flex-col items-center justify-center ${isBpmMatch ? goldBorderClass : defaultBorderClass}`}>
-                        <span className="text-[8px] text-slate-500 uppercase font-bold mb-0.5">BPM</span>
+                        <span className="text-[8px] text-slate-400 uppercase font-bold mb-0.5">BPM</span>
                         <div className="flex items-center gap-1 leading-none">
                             <span className={`text-xs font-mono font-bold ${isBpmMatch ? 'text-yellow-400' : 'text-slate-200'}`}>{suggestion.bpm}</span>
                             <span className={`text-[8px] font-mono font-bold ${bpmDiffColor}`}>{bpmDiffFormatted}</span>
@@ -237,12 +237,12 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                     </div>
                     {/* Key */}
                     <div className={`rounded p-1.5 flex flex-col items-center justify-center ${isKeyMatch ? goldBorderClass : defaultBorderClass}`}>
-                        <span className="text-[8px] text-slate-500 uppercase font-bold mb-0.5">Key</span>
+                        <span className="text-[8px] text-slate-400 uppercase font-bold mb-0.5">Key</span>
                         <span className={`text-xs font-mono font-bold ${isKeyMatch ? 'text-yellow-400' : suggestion.key.includes('m') ? 'text-cyan-400' : 'text-pink-400'}`}>{suggestion.key}</span>
                     </div>
                     {/* Time */}
                     <div className="bg-black/40 rounded border border-white/10 p-1.5 flex flex-col items-center justify-center">
-                        <span className="text-[8px] text-slate-500 uppercase font-bold mb-0.5">Time</span>
+                        <span className="text-[8px] text-slate-400 uppercase font-bold mb-0.5">Time</span>
                         <span className="text-xs font-mono font-bold text-slate-300">{suggestion.duration}</span>
                     </div>
                 </div>

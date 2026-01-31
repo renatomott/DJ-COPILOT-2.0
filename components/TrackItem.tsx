@@ -246,15 +246,15 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
                                 {track.color ? (
                                     <span className="w-2 h-2 rounded-full shadow-[0_0_5px_currentColor] flex-shrink-0" style={{ backgroundColor: track.color, color: track.color }} />
                                 ) : (
-                                    <FolderIcon className="w-2.5 h-2.5 text-slate-500 flex-shrink-0" />
+                                    <FolderIcon className="w-2.5 h-2.5 text-slate-400 flex-shrink-0" />
                                 )}
-                                <span className="text-[9px] md:text-[10px] text-slate-400 font-medium uppercase truncate tracking-wide">{track.location || 'N/A'}</span>
+                                <span className="text-[9px] md:text-[10px] text-slate-300 font-medium uppercase truncate tracking-wide">{track.location || 'N/A'}</span>
                             </div>
                             
                             {/* Time & Rating */}
                             <div className="flex items-center gap-2 flex-shrink-0 pl-2">
                                 {/* Duration (Mobile Only - Hidden on Tablet because it's on top row) */}
-                                <span className="text-xs font-mono text-slate-500 font-bold md:hidden">{track.duration}</span>
+                                <span className="text-xs font-mono text-slate-400 font-bold md:hidden">{track.duration}</span>
                                 {renderRating(track.rating, "w-3 h-3")}
                             </div>
                         </div>
@@ -279,22 +279,22 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
                 <div className="grid grid-cols-4 gap-2">
                     {/* BPM */}
                     <div className={`rounded p-1.5 flex flex-col items-center justify-center bg-black/40 border border-white/10 ${isBpmMatch ? 'ring-1 ring-yellow-500/50' : ''}`}>
-                        <span className="text-[8px] text-slate-500 uppercase font-bold mb-0.5">BPM</span>
+                        <span className="text-[8px] text-slate-400 uppercase font-bold mb-0.5">BPM</span>
                         <span className={`text-xs font-mono font-bold ${isBpmMatch ? 'text-yellow-400' : 'text-slate-200'}`}>{track.bpm}</span>
                     </div>
                     {/* Key */}
                     <div className={`rounded p-1.5 flex flex-col items-center justify-center bg-black/40 border border-white/10 ${isKeyMatch ? 'ring-1 ring-yellow-500/50' : ''}`}>
-                         <span className="text-[8px] text-slate-500 uppercase font-bold mb-0.5">Key</span>
+                         <span className="text-[8px] text-slate-400 uppercase font-bold mb-0.5">Key</span>
                          <span className={`text-xs font-mono font-bold ${isKeyMatch ? 'text-yellow-400' : track.key.includes('m') ? 'text-cyan-400' : 'text-pink-400'}`}>{track.key}</span>
                     </div>
                     {/* Plays */}
                     <div className="bg-black/40 rounded border border-white/10 p-1.5 flex flex-col items-center justify-center">
-                        <span className="text-[8px] text-slate-500 uppercase font-bold mb-0.5">Plays</span>
+                        <span className="text-[8px] text-slate-400 uppercase font-bold mb-0.5">Plays</span>
                         <span className="text-xs font-mono font-bold text-slate-300">{track.playCount}</span>
                     </div>
                     {/* Time */}
                     <div className="bg-black/40 rounded border border-white/10 p-1.5 flex flex-col items-center justify-center">
-                        <span className="text-[8px] text-slate-500 uppercase font-bold mb-0.5">Time</span>
+                        <span className="text-[8px] text-slate-400 uppercase font-bold mb-0.5">Time</span>
                         <span className="text-xs font-mono font-bold text-slate-300">{track.duration}</span>
                     </div>
                 </div>
@@ -302,7 +302,7 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
                 {/* B. Genre/Subgenre */}
                 <div className="flex gap-2">
                      <div className="flex-1 bg-white/5 rounded-lg p-2 border border-white/5">
-                        <span className="text-[8px] text-slate-500 font-bold uppercase block mb-0.5">Gênero</span>
+                        <span className="text-[8px] text-slate-400 font-bold uppercase block mb-0.5">Gênero</span>
                         <span className="text-xs text-slate-200 font-semibold truncate block">{track.genre || '-'}</span>
                      </div>
                      {track.subgenre && (

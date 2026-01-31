@@ -92,7 +92,7 @@ export const NowPlaying: React.FC<NowPlayingProps> = ({ track, language, classNa
           </div>
         )}
 
-        <div className="relative z-10 w-full flex-1 flex flex-col">
+        <div className="relative z-10 w-full flex-1 flex flex-col h-full min-h-0">
             
             {/* --- COLLAPSED STATE (Retraído) --- */}
             {!isExpanded && (
@@ -139,20 +139,20 @@ export const NowPlaying: React.FC<NowPlayingProps> = ({ track, language, classNa
 
             {/* --- EXPANDED STATE (Expandido) --- */}
             {isExpanded && (
-                <div className="p-4 flex flex-col items-center text-center animate-in fade-in zoom-in-95 duration-300 relative h-full justify-between">
+                <div className="p-4 flex flex-col items-center text-center animate-in fade-in zoom-in-95 duration-300 relative h-full overflow-y-auto custom-scrollbar">
                     
                     {/* Rating - Top Right */}
-                    <div className="absolute top-4 right-4 z-20">
+                    <div className="absolute top-0 right-0 z-20">
                          <div className="bg-black/50 backdrop-blur-md border border-white/20 px-3 py-1.5 rounded-full shadow-[0_0_15px_rgba(234,179,8,0.2)]">
                             {renderRating(track.rating)}
                          </div>
                     </div>
 
                     {/* Section 1: Visuals & Title */}
-                    <div className="flex flex-col items-center w-full">
-                        {/* Large Vinyl */}
+                    <div className="flex flex-col items-center w-full flex-shrink-0">
+                        {/* Large Vinyl - Responsive Size for Landscape Tablets */}
                         <div 
-                            className="relative w-32 h-32 sm:w-40 sm:h-40 mb-4 mt-2 cursor-pointer active:scale-95 transition-transform"
+                            className="relative w-32 h-32 sm:w-40 sm:h-40 max-h-[25vh] aspect-square mb-2 mt-2 cursor-pointer active:scale-95 transition-transform"
                             onClick={toggleSpin}
                         >
                             <div 
@@ -174,13 +174,13 @@ export const NowPlaying: React.FC<NowPlayingProps> = ({ track, language, classNa
                         <h2 className="text-lg sm:text-xl lg:text-2xl font-black text-white leading-tight mb-1 w-full break-words px-1 tracking-tight drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)] line-clamp-2">
                             {track.name}
                         </h2>
-                        <p className="text-base sm:text-lg text-cyan-200 font-bold mb-6 w-full break-words px-1 drop-shadow-sm line-clamp-1">
+                        <p className="text-base sm:text-lg text-cyan-200 font-bold mb-4 w-full break-words px-1 drop-shadow-sm line-clamp-1">
                             {track.artist}
                         </p>
                     </div>
 
                     {/* Section 2: Core Stats */}
-                    <div className="w-full grid grid-cols-2 xl:grid-cols-4 gap-2 mb-4">
+                    <div className="w-full grid grid-cols-2 xl:grid-cols-4 gap-2 mb-2 flex-shrink-0">
                         {/* BPM */}
                         <div className="bg-black/60 rounded-lg p-1.5 flex flex-col items-center justify-center border border-white/10 backdrop-blur-md shadow-inner min-w-0">
                             <span className="text-[9px] text-gray-400 uppercase font-bold mb-0.5">BPM</span>
@@ -204,7 +204,7 @@ export const NowPlaying: React.FC<NowPlayingProps> = ({ track, language, classNa
                     </div>
 
                     {/* Tablet/Desktop Only: Extended Metadata - Occupy optimized space */}
-                    <div className="hidden md:flex w-full flex-col gap-3 mb-4 bg-white/5 p-3 rounded-xl border border-white/5 flex-1 justify-center">
+                    <div className="hidden md:flex w-full flex-col gap-2 mb-2 bg-white/5 p-3 rounded-xl border border-white/5 flex-shrink justify-center min-h-[60px]">
                         <div className="grid grid-cols-2 gap-4 w-full">
                             <div className="flex flex-col text-left">
                                 <span className="text-[9px] text-gray-400 uppercase font-bold mb-0.5">Gênero</span>
@@ -226,7 +226,7 @@ export const NowPlaying: React.FC<NowPlayingProps> = ({ track, language, classNa
                     </div>
 
                     {/* Footer Info: Directory, Energy, Cues */}
-                    <div className="w-full bg-black/60 rounded-xl p-3 border border-white/10 space-y-3 backdrop-blur-md shadow-inner mt-auto">
+                    <div className="w-full bg-black/60 rounded-xl p-3 border border-white/10 space-y-3 backdrop-blur-md shadow-inner mt-auto flex-shrink-0">
                         
                         <div className="flex items-center justify-between text-xs">
                              <div className="flex items-center gap-2 overflow-hidden flex-1 min-w-0">
