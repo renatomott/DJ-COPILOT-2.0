@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import type { Track } from '../types';
 import { TrackItem } from './TrackItem';
 import { TrashIcon, DownloadIcon, WandSparklesIcon, BrainIcon, SparklesIcon, PlusIcon, SearchIcon, XIcon, ZapIcon, BarChartIcon, TrendingUpIcon, UploadIcon, LayersIcon, ChevronDownIcon, PlayIcon, ArrowUpIcon } from './icons';
@@ -82,7 +82,11 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
   const [mustHaves, setMustHaves] = useState<Track[]>([]);
   const [planSearch, setPlanSearch] = useState('');
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
+  
+  // Drag State
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [touchDragInfo, setTouchDragInfo] = useState<{ startIndex: number; currentIndex: number; startY: number } | null>(null);
+  
   const importFileRef = useRef<HTMLInputElement>(null);
 
   const [plannerParams, setPlannerParams] = useState({
@@ -311,31 +315,70 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
       }).length;
   }, [fullPlaylist, plannerParams]);
 
-  // Drag and Drop Handlers
+  // --- DESKTOP DRAG & DROP HANDLERS ---
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
       setDraggedIndex(index);
       e.dataTransfer.effectAllowed = 'move';
-      // Set invisible drag image or standard
+      // Fallback for invisible image if needed
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>, index: number) => {
-      e.preventDefault(); // Necessary for Drop
+      e.preventDefault(); 
       if (draggedIndex === null || draggedIndex === index) return;
-      
-      // We could add visual indicators here, but keeping it simple for now
   };
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>, index: number) => {
       e.preventDefault();
       if (draggedIndex === null) return;
-
-      const newQueue = [...queue];
-      const draggedItem = newQueue[draggedIndex];
-      newQueue.splice(draggedIndex, 1);
-      newQueue.splice(index, 0, draggedItem);
-      
-      setQueue(newQueue);
+      moveItem(draggedIndex, index);
       setDraggedIndex(null);
+  };
+
+  // --- MOBILE TOUCH DRAG HANDLERS ---
+  // Implements custom logic since HTML5 DnD doesn't work on touch
+  const handleTouchStart = (e: React.TouchEvent, index: number) => {
+      e.stopPropagation(); // Stop SwipeableItem and others
+      const touch = e.touches[0];
+      setTouchDragInfo({ 
+          startIndex: index, 
+          currentIndex: index, 
+          startY: touch.clientY 
+      });
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+      if (!touchDragInfo) return;
+      
+      // Prevent scrolling the page while reordering
+      if (e.cancelable) e.preventDefault(); 
+      
+      const touch = e.touches[0];
+      const target = document.elementFromPoint(touch.clientX, touch.clientY);
+      
+      // Find the row under the finger
+      const row = target?.closest('[data-queue-index]');
+      if (row) {
+          const newIndex = parseInt(row.getAttribute('data-queue-index') || '-1');
+          if (newIndex !== -1 && newIndex !== touchDragInfo.currentIndex) {
+              setTouchDragInfo(prev => prev ? { ...prev, currentIndex: newIndex } : null);
+          }
+      }
+  };
+
+  const handleTouchEnd = () => {
+      if (touchDragInfo) {
+          if (touchDragInfo.startIndex !== touchDragInfo.currentIndex) {
+              moveItem(touchDragInfo.startIndex, touchDragInfo.currentIndex);
+          }
+          setTouchDragInfo(null);
+      }
+  };
+
+  const moveItem = (fromIndex: number, toIndex: number) => {
+      const newQueue = [...queue];
+      const [movedItem] = newQueue.splice(fromIndex, 1);
+      newQueue.splice(toIndex, 0, movedItem);
+      setQueue(newQueue);
   };
 
   return (
@@ -345,6 +388,7 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
       {/* --- Column 1: Planner & Tools (Sticky on Desktop) --- */}
       <div className="w-full md:col-span-5 lg:col-span-5 flex-shrink-0 md:h-full md:border-r md:border-white/5 bg-[#020617]/95 md:bg-slate-950/40 backdrop-blur-xl md:backdrop-blur-none z-40 transition-all duration-300 flex flex-col rounded-xl overflow-hidden mb-4 md:mb-0">
           <div className="p-4 border-b border-white/5 space-y-4 overflow-y-auto custom-scrollbar h-full">
+                {/* ... (Header and Planner content remains same) ... */}
                 
                 {/* Header */}
                 <div className="flex items-center justify-between relative z-30">
@@ -561,13 +605,22 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
           </div>
 
           {queue.length > 0 ? (
-            <div className="space-y-4 px-1 pb-20">
+            <div 
+                className="space-y-4 px-1 pb-20 touch-none" // Disable browser default touch actions for the list area to help custom drag
+            >
                 {queue.map((track, index) => {
                     let transitionInfo = null;
                     const isOnAir = track.id === currentTrackId;
-                    const uniqueKey = `${track.id}-${index}`;
+                    
+                    // FIXED: Key usage. Using index as part of key is dangerous for drag/drop, but using only track.id fails if duplicates exist.
+                    // Ideally we'd wrap queue items with unique IDs. Assuming standard usage, we combine id and index but we handle drop carefully.
+                    // For reordering visual stability, let's use track.id if unique in queue, or index fallback.
+                    const isDuplicate = queue.filter(t => t.id === track.id).length > 1;
+                    const uniqueKey = isDuplicate ? `${track.id}-${index}` : track.id;
+                    
                     const isExpanded = expandedKey === uniqueKey;
                     const isDragging = draggedIndex === index;
+                    const isTouchTarget = touchDragInfo?.currentIndex === index;
 
                     if (index > 0) {
                         const prev = queue[index-1];
@@ -588,9 +641,9 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
                                 {/* Visual Connection Line */}
                                 <div className={`h-8 w-0.5 ${lineColor} absolute top-[-1rem] opacity-50`}></div>
                                 <div className={`bg-black/90 border border-white/10 rounded-full px-4 py-1.5 font-mono font-bold flex gap-4 shadow-xl z-10 ${textColor}`}>
-                                    <span className={`text-xs md:text-sm ${track.key === prev.key ? 'text-white' : 'text-slate-400'}`}>{prev.key} → {track.key}</span>
-                                    <div className="w-px h-3 bg-slate-700/50 self-center"></div>
-                                    <span className="text-xs md:text-sm">{bpmDiff} BPM</span>
+                                    <span className={`text-base md:text-lg ${track.key === prev.key ? 'text-white' : 'text-slate-400'}`}>{prev.key} → {track.key}</span>
+                                    <div className="w-px h-4 bg-slate-700/50 self-center"></div>
+                                    <span className="text-base md:text-lg">{bpmDiff} BPM</span>
                                 </div>
                             </div>
                         );
@@ -599,8 +652,12 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
                     return (
                         <div 
                             key={uniqueKey} 
-                            className={`animate-in slide-in-from-left-2 transition-opacity ${isDragging ? 'opacity-50' : 'opacity-100'}`}
-                            draggable={!isExpanded} // Disable drag when expanded to avoid conflicts
+                            data-queue-index={index}
+                            className={`animate-in slide-in-from-left-2 transition-all duration-200 
+                                ${isDragging ? 'opacity-50 scale-95' : 'opacity-100'} 
+                                ${isTouchTarget && touchDragInfo ? 'border-t-4 border-cyan-500 pt-2' : ''}
+                            `}
+                            draggable={!isExpanded} 
                             onDragStart={(e) => handleDragStart(e, index)}
                             onDragOver={(e) => handleDragOver(e, index)}
                             onDrop={(e) => handleDrop(e, index)}
@@ -618,10 +675,15 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
                                 rightIcon={<PlayIcon className="w-8 h-8 text-white" />}
                             >
                                 <div className="relative group flex items-stretch gap-3">
-                                    {/* Drag Handle Area */}
-                                    <div className="flex-shrink-0 w-6 flex flex-col items-center justify-center cursor-grab active:cursor-grabbing">
+                                    {/* Drag Handle Area - Now with TOUCH support */}
+                                    <div 
+                                        className="flex-shrink-0 w-8 flex flex-col items-center justify-center cursor-grab active:cursor-grabbing touch-none select-none"
+                                        onTouchStart={(e) => handleTouchStart(e, index)}
+                                        onTouchMove={handleTouchMove}
+                                        onTouchEnd={handleTouchEnd}
+                                    >
                                         <div className={`text-xs font-black ${isOnAir ? 'text-cyan-400' : 'text-slate-600'} mb-0.5`}>{index + 1}</div>
-                                        <div className={`flex-1 w-[2px] bg-gradient-to-b ${isOnAir ? 'from-cyan-400' : 'from-slate-800'} to-transparent rounded-full`}></div>
+                                        <div className={`flex-1 w-[3px] bg-gradient-to-b ${isOnAir ? 'from-cyan-400' : 'from-slate-800'} to-transparent rounded-full`}></div>
                                     </div>
                                     
                                     <div className="flex-1 relative pb-1">
