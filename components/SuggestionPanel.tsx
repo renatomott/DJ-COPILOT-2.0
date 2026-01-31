@@ -18,6 +18,8 @@ interface SuggestionPanelProps {
   language: 'pt-BR' | 'en-US';
 }
 
+const LAST_ID_KEY = 'dj_copilot_last_suggestion_id';
+
 export const SuggestionPanel: React.FC<SuggestionPanelProps> = ({ currentTrack, playlist, suggestions, setSuggestions, onSelectTrack, onAddToQueue, language }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -26,7 +28,11 @@ export const SuggestionPanel: React.FC<SuggestionPanelProps> = ({ currentTrack, 
   
   const t = translations[language];
   const isFetching = useRef(false);
-  const lastTrackId = useRef<string | null>(null);
+  
+  // Initialize with value from storage to persist across unmounts (tab switches)
+  const lastTrackId = useRef<string | null>(
+      typeof localStorage !== 'undefined' ? localStorage.getItem(LAST_ID_KEY) : null
+  );
 
   const handleDismiss = (trackId: string) => {
     setSuggestions(prev => prev.filter(s => s.id !== trackId));
@@ -36,9 +42,11 @@ export const SuggestionPanel: React.FC<SuggestionPanelProps> = ({ currentTrack, 
   const loadSuggestions = useCallback(async (force: boolean = false) => {
     if (!currentTrack) return;
     
-    // Logic update: If track changed, we MUST load, regardless of force flag
+    // Check if the current suggestions match the current track
     const trackChanged = lastTrackId.current !== currentTrack.id;
     
+    // PERSISTENCE LOGIC:
+    // If not forced, track hasn't changed, and we have data, keep existing suggestions.
     if (!force && !trackChanged && suggestions.length > 0) {
       return;
     }
@@ -49,11 +57,12 @@ export const SuggestionPanel: React.FC<SuggestionPanelProps> = ({ currentTrack, 
     setError(null);
     isFetching.current = true;
     
-    // Clear old suggestions if track changed to avoid confusion
+    // If track changed, clear old suggestions and update reference
     if (trackChanged) {
         setSuggestions([]);
         setExpandedId(null);
         lastTrackId.current = currentTrack.id;
+        localStorage.setItem(LAST_ID_KEY, currentTrack.id);
     }
 
     try {
@@ -96,11 +105,12 @@ export const SuggestionPanel: React.FC<SuggestionPanelProps> = ({ currentTrack, 
   };
 
   // Trigger load whenever currentTrack ID changes
+  // Pass 'false' to allow persistence logic to skip reload if IDs match
   useEffect(() => {
     if (currentTrack?.id) {
-        loadSuggestions(true); // Force load for new track
+        loadSuggestions(false); 
     }
-  }, [currentTrack?.id]); 
+  }, [currentTrack?.id, loadSuggestions]); 
 
   const handleRefresh = (e: React.MouseEvent) => {
     e.stopPropagation();

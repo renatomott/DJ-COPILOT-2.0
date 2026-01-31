@@ -419,7 +419,13 @@ export const MainScreen: React.FC<MainScreenProps> = ({
     <div 
         className={`min-h-screen text-slate-200 font-sans selection:bg-cyan-500/30 transition-colors duration-1000 ease-in-out ${isHighContrast ? 'contrast-125 grayscale bg-black' : `bg-gradient-to-br ${theme.gradientFrom} via-slate-950 ${theme.gradientTo}`} ${!isHighContrast && 'aurora-bg'}`}
     >
-      <Header onReset={onReset} showMenuButton={true} onToggleMenu={() => setSidebarExpanded(!sidebarExpanded)} />
+      <Header 
+        onReset={onReset} 
+        showMenuButton={true} 
+        onToggleMenu={() => setSidebarExpanded(!sidebarExpanded)} 
+        currentTrack={currentTrack}
+        showMiniPlayer={activeTab !== 'deck'}
+      />
       
       {/* Toast Notification */}
       {transitionToast && (
@@ -584,9 +590,6 @@ export const MainScreen: React.FC<MainScreenProps> = ({
                 
                 {/* DIRECTORY LIST (Visible on Tablet, Hidden/Accordion on Mobile handled by Right Column logic) */}
                 <div className="hidden md:flex flex-col flex-1 overflow-y-auto custom-scrollbar p-2">
-                    <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-2 mb-2 flex items-center gap-2">
-                        <FolderIcon className="w-3 h-3" /> Diretórios
-                    </h3>
                     <div className="space-y-1">
                         <button 
                             onClick={selectAllDirectories}
