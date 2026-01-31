@@ -63,6 +63,10 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ track, onClick, variant 
     
     const artistColor = isNext ? 'text-indigo-200' : 'text-cyan-200';
     const labelColor = isNext ? 'text-indigo-300 bg-indigo-950/60 border-indigo-500/50' : 'text-cyan-300 bg-cyan-950/40 border-cyan-500/30';
+    
+    // Styles for Directory line
+    const dirIconColor = isNext ? 'text-indigo-300/70' : 'text-slate-500';
+    const dirTextColor = isNext ? 'text-indigo-100/80' : 'text-slate-400';
 
     return (
         <div 
@@ -92,21 +96,16 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ track, onClick, variant 
                 )}
             </div>
 
-            {/* Info */}
-            <div className="flex flex-col min-w-0 flex-1 justify-center">
-                <span className="text-xs font-semibold text-white truncate leading-tight pr-6 tracking-wide">{track.name}</span>
+            {/* Info Container */}
+            <div className="flex flex-col min-w-0 flex-1 justify-center gap-[2px]">
                 
-                {/* Directory Name for NEXT variant */}
-                {isNext && track.location && (
-                    <div className="flex items-center gap-1 mt-0.5 min-w-0">
-                        <FolderIcon className="w-2.5 h-2.5 text-indigo-300/70 flex-shrink-0" />
-                        <span className="text-[10px] text-indigo-100/80 font-medium truncate leading-tight">
-                            {track.location}
-                        </span>
-                    </div>
-                )}
-
-                <div className="flex items-center gap-2 text-xs leading-tight mt-1">
+                {/* 1. Track Name */}
+                <span className="text-xs font-semibold text-white truncate leading-tight pr-6 tracking-wide">
+                    {track.name}
+                </span>
+                
+                {/* 2. Metadata: Artist | BPM | Key | Duration */}
+                <div className="flex items-center gap-2 text-xs leading-tight">
                     {/* Artist */}
                     <span className={`font-medium truncate max-w-[80px] sm:max-w-[120px] ${artistColor}`}>
                         {track.artist}
@@ -129,6 +128,16 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ track, onClick, variant 
                         <span>{track.duration}</span>
                     </div>
                 </div>
+
+                {/* 3. Directory Name */}
+                {track.location && (
+                    <div className="flex items-center gap-1 min-w-0">
+                        <FolderIcon className={`w-2.5 h-2.5 flex-shrink-0 ${dirIconColor}`} />
+                        <span className={`text-[10px] font-medium truncate leading-tight ${dirTextColor}`}>
+                            {track.location}
+                        </span>
+                    </div>
+                )}
             </div>
         </div>
     );
