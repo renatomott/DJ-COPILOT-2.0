@@ -186,9 +186,10 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
       );
   }
 
+  // CHANGED: Increased font size for BPM on tablets (md:text-xs) and adjusted padding
   const bpmClass = isExpanded 
     ? "text-xs sm:text-sm font-black font-mono text-cyan-300 bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-500/40 shadow-[0_0_10px_rgba(6,182,212,0.15)] transition-all duration-300"
-    : "text-[9px] font-mono font-bold text-cyan-400 bg-black/40 px-1.5 py-0.5 rounded border border-slate-700 shadow-sm transition-all duration-300";
+    : "text-[9px] md:text-xs font-mono font-bold text-cyan-400 bg-black/40 px-1.5 py-0.5 rounded border border-slate-700 shadow-sm transition-all duration-300";
 
   // Apply gold outline if match, merge with existing classes
   const finalBpmClass = `${bpmClass} ${isBpmMatch ? matchStyle : ''}`;
@@ -235,20 +236,26 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
                     )}
                 </div>
                 <div className="flex items-center justify-between gap-2 mb-1">
+                    {/* CHANGED: Increased Artist font size on tablets (md:text-sm) */}
                     <HighlightText 
                         text={track.artist} 
                         query={searchQuery}
-                        className="text-[11px] text-slate-400 line-clamp-1 font-bold flex-1"
+                        className="text-[11px] md:text-sm text-slate-400 line-clamp-1 font-bold flex-1"
                     />
                     
                     {/* Collapsed Location */}
+                    {/* CHANGED: 
+                        - Increased font size (md:text-[11px])
+                        - Removed max-width constraints on tablet (md:max-w-none)
+                        - Allowed wrapping/full text (md:truncate-0, md:whitespace-normal)
+                    */}
                     {track.location && !isExpanded && (
-                        <div className="flex items-center gap-1 flex-shrink-0 justify-end max-w-[60%]">
+                        <div className="flex items-center gap-1 flex-shrink-0 justify-end max-w-[60%] md:max-w-none md:flex-auto">
                              {track.color && (
                                 <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: track.color }} />
                              )}
                              {!track.color && <FolderIcon className="w-2.5 h-2.5 text-cyan-600 flex-shrink-0" />}
-                            <p className="text-[8px] text-cyan-500 uppercase tracking-wider font-black break-words leading-tight text-right truncate max-w-[80px]">{track.location}</p>
+                            <p className="text-[8px] md:text-[11px] text-cyan-500 uppercase tracking-wider font-black break-words leading-tight text-right truncate md:whitespace-normal md:overflow-visible max-w-[80px] md:max-w-none">{track.location}</p>
                         </div>
                     )}
                 </div>

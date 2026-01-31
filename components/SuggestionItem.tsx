@@ -54,14 +54,13 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
   const t = translations[language];
   const itemRef = useRef<HTMLDivElement>(null);
 
+  // Scroll to top when expanded
   useEffect(() => {
     if (isExpanded && itemRef.current) {
+        // Tiny delay to ensure layout is calculated
         setTimeout(() => {
-            // Increased to ensure visibility
-            const headerOffset = 110; 
-            const elementPosition = itemRef.current?.getBoundingClientRect().top || 0;
-            const offsetPosition = elementPosition + window.scrollY - headerOffset;
-            window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
+            // Scroll container to show this element at the top
+            itemRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 150);
     }
   }, [isExpanded]);
@@ -104,13 +103,14 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
         <div 
           ref={itemRef}
           onClick={onToggleExpand}
-          className={`relative overflow-hidden transition-all duration-300 border cursor-pointer ${isExpanded ? 'bg-slate-900/90 rounded-xl' : 'bg-black/40 backdrop-blur-md hover:bg-black/50 rounded-lg'}`}
+          className={`relative overflow-hidden transition-all duration-300 border cursor-pointer scroll-mt-24 ${isExpanded ? 'bg-slate-900/90 rounded-xl' : 'bg-black/40 backdrop-blur-md hover:bg-black/50 rounded-lg'}`}
           style={containerStyle}
         >
           {/* --- CONTENT CONTAINER --- */}
-          <div className={`flex ${isExpanded ? 'flex-col gap-3 p-3' : 'flex-row items-center gap-3 p-2.5'}`}>
+          {/* Always Keep Row Layout for Header to save vertical space */}
+          <div className={`flex flex-row gap-3 ${isExpanded ? 'p-3 items-start' : 'items-center p-2.5'}`}>
             
-            {/* 1. COVER ART (Left Aligned in both states) */}
+            {/* 1. COVER ART */}
             <div className={`relative flex-shrink-0 transition-all duration-300 ${isExpanded ? 'w-20 h-20' : 'w-14 h-14'}`}>
               <div className="w-full h-full rounded-md overflow-hidden shadow-lg border border-white/10 bg-black relative">
                 <CoverArt 
@@ -123,14 +123,14 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
               </div>
             </div>
 
-            {/* 2. HEADER INFO (Right of Art) */}
+            {/* 2. HEADER INFO */}
             <div className="flex-1 min-w-0 flex flex-col justify-center">
-                {/* Title - Larger */}
+                {/* Title */}
                 <h4 className={`font-black text-white leading-tight break-words ${isExpanded ? 'text-lg mb-0.5 line-clamp-2' : 'text-base line-clamp-1'}`}>
                     {suggestion.name}
                 </h4>
                 
-                {/* Artist - Bold & Colored */}
+                {/* Artist */}
                 <p className={`font-bold text-cyan-100 break-words leading-tight truncate ${isExpanded ? 'text-sm mb-2' : 'text-xs mb-1.5'}`}>
                     {suggestion.artist}
                 </p>
@@ -154,7 +154,7 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                             {suggestion.key}
                          </span>
                         
-                        {/* Dot Location - Pushes to far right thanks to flex-1 parent */}
+                        {/* Dot Location */}
                         {suggestion.location && (
                              <div className="flex items-center gap-1 ml-auto opacity-70">
                                 {suggestion.color ? (
@@ -167,7 +167,7 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                     </div>
                 )}
 
-                {/* EXPANDED: Location & Rating */}
+                {/* EXPANDED: Location & Rating Inline */}
                 {isExpanded && (
                     <div className="flex items-center gap-3">
                          <div className="flex items-center gap-1.5 bg-black/30 px-2 py-1 rounded-md border border-white/5 max-w-fit">
@@ -178,44 +178,45 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                     </div>
                 )}
             </div>
-            
-            {/* Removed X Button from Retracted State */}
           </div>
 
-          {/* 3. EXPANDED DETAILS (Below Header) */}
+          {/* 3. EXPANDED DETAILS */}
           {isExpanded && (
             <div className="px-3 pb-3 space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
                 
-                {/* A. Data Grid (Match, BPM, Key, Time) - CHANGED TO 2 COLS FOR ROBUSTNESS */}
-                <div className="grid grid-cols-2 gap-2">
+                {/* A. Data Grid - 4 Columns for Compact Vertical Height */}
+                <div className="grid grid-cols-4 gap-2">
                     {/* Match */}
                     <div className="bg-black/40 rounded border border-white/10 p-1.5 flex flex-col items-center justify-center">
-                        <BrainIcon className={`w-3.5 h-3.5 mb-0.5 ${scoreColor}`} />
-                        <span className={`text-sm font-black ${scoreColor}`}>{matchScoreDisplay}%</span>
+                        <span className="text-[8px] text-gray-500 uppercase font-bold mb-0.5">Match</span>
+                        <div className="flex items-center gap-1">
+                            <BrainIcon className={`w-3 h-3 ${scoreColor}`} />
+                            <span className={`text-xs font-black ${scoreColor}`}>{matchScoreDisplay}%</span>
+                        </div>
                     </div>
                     {/* BPM */}
                     <div className={`rounded p-1.5 flex flex-col items-center justify-center ${isBpmMatch ? goldBorderClass : defaultBorderClass}`}>
-                        <span className="text-[9px] text-gray-500 uppercase font-bold">BPM</span>
-                        <div className="flex flex-col items-center leading-none">
-                            <span className={`text-sm font-mono font-black ${isBpmMatch ? 'text-yellow-400' : 'text-white'}`}>{suggestion.bpm}</span>
-                            <span className={`text-[9px] font-mono font-bold ${bpmDiffColor}`}>{bpmDiffFormatted}</span>
+                        <span className="text-[8px] text-gray-500 uppercase font-bold mb-0.5">BPM</span>
+                        <div className="flex items-center gap-1 leading-none">
+                            <span className={`text-xs font-mono font-black ${isBpmMatch ? 'text-yellow-400' : 'text-white'}`}>{suggestion.bpm}</span>
+                            <span className={`text-[8px] font-mono font-bold ${bpmDiffColor}`}>{bpmDiffFormatted}</span>
                         </div>
                     </div>
                     {/* Key */}
                     <div className={`rounded p-1.5 flex flex-col items-center justify-center ${isKeyMatch ? goldBorderClass : defaultBorderClass}`}>
-                        <span className="text-[9px] text-gray-500 uppercase font-bold">Key</span>
-                        <span className={`text-sm font-mono font-black ${isKeyMatch ? 'text-yellow-400' : suggestion.key.includes('m') ? 'text-cyan-400' : 'text-pink-400'}`}>{suggestion.key}</span>
+                        <span className="text-[8px] text-gray-500 uppercase font-bold mb-0.5">Key</span>
+                        <span className={`text-xs font-mono font-black ${isKeyMatch ? 'text-yellow-400' : suggestion.key.includes('m') ? 'text-cyan-400' : 'text-pink-400'}`}>{suggestion.key}</span>
                     </div>
                     {/* Time */}
                     <div className="bg-black/40 rounded border border-white/10 p-1.5 flex flex-col items-center justify-center">
-                        <ClockIcon className="w-3.5 h-3.5 mb-0.5 text-gray-500" />
-                        <span className="text-sm font-mono font-black text-gray-300">{suggestion.duration}</span>
+                        <span className="text-[8px] text-gray-500 uppercase font-bold mb-0.5">Time</span>
+                        <span className="text-xs font-mono font-black text-gray-300">{suggestion.duration}</span>
                     </div>
                 </div>
 
-                {/* B. Reason - Increased Font Size */}
-                <div className="bg-white/5 rounded-lg p-3 border border-white/5">
-                    <p className="text-sm text-gray-200 italic leading-relaxed text-center font-medium">
+                {/* B. Reason - Compact */}
+                <div className="bg-white/5 rounded-lg p-2.5 border border-white/5">
+                    <p className="text-xs text-gray-200 italic leading-relaxed text-center font-medium">
                         "{suggestion.reason}"
                     </p>
                 </div>
@@ -231,11 +232,11 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                     </div>
                 )}
 
-                {/* D. Actions */}
-                <div className="grid grid-cols-[1fr_auto_auto] gap-2 pt-1">
+                {/* D. Actions - Same Line Buttons */}
+                <div className="flex gap-2 pt-1">
                      <button 
                         onClick={(e) => { e.stopPropagation(); onSelect(suggestion); }}
-                        className="bg-cyan-600 hover:bg-cyan-500 text-white h-10 rounded-lg font-bold text-xs uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 active:scale-95"
+                        className="flex-1 bg-cyan-600 hover:bg-cyan-500 text-white h-10 rounded-lg font-bold text-xs uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 active:scale-95"
                      >
                         <PlayIcon className="w-4 h-4" /> Load
                      </button>
