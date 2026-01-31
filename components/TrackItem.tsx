@@ -142,10 +142,10 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
             <div className="flex-1 min-w-0 flex flex-col justify-center">
                 <div className="flex items-center gap-2">
                     {track.color && <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: track.color }} />}
-                    <HighlightText text={track.name} query={searchQuery} className={`text-[13px] font-bold truncate leading-tight ${isSelected ? 'text-cyan-100' : 'text-white'}`} />
+                    <HighlightText text={track.name} query={searchQuery} className={`text-[13px] font-semibold truncate leading-tight ${isSelected ? 'text-cyan-100' : 'text-slate-100'}`} />
                 </div>
                 <div className="flex items-center gap-2 mt-0.5">
-                    <HighlightText text={track.artist} query={searchQuery} className="text-[10px] text-slate-400 truncate font-bold uppercase max-w-[50%]" />
+                    <HighlightText text={track.artist} query={searchQuery} className="text-[10px] text-slate-400 truncate font-medium uppercase max-w-[50%]" />
                     {track.location && <><div className="w-px h-2 bg-slate-700"></div><p className="text-[9px] text-cyan-700/80 truncate font-mono uppercase">{track.location}</p></>}
                 </div>
             </div>
@@ -189,7 +189,7 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
                 <div className="absolute bottom-0 left-0 right-0 bg-black/80 backdrop-blur-[1px] h-3.5 flex items-center justify-center pointer-events-none z-10">
                     <div className="flex items-center gap-0.5">
                         <PlayIcon className="w-2 h-2 text-white/70" />
-                        <span className="text-[7px] font-black text-white">{track.playCount}</span>
+                        <span className="text-[7px] font-bold text-white">{track.playCount}</span>
                     </div>
                 </div>
               </div>
@@ -202,12 +202,12 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
                      <HighlightText 
                         text={track.name} 
                         query={searchQuery}
-                        className={`font-black text-white leading-tight break-words ${isExpanded ? 'text-xl mb-1 line-clamp-2' : 'text-base md:text-lg line-clamp-1'}`}
+                        className={`font-semibold text-slate-50 leading-tight break-words tracking-tight ${isExpanded ? 'text-xl mb-1 line-clamp-2' : 'text-base md:text-lg line-clamp-1'}`}
                      />
                      <HighlightText 
                         text={track.artist} 
                         query={searchQuery}
-                        className={`font-bold text-cyan-100 break-words leading-tight truncate ${isExpanded ? 'text-base mb-2' : 'text-sm md:text-base'}`}
+                        className={`font-medium text-cyan-200 break-words leading-tight truncate ${isExpanded ? 'text-base mb-2' : 'text-sm md:text-base'}`}
                      />
                 </div>
 
@@ -217,16 +217,16 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
                         {/* Row A: BPM | Key | Energy */}
                         <div className="flex items-center gap-2">
                             {/* BPM */}
-                            <span className={`text-[11px] md:text-sm font-mono font-black px-1.5 py-0.5 rounded ${isBpmMatch ? matchStyle : 'text-gray-400 bg-white/5'}`}>
+                            <span className={`text-[11px] md:text-sm font-mono font-bold px-1.5 py-0.5 rounded ${isBpmMatch ? matchStyle : 'text-slate-300 bg-white/5'}`}>
                                 {track.bpm}
                             </span>
                             {/* Key */}
-                            <span className={`text-[11px] md:text-sm font-mono font-black px-1.5 py-0.5 rounded ${isKeyMatch ? matchStyle : track.key.includes('m') ? 'text-cyan-300 bg-cyan-950/30' : 'text-pink-300 bg-pink-950/30'}`}>
+                            <span className={`text-[11px] md:text-sm font-mono font-bold px-1.5 py-0.5 rounded ${isKeyMatch ? matchStyle : track.key.includes('m') ? 'text-cyan-300 bg-cyan-950/30' : 'text-pink-300 bg-pink-950/30'}`}>
                                 {track.key}
                             </span>
                             
                             {/* Duration (Tablet Only) */}
-                            <span className="hidden md:block text-[11px] md:text-sm font-mono font-bold text-slate-400 bg-white/5 px-1.5 py-0.5 rounded">
+                            <span className="hidden md:block text-[11px] md:text-sm font-mono font-medium text-slate-400 bg-white/5 px-1.5 py-0.5 rounded">
                                 {track.duration}
                             </span>
 
@@ -246,9 +246,9 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
                                 {track.color ? (
                                     <span className="w-2 h-2 rounded-full shadow-[0_0_5px_currentColor] flex-shrink-0" style={{ backgroundColor: track.color, color: track.color }} />
                                 ) : (
-                                    <FolderIcon className="w-2.5 h-2.5 text-gray-500 flex-shrink-0" />
+                                    <FolderIcon className="w-2.5 h-2.5 text-slate-500 flex-shrink-0" />
                                 )}
-                                <span className="text-[9px] md:text-[10px] text-gray-400 font-bold uppercase truncate">{track.location || 'N/A'}</span>
+                                <span className="text-[9px] md:text-[10px] text-slate-400 font-medium uppercase truncate tracking-wide">{track.location || 'N/A'}</span>
                             </div>
                             
                             {/* Time & Rating */}
@@ -279,36 +279,36 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
                 <div className="grid grid-cols-4 gap-2">
                     {/* BPM */}
                     <div className={`rounded p-1.5 flex flex-col items-center justify-center bg-black/40 border border-white/10 ${isBpmMatch ? 'ring-1 ring-yellow-500/50' : ''}`}>
-                        <span className="text-[8px] text-gray-500 uppercase font-bold mb-0.5">BPM</span>
-                        <span className={`text-xs font-mono font-black ${isBpmMatch ? 'text-yellow-400' : 'text-white'}`}>{track.bpm}</span>
+                        <span className="text-[8px] text-slate-500 uppercase font-bold mb-0.5">BPM</span>
+                        <span className={`text-xs font-mono font-bold ${isBpmMatch ? 'text-yellow-400' : 'text-slate-200'}`}>{track.bpm}</span>
                     </div>
                     {/* Key */}
                     <div className={`rounded p-1.5 flex flex-col items-center justify-center bg-black/40 border border-white/10 ${isKeyMatch ? 'ring-1 ring-yellow-500/50' : ''}`}>
-                         <span className="text-[8px] text-gray-500 uppercase font-bold mb-0.5">Key</span>
-                         <span className={`text-xs font-mono font-black ${isKeyMatch ? 'text-yellow-400' : track.key.includes('m') ? 'text-cyan-400' : 'text-pink-400'}`}>{track.key}</span>
+                         <span className="text-[8px] text-slate-500 uppercase font-bold mb-0.5">Key</span>
+                         <span className={`text-xs font-mono font-bold ${isKeyMatch ? 'text-yellow-400' : track.key.includes('m') ? 'text-cyan-400' : 'text-pink-400'}`}>{track.key}</span>
                     </div>
                     {/* Plays */}
                     <div className="bg-black/40 rounded border border-white/10 p-1.5 flex flex-col items-center justify-center">
-                        <span className="text-[8px] text-gray-500 uppercase font-bold mb-0.5">Plays</span>
-                        <span className="text-xs font-mono font-black text-gray-300">{track.playCount}</span>
+                        <span className="text-[8px] text-slate-500 uppercase font-bold mb-0.5">Plays</span>
+                        <span className="text-xs font-mono font-bold text-slate-300">{track.playCount}</span>
                     </div>
                     {/* Time */}
                     <div className="bg-black/40 rounded border border-white/10 p-1.5 flex flex-col items-center justify-center">
-                        <span className="text-[8px] text-gray-500 uppercase font-bold mb-0.5">Time</span>
-                        <span className="text-xs font-mono font-black text-gray-300">{track.duration}</span>
+                        <span className="text-[8px] text-slate-500 uppercase font-bold mb-0.5">Time</span>
+                        <span className="text-xs font-mono font-bold text-slate-300">{track.duration}</span>
                     </div>
                 </div>
 
                 {/* B. Genre/Subgenre */}
                 <div className="flex gap-2">
                      <div className="flex-1 bg-white/5 rounded-lg p-2 border border-white/5">
-                        <span className="text-[8px] text-gray-500 font-bold uppercase block mb-0.5">Gênero</span>
-                        <span className="text-xs text-white font-bold truncate block">{track.genre || '-'}</span>
+                        <span className="text-[8px] text-slate-500 font-bold uppercase block mb-0.5">Gênero</span>
+                        <span className="text-xs text-slate-200 font-semibold truncate block">{track.genre || '-'}</span>
                      </div>
                      {track.subgenre && (
                         <div className="flex-1 bg-cyan-950/20 rounded-lg p-2 border border-cyan-500/20">
                             <span className="text-[8px] text-cyan-500 font-bold uppercase block mb-0.5 flex items-center gap-1"><BrainIcon className="w-2 h-2" /> Vibe</span>
-                            <span className="text-xs text-cyan-200 font-bold truncate block">{track.subgenre}</span>
+                            <span className="text-xs text-cyan-200 font-semibold truncate block">{track.subgenre}</span>
                         </div>
                      )}
                 </div>

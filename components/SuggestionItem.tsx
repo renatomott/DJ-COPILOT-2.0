@@ -141,12 +141,12 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
             {/* 2. HEADER INFO */}
             <div className="flex-1 min-w-0 flex flex-col justify-center">
                 {/* Title */}
-                <h4 className={`font-black text-white leading-tight break-words ${isExpanded ? 'text-lg mb-0.5 line-clamp-2' : 'text-sm md:text-base line-clamp-1'}`}>
+                <h4 className={`font-semibold text-slate-50 leading-tight break-words tracking-tight ${isExpanded ? 'text-lg mb-0.5 line-clamp-2' : 'text-sm md:text-base line-clamp-1'}`}>
                     {suggestion.name}
                 </h4>
                 
                 {/* Artist */}
-                <p className={`font-bold text-cyan-100 break-words leading-tight truncate ${isExpanded ? 'text-sm mb-2' : 'text-xs md:text-sm mb-1.5'}`}>
+                <p className={`font-medium text-cyan-200 break-words leading-tight truncate ${isExpanded ? 'text-sm mb-2' : 'text-xs md:text-sm mb-1.5'}`}>
                     {suggestion.artist}
                 </p>
 
@@ -159,21 +159,21 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                              {/* Match % */}
                              <div className="flex items-center gap-1 bg-black/40 px-1.5 py-0.5 rounded">
                                 <BrainIcon className={`w-3 h-3 ${scoreColor}`} />
-                                <span className={`text-[11px] md:text-sm font-black ${scoreColor}`}>{matchScoreDisplay}%</span>
+                                <span className={`text-[11px] md:text-sm font-bold ${scoreColor}`}>{matchScoreDisplay}%</span>
                              </div>
                              
                              {/* BPM */}
-                             <span className={`text-[11px] md:text-sm font-mono font-black px-1.5 py-0.5 rounded ${isBpmMatch ? 'text-yellow-400 ring-1 ring-yellow-500/50' : 'text-gray-400 bg-white/5'}`}>
+                             <span className={`text-[11px] md:text-sm font-mono font-bold px-1.5 py-0.5 rounded ${isBpmMatch ? 'text-yellow-400 ring-1 ring-yellow-500/50' : 'text-slate-300 bg-white/5'}`}>
                                 {suggestion.bpm}
                              </span>
 
                              {/* Key */}
-                             <span className={`text-[11px] md:text-sm font-mono font-black px-1.5 py-0.5 rounded ${isKeyMatch ? 'text-yellow-400 ring-1 ring-yellow-500/50' : suggestion.key.includes('m') ? 'text-cyan-300 bg-cyan-950/30' : 'text-pink-300 bg-pink-950/30'}`}>
+                             <span className={`text-[11px] md:text-sm font-mono font-bold px-1.5 py-0.5 rounded ${isKeyMatch ? 'text-yellow-400 ring-1 ring-yellow-500/50' : suggestion.key.includes('m') ? 'text-cyan-300 bg-cyan-950/30' : 'text-pink-300 bg-pink-950/30'}`}>
                                 {suggestion.key}
                              </span>
 
                              {/* Duration (Tablet Only) */}
-                             <span className="hidden md:block text-[11px] md:text-sm font-mono font-bold text-slate-400 bg-white/5 px-1.5 py-0.5 rounded">
+                             <span className="hidden md:block text-[11px] md:text-sm font-mono font-medium text-slate-400 bg-white/5 px-1.5 py-0.5 rounded">
                                 {suggestion.duration}
                              </span>
                          </div>
@@ -185,9 +185,9 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                                 {suggestion.color ? (
                                     <span className="w-2 h-2 rounded-full shadow-[0_0_5px_currentColor] flex-shrink-0" style={{ backgroundColor: suggestion.color, color: suggestion.color }} />
                                 ) : (
-                                    <FolderIcon className="w-2.5 h-2.5 text-gray-500 flex-shrink-0" />
+                                    <FolderIcon className="w-2.5 h-2.5 text-slate-500 flex-shrink-0" />
                                 )}
-                                <span className="text-[9px] md:text-[10px] text-gray-400 font-bold uppercase truncate">{suggestion.location || 'N/A'}</span>
+                                <span className="text-[9px] md:text-[10px] text-slate-400 font-medium uppercase truncate tracking-wide">{suggestion.location || 'N/A'}</span>
                             </div>
 
                             {/* Right: Duration & Stars */}
@@ -205,7 +205,7 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                     <div className="flex items-center gap-3">
                          <div className="flex items-center gap-1.5 bg-black/30 px-2 py-1 rounded-md border border-white/5 max-w-fit">
                             {suggestion.color && <span className="w-2 h-2 rounded-full shadow-[0_0_5px_currentColor]" style={{ backgroundColor: suggestion.color, color: suggestion.color }} />}
-                            <span className="text-[10px] text-gray-300 font-bold uppercase break-all line-clamp-1">{suggestion.location}</span>
+                            <span className="text-[10px] text-slate-300 font-bold uppercase break-all line-clamp-1">{suggestion.location}</span>
                          </div>
                          {renderRating(suggestion.rating, "w-2.5 h-2.5")}
                     </div>
@@ -221,35 +221,35 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                 <div className="grid grid-cols-4 gap-2">
                     {/* Match */}
                     <div className="bg-black/40 rounded border border-white/10 p-1.5 flex flex-col items-center justify-center">
-                        <span className="text-[8px] text-gray-500 uppercase font-bold mb-0.5">Match</span>
+                        <span className="text-[8px] text-slate-500 uppercase font-bold mb-0.5">Match</span>
                         <div className="flex items-center gap-1">
                             <BrainIcon className={`w-3 h-3 ${scoreColor}`} />
-                            <span className={`text-xs font-black ${scoreColor}`}>{matchScoreDisplay}%</span>
+                            <span className={`text-xs font-bold ${scoreColor}`}>{matchScoreDisplay}%</span>
                         </div>
                     </div>
                     {/* BPM */}
                     <div className={`rounded p-1.5 flex flex-col items-center justify-center ${isBpmMatch ? goldBorderClass : defaultBorderClass}`}>
-                        <span className="text-[8px] text-gray-500 uppercase font-bold mb-0.5">BPM</span>
+                        <span className="text-[8px] text-slate-500 uppercase font-bold mb-0.5">BPM</span>
                         <div className="flex items-center gap-1 leading-none">
-                            <span className={`text-xs font-mono font-black ${isBpmMatch ? 'text-yellow-400' : 'text-white'}`}>{suggestion.bpm}</span>
+                            <span className={`text-xs font-mono font-bold ${isBpmMatch ? 'text-yellow-400' : 'text-slate-200'}`}>{suggestion.bpm}</span>
                             <span className={`text-[8px] font-mono font-bold ${bpmDiffColor}`}>{bpmDiffFormatted}</span>
                         </div>
                     </div>
                     {/* Key */}
                     <div className={`rounded p-1.5 flex flex-col items-center justify-center ${isKeyMatch ? goldBorderClass : defaultBorderClass}`}>
-                        <span className="text-[8px] text-gray-500 uppercase font-bold mb-0.5">Key</span>
-                        <span className={`text-xs font-mono font-black ${isKeyMatch ? 'text-yellow-400' : suggestion.key.includes('m') ? 'text-cyan-400' : 'text-pink-400'}`}>{suggestion.key}</span>
+                        <span className="text-[8px] text-slate-500 uppercase font-bold mb-0.5">Key</span>
+                        <span className={`text-xs font-mono font-bold ${isKeyMatch ? 'text-yellow-400' : suggestion.key.includes('m') ? 'text-cyan-400' : 'text-pink-400'}`}>{suggestion.key}</span>
                     </div>
                     {/* Time */}
                     <div className="bg-black/40 rounded border border-white/10 p-1.5 flex flex-col items-center justify-center">
-                        <span className="text-[8px] text-gray-500 uppercase font-bold mb-0.5">Time</span>
-                        <span className="text-xs font-mono font-black text-gray-300">{suggestion.duration}</span>
+                        <span className="text-[8px] text-slate-500 uppercase font-bold mb-0.5">Time</span>
+                        <span className="text-xs font-mono font-bold text-slate-300">{suggestion.duration}</span>
                     </div>
                 </div>
 
                 {/* B. Reason - Compact */}
                 <div className="bg-white/5 rounded-lg p-2.5 border border-white/5">
-                    <p className="text-xs text-gray-200 italic leading-relaxed text-center font-medium">
+                    <p className="text-xs text-slate-200 italic leading-relaxed text-center font-medium">
                         "{suggestion.reason}"
                     </p>
                 </div>

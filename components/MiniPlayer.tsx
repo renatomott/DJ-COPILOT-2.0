@@ -20,8 +20,8 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ track, onClick, variant 
         ? 'bg-indigo-950/90 border-indigo-500/30 hover:bg-indigo-900/90' 
         : 'bg-slate-900/90 border-white/10 hover:bg-slate-800';
     
-    const artistColor = isNext ? 'text-indigo-300' : 'text-cyan-400';
-    const labelColor = isNext ? 'text-indigo-400 bg-indigo-950/50 border-indigo-500/50' : 'text-cyan-500 bg-cyan-950/30 border-cyan-500/30';
+    const artistColor = isNext ? 'text-indigo-200' : 'text-cyan-200';
+    const labelColor = isNext ? 'text-indigo-300 bg-indigo-950/60 border-indigo-500/50' : 'text-cyan-300 bg-cyan-950/40 border-cyan-500/30';
 
     return (
         <div 
@@ -31,7 +31,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ track, onClick, variant 
         >
             {/* Optional Top Label (e.g., "NEXT") */}
             {label && (
-                <div className={`absolute top-0.5 right-1 px-1.5 rounded-[4px] text-[8px] font-black uppercase tracking-widest border ${labelColor}`}>
+                <div className={`absolute top-0.5 right-1 px-1.5 rounded-[4px] text-[8px] font-bold uppercase tracking-widest border ${labelColor}`}>
                     {label}
                 </div>
             )}
@@ -48,28 +48,28 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ track, onClick, variant 
 
             {/* Info */}
             <div className="flex flex-col min-w-0 flex-1 justify-center">
-                <span className="text-xs font-black text-white truncate leading-tight pr-6">{track.name}</span>
+                <span className="text-xs font-semibold text-white truncate leading-tight pr-6 tracking-wide">{track.name}</span>
                 
                 <div className="flex items-center gap-2 text-[10px] leading-tight mt-1">
                     {/* Artist */}
-                    <span className={`font-bold truncate max-w-[80px] sm:max-w-[120px] ${artistColor}`}>
+                    <span className={`font-medium truncate max-w-[80px] sm:max-w-[120px] ${artistColor}`}>
                         {track.artist}
                     </span>
                     
                     <div className="w-px h-2.5 bg-white/10"></div>
 
                     {/* BPM */}
-                    <span className="text-slate-400 font-mono font-bold">
+                    <span className="text-slate-300 font-mono font-bold">
                         {track.bpm} <span className="text-[8px] opacity-60">BPM</span>
                     </span>
 
                     {/* Key */}
-                    <span className={`font-mono font-black ${track.key.includes('m') ? 'text-cyan-200' : 'text-pink-200'}`}>
+                    <span className={`font-mono font-bold ${track.key.includes('m') ? 'text-cyan-200' : 'text-pink-200'}`}>
                         {track.key}
                     </span>
 
                     {/* Duration */}
-                    <div className="flex items-center gap-0.5 ml-auto text-slate-500 font-mono font-bold bg-black/20 px-1.5 rounded">
+                    <div className="flex items-center gap-0.5 ml-auto text-slate-300 font-mono font-medium bg-black/20 px-1.5 rounded">
                         <span>{track.duration}</span>
                     </div>
                 </div>
