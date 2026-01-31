@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import type { Track, Suggestion, ViewMode, GroupingMode } from '../types';
 import { translations } from '../utils/translations';
@@ -20,7 +21,8 @@ import {
     GitMergeIcon,
     PlusIcon,
     ZapIcon,
-    ArrowUpIcon
+    ArrowUpIcon,
+    FilterIcon
 } from './icons';
 import { NowPlaying } from './NowPlaying';
 import { SuggestionPanel } from './SuggestionPanel';
@@ -223,6 +225,18 @@ export const MainScreen: React.FC<MainScreenProps> = ({
         ? enabledDirectories.filter(d => d !== dir) 
         : [...enabledDirectories, dir]
     );
+  };
+  
+  // Exclusive selection for split view
+  const selectDirectoryExclusive = (dir: string) => {
+      setEnabledDirectories([dir]);
+      onGroupingModeChange('all'); // Show cards directly
+  };
+
+  const selectAllDirectories = () => {
+      const allDirs = Array.from(new Set(playlist.map(t => t.location)));
+      setEnabledDirectories(allDirs);
+      onGroupingModeChange('folder'); // Restore accordion for mobile feeling or just standard view
   };
 
   const toggleFolderAccordion = (folder: string) => {
@@ -511,63 +525,116 @@ export const MainScreen: React.FC<MainScreenProps> = ({
           </div>
         )}
 
-        {/* TAB: LIBRARY (Normal Scroll) */}
+        {/* TAB: LIBRARY (SPLIT VIEW) */}
         {activeTab === 'library' && (
-          <div className="flex-1 overflow-y-auto custom-scrollbar px-4 pb-24 md:pb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            {/* Search Bar Row & Quick Filters - Sticky Grouped Header */}
-            <div className="sticky top-0 z-40 bg-[#020617]/95 backdrop-blur-xl -mx-4 px-4 py-2 mb-2 border-b border-white/5 transition-all duration-300">
-                <div className="flex gap-2 mb-2">
-                    <div className="relative flex-1">
-                        <input 
-                            type="text" 
-                            placeholder={t.searchPlaceholder} 
-                            value={searchQuery} 
-                            onChange={(e) => setSearchQuery(e.target.value)} 
-                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-5 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all pl-11 min-h-[50px] text-white placeholder-slate-500" 
-                        />
-                        <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+          <div className="flex-1 md:h-full md:flex flex-col md:flex-row animate-in fade-in slide-in-from-bottom-4 duration-500 md:overflow-hidden">
+            
+            {/* --- COLUMN 1: SIDEBAR (Search, Filters, Folders) --- */}
+            {/* Mobile: Top block. Tablet: Left Sidebar */}
+            <div className="w-full md:w-80 lg:w-96 flex-shrink-0 md:h-full md:border-r md:border-white/5 bg-[#020617]/95 md:bg-slate-950/40 backdrop-blur-xl md:backdrop-blur-none z-40 transition-all duration-300 flex flex-col">
+                
+                {/* SEARCH & TOGGLES Container */}
+                <div className="p-4 border-b border-white/5 space-y-3">
+                     <div className="flex gap-2">
+                        <div className="relative flex-1">
+                            <input 
+                                type="text" 
+                                placeholder={t.searchPlaceholder} 
+                                value={searchQuery} 
+                                onChange={(e) => setSearchQuery(e.target.value)} 
+                                className="w-full bg-slate-900 border border-slate-800 rounded-xl px-5 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all pl-11 min-h-[50px] text-white placeholder-slate-500" 
+                            />
+                            <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                        </div>
+                        <button 
+                            onClick={() => onViewModeChange(viewMode === 'card' ? 'list' : 'card')} 
+                            className={`px-4 rounded-xl border transition-all flex items-center justify-center ${viewMode === 'list' ? 'bg-cyan-600 border-cyan-400 text-white' : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-cyan-400'}`} 
+                            title="Alternar Visualização"
+                        >
+                            {viewMode === 'card' ? <LayersIcon className="w-5 h-5" /> : <ListIcon className="w-5 h-5" />}
+                        </button>
                     </div>
-                    <button 
-                        onClick={() => onViewModeChange(viewMode === 'card' ? 'list' : 'card')} 
-                        className={`px-4 rounded-xl border transition-all flex items-center justify-center ${viewMode === 'list' ? 'bg-cyan-600 border-cyan-400 text-white' : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-cyan-400'}`} 
-                        title="Alternar Visualização"
-                    >
-                        {viewMode === 'card' ? <LayersIcon className="w-5 h-5" /> : <ListIcon className="w-5 h-5" />}
+
+                    {/* Quick Context Pills */}
+                    {currentTrack && (
+                        <div className="flex gap-2 overflow-x-auto custom-scrollbar pb-2">
+                            {filterPills.map((pill, idx) => (
+                                <button 
+                                    key={idx} 
+                                    onClick={pill.action} 
+                                    className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider border whitespace-nowrap transition-all shadow-sm flex-shrink-0 ${pill.active ? 'bg-cyan-600 text-white border-cyan-400' : 'bg-slate-900/80 text-slate-400 border-slate-700 hover:border-cyan-500 hover:text-white'}`}
+                                >
+                                    {pill.label}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
+                    <LibraryFilters availableKeys={availableKeys} availableGenres={availableGenres} onFilterChange={setFilters} initialFilters={filters} />
+                    
+                    {/* Enrich Button */}
+                    <button onClick={onEnrich} disabled={isEnriching} className="w-full py-2 text-[10px] font-bold text-cyan-500 bg-cyan-900/20 border border-cyan-500/30 rounded-lg flex items-center justify-center gap-2 hover:bg-cyan-900/40 transition-colors disabled:opacity-50">
+                        <RefreshCwIcon className={`w-3 h-3 ${isEnriching ? 'animate-spin' : ''}`} /> 
+                        {isEnriching ? t.analyzing : t.enrichBtn.toUpperCase()}
                     </button>
                 </div>
-
-                {/* Quick Filter Pills (Context Aware) */}
-                {currentTrack && (
-                    <div className="flex gap-2 overflow-x-auto custom-scrollbar pb-2 pt-1 overflow-y-hidden touch-pan-x">
-                        {filterPills.map((pill, idx) => (
+                
+                {/* DIRECTORY LIST (Visible on Tablet, Hidden/Accordion on Mobile handled by Right Column logic) */}
+                <div className="hidden md:flex flex-col flex-1 overflow-y-auto custom-scrollbar p-2">
+                    <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-2 mb-2 flex items-center gap-2">
+                        <FolderIcon className="w-3 h-3" /> Diretórios
+                    </h3>
+                    <div className="space-y-1">
+                        <button 
+                            onClick={selectAllDirectories}
+                            className={`w-full text-left px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-between group ${enabledDirectories.length === uniqueDirectories.length ? 'bg-white/10 text-white' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}
+                        >
+                            <span>Todas as Faixas</span>
+                            {enabledDirectories.length === uniqueDirectories.length && <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full"></div>}
+                        </button>
+                        
+                        {uniqueDirectories.map(dir => (
                             <button 
-                                key={idx} 
-                                onClick={pill.action} 
-                                className={`px-3 py-1.5 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-wider border whitespace-nowrap transition-all shadow-sm flex-shrink-0 ${pill.active ? 'bg-cyan-600 text-white border-cyan-400' : 'bg-slate-900/80 text-slate-400 border-slate-700 hover:border-cyan-500 hover:text-white'}`}
+                                key={dir}
+                                onClick={() => selectDirectoryExclusive(dir)}
+                                className={`w-full text-left px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-between group truncate ${enabledDirectories.length === 1 && enabledDirectories[0] === dir ? 'bg-cyan-600/20 text-cyan-400 border border-cyan-500/20' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}
                             >
-                                {pill.label}
+                                <span className="truncate">{dir}</span>
+                                {enabledDirectories.length === 1 && enabledDirectories[0] === dir && <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full"></div>}
                             </button>
                         ))}
                     </div>
-                )}
+                </div>
             </div>
 
-            <LibraryFilters availableKeys={availableKeys} availableGenres={availableGenres} onFilterChange={setFilters} initialFilters={filters} />
-            
-            <div className="mt-4">
-                 <div className="flex justify-between items-center px-1 mb-2">
-                    <span className="text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-[0.2em]">{t.navLib}</span>
-                    <div className="flex gap-2">
-                         <button onClick={onEnrich} disabled={isEnriching} className="text-[10px] md:text-xs font-bold text-cyan-500 flex items-center gap-1 disabled:opacity-50"><RefreshCwIcon className={`w-3 h-3 ${isEnriching ? 'animate-spin' : ''}`} /> ENRICH</button>
-                    </div>
+            {/* --- COLUMN 2: CONTENT (Cards) --- */}
+            {/* Mobile: Main List. Tablet: Right Content Area */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar px-4 pb-24 md:pb-8 pt-4 md:pt-4 relative">
+                
+                {/* Mobile Only: Header Info */}
+                <div className="md:hidden flex justify-between items-center mb-2">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">{t.navLib}</span>
                 </div>
-                {groupingMode === 'all' ? (
-                    // GRID LAYOUT FOR LARGER SCREENS
-                    // CHANGED: Force 2 columns even on XL (Large Tablets) screens. Only 3 columns on 2XL+ (Large Desktops)
-                    <div className={viewMode === 'card' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3 min-[1800px]:grid-cols-4 gap-2 md:gap-4' : 'space-y-1.5'}>
-                        {filteredPlaylist.map(track => renderTrackItem(track))}
+
+                {/* Content Render Logic */}
+                {/* 
+                   On Tablet/Desktop: We Force 'all' grouping mode visually because folders are in sidebar.
+                   On Mobile: We respect groupingMode state.
+                */}
+                {(groupingMode === 'all' || window.innerWidth >= 768) ? (
+                    // GRID LAYOUT
+                    <div className={viewMode === 'card' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-2 md:gap-4' : 'space-y-1.5'}>
+                        {filteredPlaylist.length > 0 ? (
+                            filteredPlaylist.map(track => renderTrackItem(track))
+                        ) : (
+                            <div className="col-span-full py-20 text-center opacity-50 flex flex-col items-center">
+                                <FilterIcon className="w-12 h-12 mb-4 text-slate-600" />
+                                <p className="text-sm font-bold uppercase tracking-widest text-slate-500">{t.noTracksFound}</p>
+                            </div>
+                        )}
                     </div>
                 ) : (
+                    // MOBILE ACCORDION LAYOUT
                     <div className="space-y-3">
                         {Object.entries(groupedPlaylist).map(([folder, tracks]: [string, Track[]]) => {
                             const folderColor = getPredominantColor(tracks) || '';
@@ -580,8 +647,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({
                                         </div>
                                         <span className="text-xs md:text-sm font-bold uppercase text-white break-words text-left">{folder}</span><span className="text-xs font-bold text-slate-500 bg-black/40 px-2 py-0.5 rounded-full flex-shrink-0">{tracks.length}</span></div><ChevronDownIcon className={`w-4 h-4 text-slate-500 transition-transform duration-300 flex-shrink-0 ${expandedFolders.includes(folder) ? 'rotate-180' : ''}`} /></button>
                                     {expandedFolders.includes(folder) && (
-                                        // CHANGED: Consistent 2 columns max for tablets
-                                        <div className={`p-2 border-t border-slate-800 bg-black/20 animate-in slide-in-from-top-2 ${viewMode === 'card' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3 gap-2' : 'space-y-0.5'}`}>
+                                        <div className={`p-2 border-t border-slate-800 bg-black/20 animate-in slide-in-from-top-2 ${viewMode === 'card' ? 'grid grid-cols-1 gap-2' : 'space-y-0.5'}`}>
                                             {tracks.map(track => renderTrackItem(track))}
                                         </div>
                                     )}
@@ -596,7 +662,8 @@ export const MainScreen: React.FC<MainScreenProps> = ({
             <div className={`fixed right-4 z-50 ${currentTrack ? 'bottom-32 md:bottom-24' : 'bottom-24 md:bottom-8'}`}>
                     <button 
                     onClick={() => {
-                        const el = document.querySelector('main .overflow-y-auto');
+                        // Target the correct scroll container based on device
+                        const el = document.querySelector('.md\\:flex-1.overflow-y-auto') || document.querySelector('main .overflow-y-auto');
                         if (el) {
                             el.scrollTo({ top: 0, behavior: 'smooth' });
                         } else {

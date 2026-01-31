@@ -446,12 +446,21 @@ export const generatePlaylist = async (playlist: Track[], vibe: string, isVocal:
 export const enrichPlaylistData = async (playlist: Track[]): Promise<Partial<Track>[]> => {
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const tracksText = playlist.slice(0, 50).map(t => `ID:${t.id}|${t.name}|${t.artist}`).join('\n');
+    // IMPROVED: Include BPM and Genre for better AI Context
+    const tracksText = playlist.slice(0, 50).map(t => 
+        `ID:${t.id}|${t.name}|${t.artist}|${t.bpm} BPM|${t.genre}`
+    ).join('\n');
     
-    const prompt = `Analise estas faixas. Para cada uma:
-    1. Classifique Subgênero (ex: Tech House).
-    2. Nível Energia (1-5).
-    3. Sugira 3 Cue Points estruturais (ex: Intro, Drop, Break, Outro).
+    // IMPROVED PROMPT: Explicit Energy Scale definition
+    const prompt = `Analise a lista de faixas musicais fornecida. Para cada faixa, retorne um objeto JSON com:
+    1. "subgenre": O subgênero eletrônico mais específico (ex: Tech House, Melodic Techno, Deep House).
+    2. "energy": Um número inteiro de 1 a 5 representando a energia da faixa.
+       - 1: Chill/Ambient/Warm-up muito calmo.
+       - 2: Calmo, bom para começo de set.
+       - 3: Energia média, constante, dançante.
+       - 4: Alta energia, momentos de pico.
+       - 5: Peak time, Banger, Explosivo.
+    3. "cuePoints": Array com 3 strings sugerindo pontos de mixagem (ex: "Intro", "Vocal Start", "Drop", "Break", "Outro").
     
     Retorne JSON com array "enrichments" (id, subgenre, energy, cuePoints: string[]).
     \n\n${tracksText}`;

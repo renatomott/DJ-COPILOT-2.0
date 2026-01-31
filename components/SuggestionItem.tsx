@@ -87,9 +87,22 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
   const defaultBorderClass = "border border-white/10 bg-black/40";
 
   const glowColor = hexToRgba(suggestion.color, 0.4);
+  
+  // Dynamic Border Left Color
+  const leftBorderColor = suggestion.color || '#334155'; // Fallback slate
+
   const containerStyle = isExpanded 
-    ? { boxShadow: `0 0 30px -5px ${glowColor}`, borderColor: 'rgba(255,255,255,0.2)' }
-    : { borderColor: 'rgba(255,255,255,0.1)' };
+    ? { 
+        boxShadow: `0 0 30px -5px ${glowColor}`, 
+        borderColor: 'rgba(255,255,255,0.2)',
+        borderLeftColor: leftBorderColor,
+        borderLeftWidth: '6px'
+      }
+    : { 
+        borderColor: 'rgba(255,255,255,0.1)',
+        borderLeftColor: leftBorderColor,
+        borderLeftWidth: '6px'
+      };
 
   return (
     <SwipeableItem
@@ -111,7 +124,7 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
           <div className={`flex flex-row gap-3 ${isExpanded ? 'p-3 items-start' : 'items-center p-2.5'}`}>
             
             {/* 1. COVER ART */}
-            <div className={`relative flex-shrink-0 transition-all duration-300 ${isExpanded ? 'w-20 h-20' : 'w-14 h-14'}`}>
+            <div className={`relative flex-shrink-0 transition-all duration-300 ${isExpanded ? 'w-20 h-20' : 'w-16 h-16'}`}>
               <div className="w-full h-full rounded-md overflow-hidden shadow-lg border border-white/10 bg-black relative">
                 <CoverArt 
                   id={suggestion.id} 
@@ -126,44 +139,56 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
             {/* 2. HEADER INFO */}
             <div className="flex-1 min-w-0 flex flex-col justify-center">
                 {/* Title */}
-                <h4 className={`font-black text-white leading-tight break-words ${isExpanded ? 'text-lg mb-0.5 line-clamp-2' : 'text-base line-clamp-1'}`}>
+                <h4 className={`font-black text-white leading-tight break-words ${isExpanded ? 'text-lg mb-0.5 line-clamp-2' : 'text-sm md:text-base line-clamp-1'}`}>
                     {suggestion.name}
                 </h4>
                 
                 {/* Artist */}
-                <p className={`font-bold text-cyan-100 break-words leading-tight truncate ${isExpanded ? 'text-sm mb-2' : 'text-xs mb-1.5'}`}>
+                <p className={`font-bold text-cyan-100 break-words leading-tight truncate ${isExpanded ? 'text-sm mb-2' : 'text-xs md:text-sm mb-1.5'}`}>
                     {suggestion.artist}
                 </p>
 
-                {/* RETRACTED: Compact Stats Row */}
+                {/* RETRACTED: New Layout with Directory, Time, Rating & Bigger Stats */}
                 {!isExpanded && (
-                    <div className="flex items-center flex-wrap gap-2 w-full">
-                         {/* Match % */}
-                         <div className="flex items-center gap-1 bg-black/40 px-1.5 py-0.5 rounded text-[10px]">
-                            <BrainIcon className={`w-3 h-3 ${scoreColor}`} />
-                            <span className={`font-black ${scoreColor}`}>{matchScoreDisplay}%</span>
-                         </div>
+                    <div className="flex flex-col gap-1.5 w-full">
                          
-                         {/* BPM */}
-                         <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ${isBpmMatch ? 'text-yellow-400 ring-1 ring-yellow-500/50' : 'text-gray-400 bg-white/5'}`}>
-                            {suggestion.bpm}
-                         </span>
-
-                         {/* Key */}
-                         <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ${isKeyMatch ? 'text-yellow-400 ring-1 ring-yellow-500/50' : suggestion.key.includes('m') ? 'text-cyan-300 bg-cyan-950/30' : 'text-pink-300 bg-pink-950/30'}`}>
-                            {suggestion.key}
-                         </span>
-                        
-                        {/* Dot Location */}
-                        {suggestion.location && (
-                             <div className="flex items-center gap-1 ml-auto opacity-70">
-                                {suggestion.color ? (
-                                    <span className="w-2 h-2 rounded-full shadow-[0_0_5px_currentColor]" style={{ backgroundColor: suggestion.color, color: suggestion.color }} />
-                                ) : (
-                                    <FolderIcon className="w-3 h-3 text-gray-500" />
-                                )}
+                         {/* Row A: Major Stats (Bigger Font) */}
+                         <div className="flex items-center gap-2">
+                             {/* Match % */}
+                             <div className="flex items-center gap-1 bg-black/40 px-1.5 py-0.5 rounded">
+                                <BrainIcon className={`w-3 h-3 ${scoreColor}`} />
+                                <span className={`text-[11px] md:text-sm font-black ${scoreColor}`}>{matchScoreDisplay}%</span>
                              </div>
-                        )}
+                             
+                             {/* BPM */}
+                             <span className={`text-[11px] md:text-sm font-mono font-black px-1.5 py-0.5 rounded ${isBpmMatch ? 'text-yellow-400 ring-1 ring-yellow-500/50' : 'text-gray-400 bg-white/5'}`}>
+                                {suggestion.bpm}
+                             </span>
+
+                             {/* Key */}
+                             <span className={`text-[11px] md:text-sm font-mono font-black px-1.5 py-0.5 rounded ${isKeyMatch ? 'text-yellow-400 ring-1 ring-yellow-500/50' : suggestion.key.includes('m') ? 'text-cyan-300 bg-cyan-950/30' : 'text-pink-300 bg-pink-950/30'}`}>
+                                {suggestion.key}
+                             </span>
+                         </div>
+
+                         {/* Row B: Metadata (Folder, Duration, Rating) */}
+                         <div className="flex items-center justify-between border-t border-white/5 pt-1 mt-0.5">
+                            {/* Left: Location */}
+                            <div className="flex items-center gap-1.5 overflow-hidden flex-1">
+                                {suggestion.color ? (
+                                    <span className="w-2 h-2 rounded-full shadow-[0_0_5px_currentColor] flex-shrink-0" style={{ backgroundColor: suggestion.color, color: suggestion.color }} />
+                                ) : (
+                                    <FolderIcon className="w-2.5 h-2.5 text-gray-500 flex-shrink-0" />
+                                )}
+                                <span className="text-[9px] md:text-[10px] text-gray-400 font-bold uppercase truncate">{suggestion.location || 'N/A'}</span>
+                            </div>
+
+                            {/* Right: Duration & Stars */}
+                            <div className="flex items-center gap-2 flex-shrink-0 pl-2">
+                                <span className="text-[10px] font-mono text-slate-500 font-bold">{suggestion.duration}</span>
+                                {renderRating(suggestion.rating, "w-2 h-2")}
+                            </div>
+                         </div>
                     </div>
                 )}
 
