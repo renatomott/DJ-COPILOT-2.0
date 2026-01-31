@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import type { Track, Suggestion, ViewMode, GroupingMode } from '../types';
 import { translations } from '../utils/translations';
@@ -515,29 +514,43 @@ export const MainScreen: React.FC<MainScreenProps> = ({
         {/* TAB: LIBRARY (Normal Scroll) */}
         {activeTab === 'library' && (
           <div className="flex-1 overflow-y-auto custom-scrollbar px-4 pb-24 md:pb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            {/* Search Bar Row */}
-            <div className="flex gap-2 mb-2 sticky top-0 z-30 bg-[#020617]/90 backdrop-blur-sm p-1 rounded-2xl">
-                <div className="relative flex-1">
-                    <input type="text" placeholder={t.searchPlaceholder} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-xl px-5 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all pl-11 min-h-[50px]" />
-                    <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+            {/* Search Bar Row & Quick Filters - Sticky Grouped Header */}
+            <div className="sticky top-0 z-40 bg-[#020617]/95 backdrop-blur-xl -mx-4 px-4 py-2 mb-2 border-b border-white/5 transition-all duration-300">
+                <div className="flex gap-2 mb-2">
+                    <div className="relative flex-1">
+                        <input 
+                            type="text" 
+                            placeholder={t.searchPlaceholder} 
+                            value={searchQuery} 
+                            onChange={(e) => setSearchQuery(e.target.value)} 
+                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-5 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all pl-11 min-h-[50px] text-white placeholder-slate-500" 
+                        />
+                        <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                    </div>
+                    <button 
+                        onClick={() => onViewModeChange(viewMode === 'card' ? 'list' : 'card')} 
+                        className={`px-4 rounded-xl border transition-all flex items-center justify-center ${viewMode === 'list' ? 'bg-cyan-600 border-cyan-400 text-white' : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-cyan-400'}`} 
+                        title="Alternar Visualização"
+                    >
+                        {viewMode === 'card' ? <LayersIcon className="w-5 h-5" /> : <ListIcon className="w-5 h-5" />}
+                    </button>
                 </div>
-                <button onClick={() => onViewModeChange(viewMode === 'card' ? 'list' : 'card')} className={`px-4 rounded-xl border transition-all flex items-center justify-center ${viewMode === 'list' ? 'bg-cyan-600 border-cyan-400 text-white' : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-cyan-400'}`} title="Alternar Visualização">{viewMode === 'card' ? <LayersIcon className="w-5 h-5" /> : <ListIcon className="w-5 h-5" />}</button>
-            </div>
 
-            {/* Quick Filter Pills (Context Aware) */}
-            {currentTrack && (
-                <div className="flex gap-2 mb-3 overflow-x-auto custom-scrollbar pb-1 sticky top-[60px] z-20 pl-1">
-                    {filterPills.map((pill, idx) => (
-                        <button 
-                            key={idx} 
-                            onClick={pill.action} 
-                            className={`px-3 py-1.5 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-wider border whitespace-nowrap transition-all shadow-sm ${pill.active ? 'bg-cyan-600 text-white border-cyan-400' : 'bg-slate-900/80 text-slate-400 border-slate-700 hover:border-cyan-500 hover:text-white'}`}
-                        >
-                            {pill.label}
-                        </button>
-                    ))}
-                </div>
-            )}
+                {/* Quick Filter Pills (Context Aware) */}
+                {currentTrack && (
+                    <div className="flex gap-2 overflow-x-auto custom-scrollbar pb-2 pt-1 overflow-y-hidden touch-pan-x">
+                        {filterPills.map((pill, idx) => (
+                            <button 
+                                key={idx} 
+                                onClick={pill.action} 
+                                className={`px-3 py-1.5 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-wider border whitespace-nowrap transition-all shadow-sm flex-shrink-0 ${pill.active ? 'bg-cyan-600 text-white border-cyan-400' : 'bg-slate-900/80 text-slate-400 border-slate-700 hover:border-cyan-500 hover:text-white'}`}
+                            >
+                                {pill.label}
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </div>
 
             <LibraryFilters availableKeys={availableKeys} availableGenres={availableGenres} onFilterChange={setFilters} initialFilters={filters} />
             
