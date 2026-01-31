@@ -41,10 +41,11 @@ export const NowPlaying: React.FC<NowPlayingProps> = ({ track, language }) => {
   const [isSpinning, setIsSpinning] = useState(true);
 
   const t = translations[language];
+  const trackColor = track.color || '#06b6d4';
   
-  // Stronger Glow Config
-  const glowColor = hexToRgba(track.color, 0.75); // Increased opacity
-  const glowStyle = { boxShadow: `0 0 90px -10px ${glowColor}` }; // Increased spread
+  // Stronger Glow Config for Box Shadow (External)
+  const glowColor = hexToRgba(trackColor, 0.5); 
+  const glowStyle = { boxShadow: `0 0 50px -10px ${glowColor}` }; 
 
   const toggleSpin = (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -55,15 +56,28 @@ export const NowPlaying: React.FC<NowPlayingProps> = ({ track, language }) => {
     <>
       <div 
         onClick={() => setIsExpanded(!isExpanded)}
-        className="mb-4 rounded-3xl relative transition-all duration-500 group cursor-pointer
-           bg-black/40 backdrop-blur-xl border border-white/10 overflow-hidden"
+        className="mb-4 rounded-3xl relative transition-all duration-500 group cursor-pointer border border-white/10 overflow-hidden"
         style={glowStyle}
       >
-        {/* Ambient Background Image (Blurred) */}
+        {/* --- Background Layers --- */}
+        
+        {/* 1. Internal Color Blob (Ambient Glow) - Increased Intensity */}
+        <div 
+            className="absolute inset-0 z-0 transition-opacity duration-700 opacity-70"
+            style={{
+                background: `radial-gradient(circle at center, ${trackColor} 0%, transparent 70%)`,
+                filter: 'blur(60px)',
+                transform: 'scale(1.1)'
+            }}
+        />
+
+        {/* 2. Predominantly Black Overlay - More Transparent (60% instead of 85%) */}
+        <div className="absolute inset-0 z-0 bg-black/60 backdrop-blur-2xl transition-colors duration-500" />
+
+        {/* 3. Optional Visual Texture from Track */}
         {track.visualUrl && (
           <div className="absolute inset-0 z-0">
-              <img src={track.visualUrl} className="w-full h-full object-cover opacity-20 blur-2xl scale-125" alt="Background" />
-              <div className="absolute inset-0 bg-black/60"></div>
+              <img src={track.visualUrl} className="w-full h-full object-cover opacity-20 blur-3xl mix-blend-screen" alt="Background" />
           </div>
         )}
 
@@ -91,19 +105,19 @@ export const NowPlaying: React.FC<NowPlayingProps> = ({ track, language }) => {
 
                     {/* Info */}
                     <div className="flex-1 min-w-0 flex flex-col justify-center">
-                        <h2 className="text-lg sm:text-xl font-black text-white leading-tight break-words mb-0.5 tracking-tight">
+                        <h2 className="text-lg sm:text-xl font-black text-white leading-tight break-words mb-0.5 tracking-tight drop-shadow-md">
                             {track.name}
                         </h2>
-                        <p className="text-sm sm:text-base text-cyan-200 font-bold mb-2 break-words leading-tight">
+                        <p className="text-sm sm:text-base text-cyan-200 font-bold mb-2 break-words leading-tight drop-shadow-sm">
                             {track.artist}
                         </p>
                         
                         {/* Compact Stats Row - Enhanced Visibility */}
                         <div className="flex flex-wrap items-center gap-2">
-                             <span className="bg-slate-800 text-cyan-400 px-2 py-0.5 rounded text-xs font-black font-mono border border-slate-700 shadow-sm">
+                             <span className="bg-slate-900/60 backdrop-blur-md text-cyan-400 px-2 py-0.5 rounded text-xs font-black font-mono border border-slate-700/50 shadow-sm">
                                 {track.bpm} BPM
                              </span>
-                             <span className={`px-2 py-0.5 rounded font-black text-xs ${track.key.includes('m') ? 'bg-cyan-900/60 text-cyan-100' : 'bg-pink-900/60 text-pink-100'} border border-white/10 shadow-sm`}>
+                             <span className={`px-2 py-0.5 rounded font-black text-xs ${track.key.includes('m') ? 'bg-cyan-950/60 text-cyan-100' : 'bg-pink-950/60 text-pink-100'} border border-white/10 shadow-sm backdrop-blur-md`}>
                                  {track.key}
                              </span>
                              <div className="ml-1 scale-105 origin-left">{renderRating(track.rating)}</div>
@@ -119,7 +133,7 @@ export const NowPlaying: React.FC<NowPlayingProps> = ({ track, language }) => {
                     {/* BPM - Top Right (Visible in expanded as well) */}
                     <div className="absolute top-4 right-4 z-20">
                          {track.bpm && (
-                            <div className="bg-black/60 backdrop-blur-md border border-white/20 px-3 py-1.5 rounded-lg text-sm sm:text-base font-black font-mono text-cyan-400 shadow-lg animate-pulse">
+                            <div className="bg-black/40 backdrop-blur-md border border-white/20 px-3 py-1.5 rounded-lg text-sm sm:text-base font-black font-mono text-cyan-400 shadow-lg animate-pulse">
                                 {track.bpm} <span className="text-[10px] text-gray-400 font-normal">BPM</span>
                             </div>
                          )}
@@ -146,41 +160,41 @@ export const NowPlaying: React.FC<NowPlayingProps> = ({ track, language }) => {
                     </div>
 
                     {/* Main Info - Prominent Typography */}
-                    <h2 className="text-2xl sm:text-3xl font-black text-white leading-tight mb-1 w-full break-words px-1 tracking-tight">
+                    <h2 className="text-2xl sm:text-3xl font-black text-white leading-tight mb-1 w-full break-words px-1 tracking-tight drop-shadow-md">
                         {track.name}
                     </h2>
-                    <p className="text-lg text-cyan-200 font-bold mb-6 w-full break-words px-1">
+                    <p className="text-lg text-cyan-200 font-bold mb-6 w-full break-words px-1 drop-shadow-sm">
                         {track.artist}
                     </p>
 
                     {/* Stats Grid - Optimized for Width */}
                     <div className="w-full grid grid-cols-4 gap-2 mb-4">
-                        <div className="bg-white/5 rounded-lg p-2 flex flex-col items-center justify-center border border-white/5">
-                            <span className="text-[9px] text-gray-500 uppercase font-bold mb-1">Key</span>
+                        <div className="bg-black/40 rounded-lg p-2 flex flex-col items-center justify-center border border-white/10 backdrop-blur-md">
+                            <span className="text-[9px] text-gray-400 uppercase font-bold mb-1">Key</span>
                             <span className={`text-sm sm:text-base font-black ${track.key.includes('m') ? 'text-cyan-400' : 'text-pink-400'}`}>{track.key}</span>
                         </div>
-                        <div className="bg-white/5 rounded-lg p-2 flex flex-col items-center justify-center border border-white/5">
-                            <span className="text-[9px] text-gray-500 uppercase font-bold mb-1">Time</span>
+                        <div className="bg-black/40 rounded-lg p-2 flex flex-col items-center justify-center border border-white/10 backdrop-blur-md">
+                            <span className="text-[9px] text-gray-400 uppercase font-bold mb-1">Time</span>
                             <span className="text-sm sm:text-base font-mono font-bold text-white">{track.duration}</span>
                         </div>
-                        <div className="bg-white/5 rounded-lg p-2 flex flex-col items-center justify-center border border-white/5">
-                            <span className="text-[9px] text-gray-500 uppercase font-bold mb-1">Plays</span>
+                        <div className="bg-black/40 rounded-lg p-2 flex flex-col items-center justify-center border border-white/10 backdrop-blur-md">
+                            <span className="text-[9px] text-gray-400 uppercase font-bold mb-1">Plays</span>
                             <span className="text-sm sm:text-base font-mono font-bold text-white">{track.playCount}</span>
                         </div>
-                        <div className="bg-white/5 rounded-lg p-2 flex flex-col items-center justify-center border border-white/5">
-                            <span className="text-[9px] text-gray-500 uppercase font-bold mb-1">Rating</span>
+                        <div className="bg-black/40 rounded-lg p-2 flex flex-col items-center justify-center border border-white/10 backdrop-blur-md">
+                            <span className="text-[9px] text-gray-400 uppercase font-bold mb-1">Rating</span>
                             <div className="scale-90 origin-center">{renderRating(track.rating)}</div>
                         </div>
                     </div>
 
                     {/* Footer Info: Directory, Energy, Cues */}
-                    <div className="w-full bg-black/20 rounded-xl p-3 border border-white/5 space-y-3">
+                    <div className="w-full bg-black/40 rounded-xl p-3 border border-white/10 space-y-3 backdrop-blur-md">
                         
                         <div className="flex items-center justify-between text-xs">
                              <div className="flex items-center gap-2 overflow-hidden">
                                  <span 
                                     className="w-2.5 h-2.5 rounded-full flex-shrink-0 shadow-[0_0_8px_currentColor]"
-                                    style={{ backgroundColor: track.color || '#06b6d4', color: track.color || '#06b6d4' }}
+                                    style={{ backgroundColor: trackColor, color: trackColor }}
                                  />
                                  <span className="font-bold text-gray-300 truncate uppercase tracking-wide">{track.location}</span>
                              </div>
@@ -193,10 +207,10 @@ export const NowPlaying: React.FC<NowPlayingProps> = ({ track, language }) => {
                         </div>
 
                         {track.cuePoints && track.cuePoints.length > 0 && (
-                            <div className="pt-2 border-t border-white/5">
+                            <div className="pt-2 border-t border-white/10">
                                 <div className="flex flex-wrap justify-center gap-1.5">
                                     {track.cuePoints.map((cue, i) => (
-                                        <span key={i} className="text-[9px] font-bold text-cyan-200 bg-cyan-950/40 px-2 py-1 rounded border border-cyan-500/20">
+                                        <span key={i} className="text-[9px] font-bold text-cyan-200 bg-cyan-950/60 px-2 py-1 rounded border border-cyan-500/20">
                                             {cue}
                                         </span>
                                     ))}

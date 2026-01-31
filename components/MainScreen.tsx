@@ -21,8 +21,7 @@ import {
     GitMergeIcon,
     PlusIcon,
     ZapIcon,
-    ArrowUpIcon,
-    MicIcon
+    ArrowUpIcon
 } from './icons';
 import { NowPlaying } from './NowPlaying';
 import { SuggestionPanel } from './SuggestionPanel';
@@ -36,7 +35,6 @@ import { detectClash } from '../utils/harmonicUtils';
 import { MashupFinder } from './MashupFinder';
 import { getGenreTheme } from '../utils/themeUtils';
 import { TransitionToast } from './TransitionToast';
-import { VoiceSearch } from './VoiceSearch';
 import { SwipeableItem } from './SwipeableItem';
 
 interface MainScreenProps {
@@ -140,7 +138,6 @@ export const MainScreen: React.FC<MainScreenProps> = ({
   const [expandedTrackId, setExpandedTrackId] = useState<string | null>(null);
   const [isIdentifying, setIsIdentifying] = useState(false);
   const [showImageSourceModal, setShowImageSourceModal] = useState(false);
-  const [showVoiceSearch, setShowVoiceSearch] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [transitionToast, setTransitionToast] = useState<{ visible: boolean; data: any } | null>(null);
   
@@ -392,13 +389,6 @@ export const MainScreen: React.FC<MainScreenProps> = ({
           />
       )}
 
-      {/* Voice Search Modal */}
-      <VoiceSearch 
-        isOpen={showVoiceSearch} 
-        onClose={() => setShowVoiceSearch(false)}
-        onSearch={(query) => { setSearchQuery(query); onGroupingModeChange('all'); }} 
-      />
-
       <input type="file" ref={galleryInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
       <input type="file" ref={cameraInputRef} className="hidden" accept="image/*" capture="environment" onChange={handleImageUpload} />
 
@@ -471,12 +461,6 @@ export const MainScreen: React.FC<MainScreenProps> = ({
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Search Bar Row */}
             <div className="flex gap-2 mb-2 sticky top-[72px] z-30 bg-[#020617]/90 backdrop-blur-sm p-1 rounded-2xl">
-                <button 
-                    onClick={() => setShowVoiceSearch(true)}
-                    className="p-3 bg-slate-900 border border-slate-800 rounded-xl text-cyan-400 hover:text-white transition-colors"
-                >
-                    <MicIcon className="w-5 h-5" />
-                </button>
                 <div className="relative flex-1">
                     <input type="text" placeholder={t.searchPlaceholder} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-xl px-5 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all pl-11 min-h-[50px]" />
                     <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
