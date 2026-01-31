@@ -1,12 +1,13 @@
 
 import React, { useState, useMemo } from 'react';
 import type { Track } from '../types';
-import { ClockIcon, PlayIcon, StarIcon, ZapIcon, TagIcon, ActivityIcon, EyeIcon, EyeOffIcon, ChevronDownIcon } from './icons';
+import { ClockIcon, PlayIcon, StarIcon, ZapIcon, ActivityIcon, FolderIcon } from './icons';
 import { CoverArt } from './CoverArt';
+import { EnergyBar } from './EnergyBar';
 import { translations } from '../utils/translations';
 import { getGenreTheme } from '../utils/themeUtils';
 
-const renderRating = (rating: number) => {
+const renderRating = (rating: number, sizeClass = "w-[0.7em] h-[0.7em]") => {
   const stars = [];
   const normalizedRating = rating > 5 ? Math.round(rating / 20) : rating;
   for (let i = 1; i <= 5; i++) {
@@ -14,7 +15,7 @@ const renderRating = (rating: number) => {
     stars.push(
       <StarIcon 
         key={i} 
-        className={`w-[0.8em] h-[0.8em] ${isFilled ? 'text-yellow-400 fill-current' : 'text-white/10 stroke-white/40'}`} 
+        className={`${sizeClass} ${isFilled ? 'text-yellow-400 fill-current' : 'text-white/10 stroke-white/40'}`} 
         filled={isFilled} 
       />
     );
@@ -29,34 +30,30 @@ interface NowPlayingProps {
 }
 
 export const NowPlaying: React.FC<NowPlayingProps> = ({ track, language, folderColor }) => {
-  const [isZenMode, setIsZenMode] = useState(false);
   const [isSpinning, setIsSpinning] = useState(true);
   const [isCardExpanded, setIsCardExpanded] = useState(false);
 
   const t = translations[language];
   const bpmValue = parseFloat(track.bpm) || 0;
   
-  // Revised Theme Logic: Track Color > Folder Color > Genre/Key Theme
   const theme = useMemo(() => {
     const customColor = track.color || folderColor;
-    
     if (customColor) {
         return {
             primary: 'custom',
             accent: customColor,
-            gradientFrom: 'from-black', // Keep generic dark to let accent pop
+            gradientFrom: 'from-black',
             gradientTo: 'to-black',
-            glow: `${customColor}66` // Hex + 40% opacity
+            glow: `${customColor}` // Full hex for stronger glow opacity calc
         };
     }
-    
     return getGenreTheme(track);
   }, [track, folderColor]);
 
   const spinDuration = bpmValue > 0 ? `${(60 / bpmValue) * 8}s` : '0s';
 
   const handleVinylClick = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent card expansion when clicking vinyl
+    e.stopPropagation(); 
     setIsSpinning(!isSpinning);
   };
 
@@ -64,232 +61,168 @@ export const NowPlaying: React.FC<NowPlayingProps> = ({ track, language, folderC
     setIsCardExpanded(!isCardExpanded);
   };
 
-  // ZEN MODE LAYOUT
-  if (isZenMode) {
-      return (
-          <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center p-6 animate-in fade-in duration-500">
-              <button onClick={() => setIsZenMode(false)} className="absolute top-8 right-8 text-white/50 hover:text-white bg-white/10 p-3 rounded-full backdrop-blur-md">
-                  <EyeOffIcon className="w-8 h-8" />
-              </button>
-              
-              <style>{`
-                @keyframes spin-vinyl { 100% { transform: rotate(360deg); } }
-              `}</style>
-
-              <div className="w-full max-w-md aspect-square relative mb-8">
-                  {/* Ambilight Glow */}
-                  <div 
-                    className="absolute inset-0 rounded-full blur-[80px] opacity-40 animate-pulse"
-                    style={{ backgroundColor: theme.accent }}
-                  ></div>
-
-                  <div 
-                    className="w-full h-full rounded-full overflow-hidden shadow-2xl relative ring-4 ring-white/10 cursor-pointer"
-                    onClick={handleVinylClick}
-                    style={{ 
-                        animation: `spin-vinyl ${spinDuration} linear infinite`,
-                        animationPlayState: isSpinning ? 'running' : 'paused',
-                    }}
-                  >
-                      <CoverArt id={track.id} artist={track.artist} name={track.name} className="w-full h-full scale-110" priority={true} />
-                      {/* Vinyl Center Hole */}
-                      <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="w-4 h-4 bg-black rounded-full border border-white/20"></div>
-                      </div>
-                  </div>
-              </div>
-
-              <div className="text-center space-y-4 relative z-20">
-                  <h1 className="text-4xl md:text-6xl font-black text-white tracking-tighter leading-none">{track.bpm}</h1>
-                  <h2 className="text-3xl md:text-5xl font-mono font-bold" style={{ color: theme.accent }}>{track.key}</h2>
-                  <div className="w-20 h-1 bg-white/20 mx-auto rounded-full"></div>
-                  <p className="text-xl text-gray-400 font-bold truncate max-w-lg">{track.name}</p>
-              </div>
-          </div>
-      );
-  }
-
-  // STANDARD LAYOUT (Card Style)
+  // COMPACT & EXPANDED CARD
   return (
     <>
       <style>{`
-        @keyframes bpm-pulse {
-            0%, 100% { transform: scale(1); box-shadow: 0 0 0 rgba(255,255,255,0); }
-            50% { transform: scale(1.05); box-shadow: 0 0 10px ${theme.glow}; }
-        }
         @keyframes spin-vinyl { 100% { transform: rotate(360deg); } }
-        .glass-panel {
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
+        .glass-panel { background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.08); }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
       
-      <div className={`mb-6 relative group select-none`}>
-        
-        {/* Main Card Container */}
+      <div className={`mb-4 relative group select-none transition-all duration-300 ease-in-out`}>
         <div 
-            className={`relative rounded-[2rem] overflow-hidden border border-white/10 bg-gradient-to-b ${theme.gradientFrom} via-[#0f172a] to-black shadow-2xl cursor-pointer transition-all duration-300 ${isCardExpanded ? 'ring-1 ring-white/20' : 'hover:ring-1 hover:ring-white/10'}`}
+            className={`relative overflow-hidden bg-gradient-to-r ${theme.gradientFrom} via-[#0f172a] to-black cursor-pointer transition-all duration-300 border`}
+            style={{ 
+                borderColor: 'transparent', // Requested: Transparent outline
+                // Requested: Increased glow
+                boxShadow: `0 0 60px ${theme.accent}66`, 
+                borderRadius: isCardExpanded ? '1.5rem' : '1rem'
+            }}
             onClick={handleCardClick}
         >
-            
-            {/* Ambient Glow Internal */}
-            <div 
-                className="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[120%] h-[60%] rounded-full blur-[90px] opacity-40 pointer-events-none"
-                style={{ backgroundColor: theme.accent }}
-            ></div>
+            {/* Background Glow */}
+            <div className="absolute top-0 right-0 w-[60%] h-full blur-[80px] opacity-30 pointer-events-none" style={{ backgroundColor: theme.accent }}></div>
 
-            {/* Glowing Border Overlay */}
-            <div className="absolute inset-0 rounded-[2rem] border border-white/5 pointer-events-none z-20"></div>
-            <div 
-                className="absolute inset-0 rounded-[2rem] border-2 opacity-30 pointer-events-none z-20"
-                style={{ borderColor: theme.accent, boxShadow: `inset 0 0 20px ${theme.glow}` }}
-            ></div>
-
-            <div className="relative z-10 p-5 flex flex-col items-center">
-                
-                {/* Header Row */}
-                <div className="w-full flex justify-between items-center mb-6">
-                    {/* NO AR Badge - Updated Style to match BPM box (font-mono) */}
-                    <div className="bg-black/60 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-xl flex items-center gap-2 shadow-sm">
-                        <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]"></div>
-                        <span className="text-white font-mono font-bold text-xs tracking-widest uppercase">{t.onAir}</span>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                        <button 
-                            onClick={(e) => { e.stopPropagation(); setIsZenMode(true); }}
-                            className="text-white/60 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-full"
-                        >
-                            <EyeIcon className="w-5 h-5" />
-                        </button>
-                        <div className="bg-black/60 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-xl flex items-center gap-2">
-                            <ActivityIcon className="w-3.5 h-3.5 text-white" />
-                            <span className="text-white font-mono font-bold text-sm">{track.bpm}</span>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Vinyl Art */}
-                <div 
-                    className="relative w-44 h-44 mb-8 cursor-pointer group/vinyl" 
-                    onClick={handleVinylClick}
-                >
-                    <div className="absolute inset-0 rounded-full bg-black shadow-2xl opacity-60 scale-95 translate-y-2 blur-xl"></div>
-                    <div 
-                        className="w-full h-full rounded-full overflow-hidden shadow-[0_0_30px_rgba(0,0,0,0.5)] relative ring-1 ring-white/10 group-hover/vinyl:scale-[1.02] transition-transform duration-700"
-                        style={{ 
-                            animation: `spin-vinyl ${spinDuration} linear infinite`,
-                            animationPlayState: isSpinning ? 'running' : 'paused',
-                            boxShadow: `0 0 40px ${theme.glow}`
-                        }}
-                    >
-                        <CoverArt 
-                            id={track.id} 
-                            artist={track.artist} 
-                            name={track.name} 
-                            className="w-full h-full scale-110" 
-                            priority={true} 
-                        />
-                        <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="w-3 h-3 bg-black rounded-full border border-white/20 z-10"></div>
-                            <div className="absolute inset-0 rounded-full border-[10px] border-black/10"></div>
-                        </div>
-                    </div>
+            {/* EXPANDED STATE */}
+            {isCardExpanded ? (
+                <div className="p-4 relative z-10 flex flex-col gap-2 items-center">
                     
-                    {/* Pause Icon Overlay - Explicit Click Handler for reliability */}
-                    {!isSpinning && (
-                        <div 
-                            className="absolute inset-0 flex items-center justify-center z-20 animate-in fade-in zoom-in duration-200 cursor-pointer"
+                    {/* 1. TOP SECTION: Vinyl + BPM/Key Badges */}
+                    <div className="flex w-full items-center justify-between gap-4">
+                        {/* BPM Badge (Left) */}
+                        <div className="flex flex-col items-center justify-center gap-0.5 min-w-[50px]">
+                            <span className="text-xl font-black font-mono text-white tracking-tighter leading-none shadow-black drop-shadow-md">{track.bpm}</span>
+                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">BPM</span>
+                        </div>
+
+                         {/* Vinyl (Center) */}
+                         <div 
+                            className="w-28 h-28 relative rounded-full ring-2 shadow-2xl flex-shrink-0"
+                            style={{ ringColor: theme.accent, boxShadow: `0 0 25px ${theme.accent}40` }}
                             onClick={handleVinylClick}
                         >
-                            <div className="bg-black/60 backdrop-blur-sm p-4 rounded-full border border-white/20 shadow-xl hover:scale-110 transition-transform">
-                                <PlayIcon className="w-8 h-8 text-white fill-current" />
+                             <div 
+                                className="w-full h-full rounded-full overflow-hidden"
+                                style={{ 
+                                    animation: `spin-vinyl ${spinDuration} linear infinite`,
+                                    animationPlayState: isSpinning ? 'running' : 'paused',
+                                }}
+                            >
+                                <CoverArt id={track.id} artist={track.artist} name={track.name} className="w-full h-full scale-110" priority={true} />
+                                <div className="absolute inset-0 flex items-center justify-center"><div className="w-2.5 h-2.5 bg-black rounded-full border border-white/20 z-10"></div></div>
                             </div>
+                            {!isSpinning && <div className="absolute inset-0 flex items-center justify-center z-20"><PlayIcon className="w-10 h-10 text-white drop-shadow-md" /></div>}
                         </div>
+
+                        {/* Key Badge (Right) */}
+                        <div className="flex flex-col items-center justify-center gap-0.5 min-w-[50px]">
+                            <span className="text-xl font-black font-mono leading-none drop-shadow-md" style={{ color: theme.accent }}>{track.key}</span>
+                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">KEY</span>
+                        </div>
+                    </div>
+
+                    {/* 2. TITLE & ARTIST */}
+                    <div className="text-center w-full px-2">
+                        <h2 className="text-lg font-black text-white leading-tight mb-0.5 break-words line-clamp-2 drop-shadow-lg">{track.name}</h2>
+                        <p className="text-xs font-bold text-slate-300 uppercase tracking-wide truncate">{track.artist}</p>
+                    </div>
+                         
+                    {/* 3. INFO DASHBOARD (Compact Grid) */}
+                    <div className="w-full bg-black/30 rounded-xl p-2.5 space-y-2 mt-1 border border-white/5 shadow-inner">
+                        
+                        {/* Row 1: Time | Plays | Rating */}
+                        <div className="grid grid-cols-3 gap-2 items-center divide-x divide-white/10 text-xs">
+                             <div className="flex flex-col items-center justify-center gap-0.5">
+                                 <ClockIcon className="w-3 h-3 text-slate-500" />
+                                 <span className="font-mono font-bold text-white">{track.duration}</span>
+                             </div>
+                             <div className="flex flex-col items-center justify-center gap-0.5">
+                                 <PlayIcon className="w-3 h-3 text-slate-500" />
+                                 <span className="font-mono font-bold text-white">{track.playCount}</span>
+                             </div>
+                             <div className="flex flex-col items-center justify-center gap-0.5">
+                                <span className="text-[8px] font-bold text-slate-500 uppercase">RATING</span>
+                                {renderRating(track.rating, "w-2.5 h-2.5")}
+                             </div>
+                        </div>
+
+                        {/* Divider */}
+                        <div className="w-full h-px bg-white/5"></div>
+
+                        {/* Row 2: Folder & Energy (Hybrid Row) */}
+                        <div className="flex items-center justify-between gap-3">
+                             {/* Folder (Left - Flexible) */}
+                             <div className="flex items-center gap-2 min-w-0 flex-1">
+                                 <FolderIcon className="w-3.5 h-3.5 flex-shrink-0" style={{ color: theme.accent }} />
+                                 <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider truncate">{track.location}</span>
+                             </div>
+
+                             {/* Energy (Right - Fixed) */}
+                             <div className="flex items-center gap-2 pl-3 border-l border-white/5">
+                                 <ZapIcon className="w-3.5 h-3.5 text-yellow-500 flex-shrink-0" />
+                                 <div className="w-12">
+                                    <EnergyBar energy={track.energy || 0} className="h-2" />
+                                 </div>
+                             </div>
+                        </div>
+                    </div>
+
+                    {/* 4. CUES (Horizontal Scroll) */}
+                    {track.cuePoints && track.cuePoints.length > 0 && (
+                    <div className="w-full flex items-center gap-2 overflow-x-auto hide-scrollbar pt-1 mask-linear-fade">
+                        <div className="flex items-center gap-1 flex-shrink-0 opacity-70 px-1">
+                            <ActivityIcon className="w-3 h-3 text-cyan-500" />
+                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Cues</span>
+                        </div>
+                        {track.cuePoints.map((cue, i) => {
+                            const label = cue.replace(/(\d{1,2}:\d{2}(\.\d{3})?)/, '').replace(/[:()]/g, '').trim() || cue;
+                            return (
+                                <span key={i} className="text-[9px] font-bold text-cyan-100 bg-cyan-950/40 px-2 py-1 rounded border border-cyan-500/20 whitespace-nowrap shadow-sm">
+                                    {label}
+                                </span>
+                            );
+                        })}
+                    </div>
                     )}
                 </div>
-
-                {/* Track Info - Ultra High Contrast with Tint */}
-                <div className="text-center w-full mb-8 px-2">
-                    <h2 
-                        className="text-3xl font-black text-white mb-2 tracking-tight leading-none line-clamp-2"
-                        style={{ textShadow: `0 2px 10px rgba(0,0,0,0.5)` }}
+            ) : (
+                /* COLLAPSED STATE */
+                <div className="min-h-[5.5rem] flex items-center px-3 py-2 gap-3">
+                    {/* Vinyl (Smaller) */}
+                    <div 
+                        className="h-14 w-14 flex-shrink-0 rounded-full overflow-hidden relative shadow-md self-center"
+                        style={{ boxShadow: `0 0 10px ${theme.accent}40` }}
                     >
-                        {track.name}
-                    </h2>
-                    <p 
-                        className="text-lg font-bold tracking-wide uppercase truncate text-white" 
-                        style={{ 
-                            textShadow: `0 0 15px ${theme.accent}`, // Colored glow tint around pure white text
-                            opacity: 1
-                        }}
-                    >
-                        {track.artist}
-                    </p>
-                </div>
-
-                {/* Stats Grid */}
-                <div className="grid grid-cols-4 gap-2 w-full mb-4">
-                    <div className="glass-panel rounded-xl py-2 px-1 flex flex-col items-center justify-center min-h-[55px]">
-                        <span className="text-sm font-black text-white font-mono">{track.key}</span>
+                         <div className="w-full h-full animate-[spin-vinyl_4s_linear_infinite]">
+                             <CoverArt id={track.id} artist={track.artist} name={track.name} className="w-full h-full scale-125" priority={true} />
+                         </div>
+                         <div className="absolute inset-0 flex items-center justify-center"><div className="w-1.5 h-1.5 bg-black rounded-full border border-white/30"></div></div>
                     </div>
-                    <div className="glass-panel rounded-xl py-2 px-1 flex flex-col items-center justify-center min-h-[55px]">
-                        <div className="flex items-center gap-1 text-slate-300">
-                            <ClockIcon className="w-3 h-3" />
-                            <span className="text-xs font-bold font-mono text-white">{track.duration}</span>
+
+                    {/* Center Info */}
+                    <div className="flex-1 min-w-0 flex flex-col justify-center gap-1 py-1">
+                        <h3 className="text-sm font-black text-white leading-tight drop-shadow-sm break-words">{track.name}</h3>
+                        <p className="text-xs font-bold text-slate-400 uppercase leading-tight break-words">{track.artist}</p>
+                    </div>
+
+                    {/* Right Info Stack */}
+                    <div className="flex flex-col items-end justify-center gap-1.5 min-w-[80px] flex-shrink-0 border-l border-white/5 pl-3 my-1">
+                        <div className="flex items-center gap-2">
+                             <span className="text-xs font-mono font-bold text-slate-200">{track.bpm}</span>
+                             <span className="text-xs font-mono font-bold px-1.5 py-0.5 rounded bg-white/10" style={{ color: theme.accent }}>{track.key}</span>
                         </div>
-                    </div>
-                    <div className="glass-panel rounded-xl py-2 px-1 flex flex-col items-center justify-center min-h-[55px]">
-                        {renderRating(track.rating)}
-                    </div>
-                    <div className="glass-panel rounded-xl py-2 px-1 flex flex-col items-center justify-center min-h-[55px]">
-                        <div className="flex items-center gap-1 overflow-hidden max-w-full px-1">
-                            <TagIcon className="w-3 h-3 text-slate-400 flex-shrink-0" />
-                            <span className="text-[9px] font-bold uppercase text-slate-200 truncate">{track.genre?.split(' ')[0] || 'GENRE'}</span>
+                        <div className="flex items-center gap-2">
+                             <ClockIcon className="w-3.5 h-3.5 text-slate-500" />
+                             <span className="text-xs font-mono font-bold text-slate-200">{track.duration}</span>
+                        </div>
+                        <div className="opacity-80 scale-90 origin-right">
+                             {renderRating(track.rating)}
                         </div>
                     </div>
                 </div>
-
-                {/* EXPANDABLE SECTION: Cue Analysis (Completely Hidden by Default) */}
-                {isCardExpanded ? (
-                    <div className="w-full animate-in slide-in-from-top-2 fade-in duration-300 border-t border-white/10 pt-4 mt-2">
-                        <div className="flex items-center gap-2 mb-3 px-1">
-                             <ZapIcon className="w-4 h-4 text-[#f59e0b]" />
-                             <span className="text-xs font-black uppercase tracking-[0.15em] text-white">
-                                {t.cueAnalysis}
-                             </span>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-2">
-                            {(track.cuePoints && track.cuePoints.length > 0 ? track.cuePoints : ['00:30.000 (Intro)', '02:15.000 (Drop)', '04:45.000 (Break)', '05:30.000 (Outro)']).slice(0, 6).map((cue, i) => {
-                                const timeMatch = cue.match(/(\d{1,2}:\d{2}(\.\d{3})?)/);
-                                const displayTime = timeMatch ? timeMatch[0] : cue;
-                                const label = cue.replace(displayTime, '').replace(/[:()]/g, '').trim() || `CUE ${i+1}`;
-
-                                return (
-                                    <div key={i} className="bg-black/40 border border-white/10 rounded-lg p-2.5 flex justify-between items-center">
-                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{label.substring(0, 8)}</span>
-                                        <span className="text-xs font-mono font-bold text-cyan-100 tracking-wide">{displayTime}</span>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                        
-                        {/* Collapse Button (Visual only, whole card clicks) */}
-                        <div className="w-full flex justify-center mt-4 text-white/20">
-                            <ChevronDownIcon className="w-5 h-5 rotate-180" />
-                        </div>
-                    </div>
-                ) : (
-                    /* Collapsed State Indicator */
-                    <div className="w-full flex justify-center mt-1 animate-pulse opacity-50">
-                        <ChevronDownIcon className="w-6 h-6 text-white" />
-                    </div>
-                )}
-
-            </div>
+            )}
         </div>
       </div>
     </>
