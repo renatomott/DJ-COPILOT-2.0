@@ -77,6 +77,7 @@ interface NavButtonProps {
     collapsed?: boolean;
 }
 
+// Sidebar Nav Button (Desktop)
 const NavButton: React.FC<NavButtonProps> = ({ active, onClick, icon, label, badge, collapsed }) => (
     <button
         onClick={onClick}
@@ -107,6 +108,25 @@ const NavButton: React.FC<NavButtonProps> = ({ active, onClick, icon, label, bad
         {/* Active Indicator */}
         {active && (
             <div className={`absolute left-0 top-1/2 -translate-y-1/2 bg-cyan-400 rounded-r-full shadow-[0_0_10px_rgba(34,211,238,0.5)] ${collapsed ? 'w-1 h-6' : 'w-1 h-8'}`}></div>
+        )}
+    </button>
+);
+
+// Mobile Bottom Nav Button
+const MobileNavButton: React.FC<NavButtonProps> = ({ active, onClick, icon, label, badge }) => (
+    <button 
+        onClick={onClick}
+        className={`flex flex-col items-center justify-center flex-1 py-1 relative group active:scale-95 transition-transform ${active ? 'text-cyan-400' : 'text-slate-500'}`}
+    >
+        <div className={`p-1.5 rounded-xl mb-0.5 transition-colors ${active ? 'bg-cyan-500/10' : ''}`}>
+            {icon}
+        </div>
+        <span className="text-[9px] font-bold uppercase tracking-wider">{label}</span>
+        
+        {badge !== undefined && badge > 0 && (
+            <span className="absolute top-1 right-1/4 bg-red-500 text-white text-[8px] font-bold flex items-center justify-center rounded-full min-w-[14px] h-3.5 px-0.5 border border-black">
+                {badge}
+            </span>
         )}
     </button>
 );
@@ -595,13 +615,13 @@ export const MainScreen: React.FC<MainScreenProps> = ({
       </main>
 
       {/* --- BOTTOM NAVIGATION (Mobile Only) --- */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-slate-950/80 backdrop-blur-xl border-t border-slate-800/50 py-2 z-[90]">
-        <div className="container mx-auto flex justify-between items-center max-w-xl px-4">
-            <NavButton active={activeTab === 'deck'} onClick={() => setActiveTab('deck')} icon={<PlayIcon className="w-5 h-5" />} label={t.navDeck} />
-            <NavButton active={activeTab === 'library'} onClick={() => setActiveTab('library')} icon={<ListIcon className="w-5 h-5" />} label={t.navLib} />
-            <NavButton active={activeTab === 'mashup'} onClick={() => setActiveTab('mashup')} icon={<GitMergeIcon className="w-5 h-5" />} label="MASH" />
-            <NavButton active={activeTab === 'builder'} onClick={() => setActiveTab('builder')} icon={<LayersIcon className="w-5 h-5" />} label={t.navBuilder} badge={queue.length > 0 ? queue.length : undefined} />
-            <NavButton active={activeTab === 'setup'} onClick={() => setActiveTab('setup')} icon={<SettingsIcon className="w-5 h-5" />} label={t.navSetup} />
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-slate-950/90 backdrop-blur-xl border-t border-slate-800/50 py-1.5 pb-safe z-[90]">
+        <div className="container mx-auto flex justify-between items-center max-w-xl px-2">
+            <MobileNavButton active={activeTab === 'deck'} onClick={() => setActiveTab('deck')} icon={<PlayIcon className="w-5 h-5" />} label={t.navDeck} />
+            <MobileNavButton active={activeTab === 'library'} onClick={() => setActiveTab('library')} icon={<ListIcon className="w-5 h-5" />} label={t.navLib} />
+            <MobileNavButton active={activeTab === 'mashup'} onClick={() => setActiveTab('mashup')} icon={<GitMergeIcon className="w-5 h-5" />} label="MASH" />
+            <MobileNavButton active={activeTab === 'builder'} onClick={() => setActiveTab('builder')} icon={<LayersIcon className="w-5 h-5" />} label={t.navBuilder} badge={queue.length > 0 ? queue.length : undefined} />
+            <MobileNavButton active={activeTab === 'setup'} onClick={() => setActiveTab('setup')} icon={<SettingsIcon className="w-5 h-5" />} label={t.navSetup} />
         </div>
       </nav>
     </div>

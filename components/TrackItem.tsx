@@ -87,14 +87,28 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
         borderColor: 'rgba(255,255,255,0.1)',
       };
 
-  const baseClasses = `relative overflow-hidden transition-all duration-300 border cursor-pointer scroll-mt-24 pl-[6px]`; // Added padding-left to compensate for the visual bar if needed, or rely on absolute positioning not affecting flow
+  const baseClasses = `relative overflow-hidden transition-all duration-300 border cursor-pointer scroll-mt-32 pl-[6px]`; // Added padding-left to compensate for the visual bar if needed, or rely on absolute positioning not affecting flow
   const bgClasses = isExpanded ? 'bg-slate-900/90 rounded-xl' : 'bg-black/40 backdrop-blur-md hover:bg-black/50 rounded-lg';
   const onAirClasses = isOnAir ? "ring-2 ring-cyan-400/50 shadow-[0_0_20px_rgba(34,211,238,0.3)] animate-pulse-onair" : "";
 
   useEffect(() => {
     if (isExpanded && cardRef.current && !isList) {
         setTimeout(() => {
-            cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            if (window.innerWidth < 768) {
+                // Mobile: Calculate scroll position manually to avoid header overlap
+                // Header is roughly 110-120px tall on mobile including padding
+                const offset = 120;
+                const elementPosition = cardRef.current?.getBoundingClientRect().top || 0;
+                const offsetPosition = elementPosition + window.pageYOffset - offset;
+                
+                window.scrollTo({
+                    top: offsetPosition,
+                    behavior: 'smooth'
+                });
+            } else {
+                // Desktop: Standard scrollIntoView works fine with scroll-mt
+                cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
         }, 150);
     }
   }, [isExpanded, isList]);
