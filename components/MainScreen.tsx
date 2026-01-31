@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import type { Track, Suggestion, ViewMode, GroupingMode } from '../types';
 import { translations } from '../utils/translations';
@@ -71,23 +70,39 @@ interface NavButtonProps {
     icon: React.ReactNode;
     label: string;
     badge?: number;
+    collapsed?: boolean;
 }
 
-const NavButton: React.FC<NavButtonProps> = ({ active, onClick, icon, label, badge }) => (
+const NavButton: React.FC<NavButtonProps> = ({ active, onClick, icon, label, badge, collapsed }) => (
     <button
         onClick={onClick}
-        className={`flex flex-col items-center justify-center w-full py-1 transition-colors relative ${
-            active ? 'text-cyan-400' : 'text-slate-500 hover:text-slate-300'
-        }`}
+        className={`flex items-center transition-all relative group
+            ${collapsed ? 'justify-center w-full py-4' : 'justify-start px-6 py-3 w-full gap-4'}
+            ${active ? 'text-cyan-400' : 'text-slate-500 hover:text-slate-300'}
+        `}
+        title={collapsed ? label : undefined}
     >
-        <div className={`p-1 rounded-xl transition-all ${active ? 'bg-cyan-500/10' : ''}`}>
+        <div className={`p-1.5 rounded-xl transition-all ${active ? 'bg-cyan-500/10' : 'group-hover:bg-white/5'}`}>
             {icon}
         </div>
-        <span className="text-[9px] font-bold uppercase tracking-widest mt-1">{label}</span>
+        
+        {!collapsed && (
+            <span className="text-xs font-bold uppercase tracking-widest mt-0.5 animate-in fade-in duration-200">
+                {label}
+            </span>
+        )}
+
         {badge !== undefined && badge > 0 && (
-            <span className="absolute top-0 right-1/4 translate-x-1/2 min-w-[16px] h-4 bg-red-500 text-white text-[9px] font-bold flex items-center justify-center rounded-full px-1 border border-black shadow-sm animate-in zoom-in">
+            <span className={`absolute bg-red-500 text-white text-[9px] font-bold flex items-center justify-center rounded-full px-1 border border-black shadow-sm animate-in zoom-in
+                ${collapsed ? 'top-2 right-4 min-w-[16px] h-4' : 'top-1/2 -translate-y-1/2 right-6 min-w-[18px] h-4.5'}
+            `}>
                 {badge}
             </span>
+        )}
+        
+        {/* Active Indicator */}
+        {active && (
+            <div className={`absolute left-0 top-1/2 -translate-y-1/2 bg-cyan-400 rounded-r-full shadow-[0_0_10px_rgba(34,211,238,0.5)] ${collapsed ? 'w-1 h-6' : 'w-1 h-8'}`}></div>
         )}
     </button>
 );
@@ -141,6 +156,10 @@ export const MainScreen: React.FC<MainScreenProps> = ({
   const [scrollProgress, setScrollProgress] = useState(0);
   const [transitionToast, setTransitionToast] = useState<{ visible: boolean; data: any } | null>(null);
   
+  // Drawer/Sidebar State
+  // Default to collapsed (false) on desktop for more space
+  const [sidebarExpanded, setSidebarExpanded] = useState(false);
+
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
@@ -379,7 +398,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({
     <div 
         className={`min-h-screen text-slate-200 font-sans selection:bg-cyan-500/30 transition-colors duration-1000 ease-in-out ${isHighContrast ? 'contrast-125 grayscale bg-black' : `bg-gradient-to-br ${theme.gradientFrom} via-slate-950 ${theme.gradientTo}`} ${!isHighContrast && 'aurora-bg'}`}
     >
-      <Header onReset={onReset} />
+      <Header onReset={onReset} showMenuButton={true} onToggleMenu={() => setSidebarExpanded(!sidebarExpanded)} />
       
       {/* Toast Notification */}
       {transitionToast && (
@@ -392,9 +411,9 @@ export const MainScreen: React.FC<MainScreenProps> = ({
       <input type="file" ref={galleryInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
       <input type="file" ref={cameraInputRef} className="hidden" accept="image/*" capture="environment" onChange={handleImageUpload} />
 
-      {/* Persistent Mini Player */}
+      {/* Persistent Mini Player (Mobile Only) */}
       {currentTrack && activeTab !== 'deck' && (
-          <div className="fixed bottom-[60px] left-0 right-0 z-[85] px-2 animate-in slide-in-from-bottom-2">
+          <div className="md:hidden fixed bottom-[74px] left-0 right-0 z-[85] px-2 animate-in slide-in-from-bottom-2 transition-all duration-300">
               <div className="bg-slate-900/95 backdrop-blur-md border border-slate-700/50 rounded-xl p-2 flex items-center gap-3 shadow-2xl" onClick={() => setActiveTab('deck')}>
                   <div className={`w-8 h-8 rounded-full border border-white/10 flex items-center justify-center bg-slate-800 ${theme.primary === 'red' ? 'animate-pulse' : ''}`}>
                       <PlayIcon className="w-4 h-4 text-white" />
@@ -422,46 +441,81 @@ export const MainScreen: React.FC<MainScreenProps> = ({
         </div>
       )}
 
-      {/* Main Container */}
-      <main className="container mx-auto px-4 pt-20 pb-24 md:pb-8 md:pt-24 max-w-xl md:max-w-5xl transition-all duration-300">
+      {/* --- DESKTOP SIDEBAR (Collapsible) --- */}
+      <aside 
+        className={`fixed top-0 left-0 bottom-0 bg-slate-950/95 backdrop-blur-xl border-r border-slate-800 z-[80] pt-20 pb-4 transition-all duration-300 hidden md:flex flex-col
+            ${sidebarExpanded ? 'w-64 px-2' : 'w-20 px-1 items-center'}
+        `}
+      >
+          <div className="flex-1 space-y-2 w-full">
+            <NavButton active={activeTab === 'deck'} onClick={() => setActiveTab('deck')} icon={<PlayIcon className="w-6 h-6" />} label={t.navDeck} collapsed={!sidebarExpanded} />
+            <NavButton active={activeTab === 'library'} onClick={() => setActiveTab('library')} icon={<ListIcon className="w-6 h-6" />} label={t.navLib} collapsed={!sidebarExpanded} />
+            <NavButton active={activeTab === 'mashup'} onClick={() => setActiveTab('mashup')} icon={<GitMergeIcon className="w-6 h-6" />} label="Mashup" collapsed={!sidebarExpanded} />
+            <NavButton active={activeTab === 'builder'} onClick={() => setActiveTab('builder')} icon={<LayersIcon className="w-6 h-6" />} label={t.navBuilder} badge={queue.length > 0 ? queue.length : undefined} collapsed={!sidebarExpanded} />
+          </div>
+          <div className="mt-auto w-full">
+             <NavButton active={activeTab === 'setup'} onClick={() => setActiveTab('setup')} icon={<SettingsIcon className="w-6 h-6" />} label={t.navSetup} collapsed={!sidebarExpanded} />
+          </div>
+      </aside>
+
+      {/* --- MAIN CONTENT CONTAINER --- */}
+      {/* 
+          Desktop Logic: Fixed Height Dashboard Layout. 
+          The main container moves right based on sidebar width.
+          It does NOT scroll itself; internal divs handle scrolling.
+      */}
+      <main 
+        className={`pt-20 transition-all duration-300 flex flex-col
+            ${sidebarExpanded ? 'md:ml-64' : 'md:ml-20'} 
+            md:h-screen md:overflow-hidden min-h-screen
+        `}
+      >
         
         {/* TAB: DECK */}
         {activeTab === 'deck' && (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="flex-1 flex flex-col md:overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
             {currentTrack ? (
-              <>
-                {nextTrackInfo?.clash?.hasClash && (
-                    <div className="mb-4 bg-red-950/40 border border-red-500/30 rounded-xl p-3 flex items-center gap-3 animate-pulse">
-                        <AlertTriangleIcon className="w-6 h-6 text-red-500" />
-                        <div><p className="text-xs font-bold text-red-400 uppercase tracking-widest">Clash Warning</p><p className="text-[10px] text-red-300/80">{nextTrackInfo.clash.reasons.join(', ')}</p></div>
-                    </div>
-                )}
-                {/* Optimized grid with gap-1 for tight layout */}
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-1">
-                    <div className="md:col-span-12"><NowPlaying track={currentTrack} language={language} /></div>
-                    <div className="md:col-span-12"><SuggestionPanel currentTrack={currentTrack} playlist={playlist.filter(t => enabledDirectories.includes(t.location))} suggestions={suggestions} setSuggestions={setSuggestions} onSelectTrack={handleSelectTrack} onAddToQueue={(t) => handleAddToQueue(undefined, t)} language={language} /></div>
+              <div className="md:grid md:grid-cols-12 md:gap-6 md:h-full md:px-6 md:pb-6 relative flex flex-col h-full px-4 pb-24">
+                
+                {/* 1. Left Column: On Air Card (FIXED HEIGHT ON DESKTOP) */}
+                <div className="md:col-span-5 lg:col-span-5 md:h-full md:overflow-hidden flex-shrink-0 mb-4 md:mb-0">
+                    <NowPlaying track={currentTrack} language={language} className="h-full" />
                 </div>
-              </>
+
+                {/* 2. Right Column: Suggestions (SCROLLABLE ON DESKTOP) */}
+                <div className="md:col-span-7 lg:col-span-7 md:h-full md:overflow-y-auto custom-scrollbar md:pr-2">
+                    {/* Optional Clash Warning inside scroll area or sticky above? Let's put it top of scroll area */}
+                    {nextTrackInfo?.clash?.hasClash && (
+                        <div className="mb-4 bg-red-950/40 border border-red-500/30 rounded-xl p-3 flex items-center gap-3 animate-pulse">
+                            <AlertTriangleIcon className="w-6 h-6 text-red-500" />
+                            <div><p className="text-xs font-bold text-red-400 uppercase tracking-widest">Clash Warning</p><p className="text-[10px] text-red-300/80">{nextTrackInfo.clash.reasons.join(', ')}</p></div>
+                        </div>
+                    )}
+                    <SuggestionPanel currentTrack={currentTrack} playlist={playlist.filter(t => enabledDirectories.includes(t.location))} suggestions={suggestions} setSuggestions={setSuggestions} onSelectTrack={handleSelectTrack} onAddToQueue={(t) => handleAddToQueue(undefined, t)} language={language} />
+                </div>
+
+                {/* Mobile Next Track Toast (Hidden on Desktop split view usually, or keep it) */}
+                {nextTrackInfo && (<div className="md:hidden fixed bottom-24 left-4 right-4 z-[80] pointer-events-none flex justify-center"><div className={`pointer-events-auto w-full max-w-lg backdrop-blur-xl text-white rounded-2xl p-3 shadow-[0_10px_40px_rgba(0,0,0,0.4)] border flex items-center min-h-[70px] animate-in slide-in-from-bottom-5 active:scale-[0.98] transition-all ${nextTrackInfo.clash?.hasClash ? 'bg-red-950/90 border-red-500/40' : 'bg-cyan-600/90 border-cyan-400/30'}`}><button onClick={(e) => { e.stopPropagation(); triggerHaptic(); handleSelectTrack(nextTrackInfo.track); }} className="bg-black/30 p-3 rounded-xl flex-shrink-0 shadow-inner hover:bg-black/50 transition-colors mr-3 active:scale-90"><PlayIcon className="w-5 h-5 text-white" /></button><div className="flex-1 overflow-hidden"><div className="flex justify-between items-center mb-0.5"><p className="text-[9px] font-bold uppercase tracking-[0.2em] opacity-80 flex items-center gap-2">{nextTrackInfo.clash?.hasClash && <AlertTriangleIcon className="w-3 h-3 text-white animate-pulse" />}{t.nextInQueue}</p><div className="flex items-center gap-1.5 opacity-80"><span className="text-[9px] font-mono text-white">{nextTrackInfo.track.duration}</span>{renderRatingMini(nextTrackInfo.track.rating)}</div></div><p className="text-sm font-bold truncate text-white tracking-tight leading-tight">{nextTrackInfo.track.name}</p><p className="text-[10px] truncate opacity-70 mt-0.5">{nextTrackInfo.track.location}</p></div></div></div>)}
+              </div>
             ) : (
-              <div className="text-center py-20 flex flex-col items-center">
+              <div className="text-center py-20 flex flex-col items-center justify-center h-full">
                 <div className="w-24 h-24 bg-slate-800/50 rounded-full flex items-center justify-center mb-6 relative"><PlayIcon className="w-10 h-10 text-slate-500" /><div className="absolute -bottom-2 -right-2 bg-cyan-600 rounded-full p-2 animate-bounce"><CameraIcon className="w-5 h-5 text-white" /></div></div>
-                <h2 className="text-xl font-bold uppercase tracking-widest text-white mb-2">{t.deckEmptyTitle}</h2>
-                <p className="text-sm text-slate-400 max-w-xs">{t.deckEmptyMsg}</p>
+                <h2 className="text-2xl font-bold uppercase tracking-widest text-white mb-2">{t.deckEmptyTitle}</h2>
+                <p className="text-base text-slate-400 max-w-md">{t.deckEmptyMsg}</p>
                 <div className="mt-8 flex flex-col gap-3 w-full max-w-xs">
                     <button onClick={() => setShowImageSourceModal(true)} disabled={isIdentifying} className="w-full py-4 bg-cyan-600 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-cyan-500 transition-all flex items-center justify-center gap-2 shadow-lg shadow-cyan-900/20">{isIdentifying ? (<RefreshCwIcon className="w-4 h-4 animate-spin" />) : (<CameraIcon className="w-4 h-4" />)} {isIdentifying ? t.analyzing : t.identifyBtn}</button>
                     <button onClick={() => setActiveTab('library')} className="w-full py-4 bg-slate-800 text-slate-300 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-700 transition-all border border-slate-700">{t.openLib}</button>
                 </div>
               </div>
             )}
-            {nextTrackInfo && (<div className="fixed bottom-24 left-4 right-4 z-[80] pointer-events-none flex justify-center"><div className={`pointer-events-auto w-full max-w-lg backdrop-blur-xl text-white rounded-2xl p-3 shadow-[0_10px_40px_rgba(0,0,0,0.4)] border flex items-center min-h-[70px] animate-in slide-in-from-bottom-5 active:scale-[0.98] transition-all ${nextTrackInfo.clash?.hasClash ? 'bg-red-950/90 border-red-500/40' : 'bg-cyan-600/90 border-cyan-400/30'}`}><button onClick={(e) => { e.stopPropagation(); triggerHaptic(); handleSelectTrack(nextTrackInfo.track); }} className="bg-black/30 p-3 rounded-xl flex-shrink-0 shadow-inner hover:bg-black/50 transition-colors mr-3 active:scale-90"><PlayIcon className="w-5 h-5 text-white" /></button><div className="flex-1 overflow-hidden"><div className="flex justify-between items-center mb-0.5"><p className="text-[9px] font-bold uppercase tracking-[0.2em] opacity-80 flex items-center gap-2">{nextTrackInfo.clash?.hasClash && <AlertTriangleIcon className="w-3 h-3 text-white animate-pulse" />}{t.nextInQueue}</p><div className="flex items-center gap-1.5 opacity-80"><span className="text-[9px] font-mono text-white">{nextTrackInfo.track.duration}</span>{renderRatingMini(nextTrackInfo.track.rating)}</div></div><p className="text-sm font-bold truncate text-white tracking-tight leading-tight">{nextTrackInfo.track.name}</p><p className="text-[10px] truncate opacity-70 mt-0.5">{nextTrackInfo.track.location}</p></div></div></div>)}
           </div>
         )}
 
-        {/* TAB: LIBRARY */}
+        {/* TAB: LIBRARY (Normal Scroll) */}
         {activeTab === 'library' && (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="flex-1 overflow-y-auto custom-scrollbar px-4 pb-24 md:pb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Search Bar Row */}
-            <div className="flex gap-2 mb-2 sticky top-[72px] z-30 bg-[#020617]/90 backdrop-blur-sm p-1 rounded-2xl">
+            <div className="flex gap-2 mb-2 sticky top-0 z-30 bg-[#020617]/90 backdrop-blur-sm p-1 rounded-2xl">
                 <div className="relative flex-1">
                     <input type="text" placeholder={t.searchPlaceholder} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-xl px-5 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all pl-11 min-h-[50px]" />
                     <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
@@ -471,12 +525,12 @@ export const MainScreen: React.FC<MainScreenProps> = ({
 
             {/* Quick Filter Pills (Context Aware) */}
             {currentTrack && (
-                <div className="flex gap-2 mb-3 overflow-x-auto custom-scrollbar pb-1 sticky top-[130px] z-20 pl-1">
+                <div className="flex gap-2 mb-3 overflow-x-auto custom-scrollbar pb-1 sticky top-[60px] z-20 pl-1">
                     {filterPills.map((pill, idx) => (
                         <button 
                             key={idx} 
                             onClick={pill.action} 
-                            className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider border whitespace-nowrap transition-all shadow-sm ${pill.active ? 'bg-cyan-600 text-white border-cyan-400' : 'bg-slate-900/80 text-slate-400 border-slate-700 hover:border-cyan-500 hover:text-white'}`}
+                            className={`px-3 py-1.5 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-wider border whitespace-nowrap transition-all shadow-sm ${pill.active ? 'bg-cyan-600 text-white border-cyan-400' : 'bg-slate-900/80 text-slate-400 border-slate-700 hover:border-cyan-500 hover:text-white'}`}
                         >
                             {pill.label}
                         </button>
@@ -488,13 +542,14 @@ export const MainScreen: React.FC<MainScreenProps> = ({
             
             <div className="mt-4">
                  <div className="flex justify-between items-center px-1 mb-2">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">{t.navLib}</span>
+                    <span className="text-[10px] md:text-xs font-bold text-slate-500 uppercase tracking-[0.2em]">{t.navLib}</span>
                     <div className="flex gap-2">
-                         <button onClick={onEnrich} disabled={isEnriching} className="text-[10px] font-bold text-cyan-500 flex items-center gap-1 disabled:opacity-50"><RefreshCwIcon className={`w-3 h-3 ${isEnriching ? 'animate-spin' : ''}`} /> ENRICH</button>
+                         <button onClick={onEnrich} disabled={isEnriching} className="text-[10px] md:text-xs font-bold text-cyan-500 flex items-center gap-1 disabled:opacity-50"><RefreshCwIcon className={`w-3 h-3 ${isEnriching ? 'animate-spin' : ''}`} /> ENRICH</button>
                     </div>
                 </div>
                 {groupingMode === 'all' ? (
-                    <div className={viewMode === 'card' ? 'grid grid-cols-1 md:grid-cols-2 gap-2' : 'space-y-1.5'}>
+                    // GRID LAYOUT FOR LARGER SCREENS
+                    <div className={viewMode === 'card' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 md:gap-4' : 'space-y-1.5'}>
                         {filteredPlaylist.map(track => renderTrackItem(track))}
                     </div>
                 ) : (
@@ -508,9 +563,9 @@ export const MainScreen: React.FC<MainScreenProps> = ({
                                         <div style={{ color: folderColor || '#06b6d4' }}>
                                             <FolderIcon className="w-4 h-4 flex-shrink-0" />
                                         </div>
-                                        <span className="text-xs font-bold uppercase text-white break-words text-left">{folder}</span><span className="text-xs font-bold text-slate-500 bg-black/40 px-2 py-0.5 rounded-full flex-shrink-0">{tracks.length}</span></div><ChevronDownIcon className={`w-4 h-4 text-slate-500 transition-transform duration-300 flex-shrink-0 ${expandedFolders.includes(folder) ? 'rotate-180' : ''}`} /></button>
+                                        <span className="text-xs md:text-sm font-bold uppercase text-white break-words text-left">{folder}</span><span className="text-xs font-bold text-slate-500 bg-black/40 px-2 py-0.5 rounded-full flex-shrink-0">{tracks.length}</span></div><ChevronDownIcon className={`w-4 h-4 text-slate-500 transition-transform duration-300 flex-shrink-0 ${expandedFolders.includes(folder) ? 'rotate-180' : ''}`} /></button>
                                     {expandedFolders.includes(folder) && (
-                                        <div className={`p-2 border-t border-slate-800 bg-black/20 animate-in slide-in-from-top-2 ${viewMode === 'card' ? 'grid grid-cols-1 md:grid-cols-2 gap-2' : 'space-y-0.5'}`}>
+                                        <div className={`p-2 border-t border-slate-800 bg-black/20 animate-in slide-in-from-top-2 ${viewMode === 'card' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2' : 'space-y-0.5'}`}>
                                             {tracks.map(track => renderTrackItem(track))}
                                         </div>
                                     )}
@@ -522,76 +577,102 @@ export const MainScreen: React.FC<MainScreenProps> = ({
             </div>
             
             {/* Scroll Progress FAB */}
-            {activeTab === 'library' && (
-                <div className="fixed bottom-24 right-4 z-50">
-                     <button 
-                        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} 
-                        className="w-12 h-12 bg-cyan-600 rounded-full shadow-2xl flex items-center justify-center text-white active:scale-90 transition-transform relative group overflow-hidden"
-                     >
-                        {/* Circular Progress SVG */}
-                        <svg className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none" viewBox="0 0 100 100">
-                            <circle cx="50" cy="50" r="46" stroke="rgba(0,0,0,0.2)" strokeWidth="8" fill="none" />
-                            <circle 
-                                cx="50" cy="50" r="46" 
-                                stroke="white" 
-                                strokeWidth="8" 
-                                fill="none" 
-                                strokeDasharray="289" 
-                                strokeDashoffset={289 - (289 * scrollProgress)} 
-                                className="transition-all duration-100 ease-linear"
-                            />
-                        </svg>
-                        <ArrowUpIcon className="w-5 h-5 relative z-10" />
-                     </button>
-                </div>
-            )}
+            <div className={`fixed right-4 z-50 ${currentTrack ? 'bottom-32 md:bottom-24' : 'bottom-24 md:bottom-8'}`}>
+                    <button 
+                    onClick={() => {
+                        const el = document.querySelector('main .overflow-y-auto');
+                        if (el) {
+                            el.scrollTo({ top: 0, behavior: 'smooth' });
+                        } else {
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }
+                    }} 
+                    className="w-12 h-12 bg-cyan-600 rounded-full shadow-2xl flex items-center justify-center text-white active:scale-90 transition-transform relative group overflow-hidden"
+                    >
+                    <svg className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="46" stroke="rgba(0,0,0,0.2)" strokeWidth="8" fill="none" />
+                        <circle 
+                            cx="50" cy="50" r="46" 
+                            stroke="white" 
+                            strokeWidth="8" 
+                            fill="none" 
+                            strokeDasharray="289" 
+                            strokeDashoffset={289 - (289 * scrollProgress)} 
+                            className="transition-all duration-100 ease-linear"
+                        />
+                    </svg>
+                    <ArrowUpIcon className="w-5 h-5 relative z-10" />
+                    </button>
+            </div>
           </div>
         )}
         
-        {/* TAB: MASHUPS */}
+        {/* TAB: MASHUPS (Normal Scroll) */}
         {activeTab === 'mashup' && (
-            <MashupFinder playlist={playlist} onSelectTrack={handleSelectTrack} onAddToQueue={(t) => handleAddToQueue(undefined, t)} language={language} />
-        )}
-
-        {/* TAB: BUILDER */}
-        {activeTab === 'builder' && (
-          <SetBuilder queue={queue} setQueue={setQueue} onSelectTrack={handleSelectTrack} currentTrackId={currentTrack?.id} language={language} fullPlaylist={playlist} />
-        )}
-
-        {/* TAB: SETUP */}
-        {activeTab === 'setup' && (
-            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-4 max-w-2xl mx-auto">
-                {/* ... existing setup content ... */}
-                <h2 className="text-2xl font-bold text-white px-2 mb-2">{t.settingsTitle}</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <section className="bg-slate-900/50 border border-slate-800 rounded-3xl p-6 transition-all hover:bg-slate-900/70">
-                        <h3 className="text-sm font-bold text-cyan-400 uppercase tracking-widest mb-4 flex items-center gap-2"><RefreshCwIcon className="w-4 h-4" /> {t.automationTitle}</h3>
-                        <div className="flex items-center justify-between"><div><p className="text-sm font-bold text-white">{t.autoEnrichTitle}</p></div><button onClick={() => onAutoEnrichChange(!autoEnrichEnabled)} className={`w-12 h-6 rounded-full transition-colors relative ${autoEnrichEnabled ? 'bg-cyan-500' : 'bg-slate-800'}`}><div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${autoEnrichEnabled ? 'right-1' : 'left-1'}`} /></button></div>
-                    </section>
-                    <section className="bg-slate-900/50 border border-slate-800 rounded-3xl p-6 transition-all hover:bg-slate-900/70">
-                        <h3 className="text-sm font-bold text-cyan-400 uppercase tracking-widest mb-4 flex items-center gap-2"><GlobeIcon className="w-4 h-4" /> {t.langTitle}</h3>
-                        <div className="flex p-1 bg-black/60 rounded-xl border border-white/5"><button onClick={() => setLanguage('pt-BR')} className={`flex-1 py-3 text-[10px] font-bold uppercase rounded-lg transition-all ${language === 'pt-BR' ? 'bg-cyan-600 text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}>Português</button><button onClick={() => setLanguage('en-US')} className={`flex-1 py-3 text-[10px] font-bold uppercase rounded-lg transition-all ${language === 'en-US' ? 'bg-cyan-600 text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}>English</button></div>
-                    </section>
+            <div className="flex-1 overflow-y-auto custom-scrollbar px-4 pb-24 md:pb-8">
+                <div className="md:max-w-4xl md:mx-auto">
+                    <MashupFinder playlist={playlist} onSelectTrack={handleSelectTrack} onAddToQueue={(t) => handleAddToQueue(undefined, t)} language={language} />
                 </div>
-                <section className="bg-slate-900/50 border border-slate-800 rounded-3xl p-6 transition-all hover:bg-slate-900/70">
-                    <h3 className="text-sm font-bold text-cyan-400 uppercase tracking-widest mb-2 flex items-center gap-2"><FolderIcon className="w-4 h-4" /> {t.filterPlaylists}</h3>
-                    <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar pr-2">
-                        {uniqueDirectories.length > 0 ? uniqueDirectories.map(dir => (<div key={dir} className="flex items-center justify-between p-3 bg-black/40 rounded-xl border border-white/5 cursor-pointer active:scale-95 transition-transform" onClick={() => toggleDirectory(dir)}><div className="flex items-center gap-3 overflow-hidden"><FolderIcon className={`w-4 h-4 ${enabledDirectories.includes(dir) ? 'text-cyan-500' : 'text-slate-700'}`} /><span className={`text-[11px] font-bold truncate ${enabledDirectories.includes(dir) ? 'text-white' : 'text-slate-600'}`}>{dir}</span></div><button className={`w-10 h-5 rounded-full transition-colors relative flex-shrink-0 ${enabledDirectories.includes(dir) ? 'bg-cyan-500' : 'bg-slate-800'}`}><div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${enabledDirectories.includes(dir) ? 'right-1' : 'left-1'}`} /></button></div>)) : (<p className="text-[10px] text-slate-600 italic p-2 text-center">Nenhum diretório válido encontrado (faixas {'>'} 60s)</p>)}
+            </div>
+        )}
+
+        {/* TAB: BUILDER (Split View on Desktop or Normal) */}
+        {activeTab === 'builder' && (
+          <div className="flex-1 overflow-y-auto custom-scrollbar px-4 pb-24 md:pb-8 md:grid md:grid-cols-12 md:gap-6">
+              {/* Queue List (Right on Mobile, but visually primary content) */}
+              <div className="md:col-span-7 lg:col-span-8 md:order-2">
+                 <SetBuilder queue={queue} setQueue={setQueue} onSelectTrack={handleSelectTrack} currentTrackId={currentTrack?.id} language={language} fullPlaylist={playlist} />
+              </div>
+              {/* Tools/Planner (Sticky Left on Tablet) */}
+              <div className="md:col-span-5 lg:col-span-4 md:order-1 h-fit md:sticky md:top-4">
+                 <div className="bg-slate-900/40 rounded-3xl p-4 border border-white/5 hidden md:block mb-4">
+                     <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-2 flex items-center gap-2">
+                         <LayersIcon className="w-4 h-4 text-cyan-400" /> Ferramentas
+                     </h3>
+                     <p className="text-xs text-slate-400 mb-4">Use o planejador abaixo para gerar sequências automáticas.</p>
+                 </div>
+              </div>
+          </div>
+        )}
+        
+        {/* TAB: BUILDER REVISITED - Cleanup */}
+        {activeTab === 'builder' && (<div className="hidden"></div>)}
+
+        {/* TAB: SETUP (Normal Scroll) */}
+        {activeTab === 'setup' && (
+            <div className="flex-1 overflow-y-auto custom-scrollbar px-4 pb-24 md:pb-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="space-y-4 max-w-2xl mx-auto">
+                    <h2 className="text-2xl font-bold text-white px-2 mb-2">{t.settingsTitle}</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <section className="bg-slate-900/50 border border-slate-800 rounded-3xl p-6 transition-all hover:bg-slate-900/70">
+                            <h3 className="text-sm font-bold text-cyan-400 uppercase tracking-widest mb-4 flex items-center gap-2"><RefreshCwIcon className="w-4 h-4" /> {t.automationTitle}</h3>
+                            <div className="flex items-center justify-between"><div><p className="text-sm font-bold text-white">{t.autoEnrichTitle}</p></div><button onClick={() => onAutoEnrichChange(!autoEnrichEnabled)} className={`w-12 h-6 rounded-full transition-colors relative ${autoEnrichEnabled ? 'bg-cyan-500' : 'bg-slate-800'}`}><div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${autoEnrichEnabled ? 'right-1' : 'left-1'}`} /></button></div>
+                        </section>
+                        <section className="bg-slate-900/50 border border-slate-800 rounded-3xl p-6 transition-all hover:bg-slate-900/70">
+                            <h3 className="text-sm font-bold text-cyan-400 uppercase tracking-widest mb-4 flex items-center gap-2"><GlobeIcon className="w-4 h-4" /> {t.langTitle}</h3>
+                            <div className="flex p-1 bg-black/60 rounded-xl border border-white/5"><button onClick={() => setLanguage('pt-BR')} className={`flex-1 py-3 text-[10px] font-bold uppercase rounded-lg transition-all ${language === 'pt-BR' ? 'bg-cyan-600 text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}>Português</button><button onClick={() => setLanguage('en-US')} className={`flex-1 py-3 text-[10px] font-bold uppercase rounded-lg transition-all ${language === 'en-US' ? 'bg-cyan-600 text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}>English</button></div>
+                        </section>
                     </div>
-                </section>
-                <section className="bg-slate-900/50 border border-slate-800 rounded-3xl p-6 transition-all hover:bg-slate-900/70">
-                    <h3 className="text-sm font-bold text-cyan-400 uppercase tracking-widest mb-4 flex items-center gap-2"><ContrastIcon className="w-4 h-4" /> {t.accessTitle}</h3>
-                    <div className="flex items-center justify-between mb-6"><div><p className="text-sm font-bold text-white">{t.highContrastTitle}</p></div><button onClick={() => onHighContrastChange(!isHighContrast)} className={`w-12 h-6 rounded-full transition-colors relative ${isHighContrast ? 'bg-white' : 'bg-slate-800'}`}><div className={`absolute top-1 w-4 h-4 rounded-full transition-all ${isHighContrast ? 'bg-black right-1' : 'bg-white left-1'}`} /></button></div>
-                    <div><div className="flex items-center justify-between mb-2"><span className="text-[10px] font-bold text-white/60 uppercase">Zoom: {fontScale}%</span></div><div className="relative h-10 flex items-center px-2 bg-black/60 rounded-xl border border-white/5"><span className="text-xs font-bold text-gray-500 mr-2">A</span><input type="range" min="100" max="175" step="25" value={fontScale} onChange={(e) => onFontScaleChange(parseInt(e.target.value))} className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-cyan-500" /><span className="text-lg font-bold text-white ml-2">A</span></div><div className="flex justify-between px-1 mt-1"><span className="text-[8px] text-gray-300">100%</span><span className="text-[8px] text-gray-300">175%</span></div></div>
-                </section>
-                 <div className="p-1"><div className="p-4 rounded-3xl bg-red-950/20 border border-red-900/30"><h3 className="text-sm font-bold text-red-500 uppercase tracking-widest mb-4 flex items-center gap-2">{t.criticalMgmt}</h3><button onClick={onReset} className="w-full py-4 bg-red-600 hover:bg-red-500 text-white rounded-2xl font-bold text-xs uppercase tracking-widest transition-all shadow-lg active:scale-95">{t.clearAll}</button></div></div>
+                    <section className="bg-slate-900/50 border border-slate-800 rounded-3xl p-6 transition-all hover:bg-slate-900/70">
+                        <h3 className="text-sm font-bold text-cyan-400 uppercase tracking-widest mb-2 flex items-center gap-2"><FolderIcon className="w-4 h-4" /> {t.filterPlaylists}</h3>
+                        <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar pr-2">
+                            {uniqueDirectories.length > 0 ? uniqueDirectories.map(dir => (<div key={dir} className="flex items-center justify-between p-3 bg-black/40 rounded-xl border border-white/5 cursor-pointer active:scale-95 transition-transform" onClick={() => toggleDirectory(dir)}><div className="flex items-center gap-3 overflow-hidden"><FolderIcon className={`w-4 h-4 ${enabledDirectories.includes(dir) ? 'text-cyan-500' : 'text-slate-700'}`} /><span className={`text-[11px] font-bold truncate ${enabledDirectories.includes(dir) ? 'text-white' : 'text-slate-600'}`}>{dir}</span></div><button className={`w-10 h-5 rounded-full transition-colors relative flex-shrink-0 ${enabledDirectories.includes(dir) ? 'bg-cyan-500' : 'bg-slate-800'}`}><div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${enabledDirectories.includes(dir) ? 'right-1' : 'left-1'}`} /></button></div>)) : (<p className="text-[10px] text-slate-600 italic p-2 text-center">Nenhum diretório válido encontrado (faixas {'>'} 60s)</p>)}
+                        </div>
+                    </section>
+                    <section className="bg-slate-900/50 border border-slate-800 rounded-3xl p-6 transition-all hover:bg-slate-900/70">
+                        <h3 className="text-sm font-bold text-cyan-400 uppercase tracking-widest mb-4 flex items-center gap-2"><ContrastIcon className="w-4 h-4" /> {t.accessTitle}</h3>
+                        <div className="flex items-center justify-between mb-6"><div><p className="text-sm font-bold text-white">{t.highContrastTitle}</p></div><button onClick={() => onHighContrastChange(!isHighContrast)} className={`w-12 h-6 rounded-full transition-colors relative ${isHighContrast ? 'bg-white' : 'bg-slate-800'}`}><div className={`absolute top-1 w-4 h-4 rounded-full transition-all ${isHighContrast ? 'bg-black right-1' : 'bg-white left-1'}`} /></button></div>
+                        <div><div className="flex items-center justify-between mb-2"><span className="text-[10px] font-bold text-white/60 uppercase">Zoom: {fontScale}%</span></div><div className="relative h-10 flex items-center px-2 bg-black/60 rounded-xl border border-white/5"><span className="text-xs font-bold text-gray-500 mr-2">A</span><input type="range" min="100" max="175" step="25" value={fontScale} onChange={(e) => onFontScaleChange(parseInt(e.target.value))} className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-cyan-500" /><span className="text-lg font-bold text-white ml-2">A</span></div><div className="flex justify-between px-1 mt-1"><span className="text-[8px] text-gray-300">100%</span><span className="text-[8px] text-gray-300">175%</span></div></div>
+                    </section>
+                    <div className="p-1"><div className="p-4 rounded-3xl bg-red-950/20 border border-red-900/30"><h3 className="text-sm font-bold text-red-500 uppercase tracking-widest mb-4 flex items-center gap-2">{t.criticalMgmt}</h3><button onClick={onReset} className="w-full py-4 bg-red-600 hover:bg-red-500 text-white rounded-2xl font-bold text-xs uppercase tracking-widest transition-all shadow-lg active:scale-95">{t.clearAll}</button></div></div>
+                </div>
             </div>
         )}
       </main>
 
-      {/* Nav */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-slate-950/80 backdrop-blur-xl border-t border-slate-800/50 py-2 z-[90]">
-        <div className="container mx-auto flex justify-between items-center max-w-xl md:max-w-5xl px-4">
+      {/* --- BOTTOM NAVIGATION (Mobile Only) --- */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-slate-950/80 backdrop-blur-xl border-t border-slate-800/50 py-2 z-[90]">
+        <div className="container mx-auto flex justify-between items-center max-w-xl px-4">
             <NavButton active={activeTab === 'deck'} onClick={() => setActiveTab('deck')} icon={<PlayIcon className="w-5 h-5" />} label={t.navDeck} />
             <NavButton active={activeTab === 'library'} onClick={() => setActiveTab('library')} icon={<ListIcon className="w-5 h-5" />} label={t.navLib} />
             <NavButton active={activeTab === 'mashup'} onClick={() => setActiveTab('mashup')} icon={<GitMergeIcon className="w-5 h-5" />} label="MASH" />

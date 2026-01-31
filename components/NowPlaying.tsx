@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import type { Track } from '../types';
 import { StarIcon, ZapIcon } from './icons';
 import { CoverArt } from './CoverArt';
@@ -33,11 +34,19 @@ const hexToRgba = (hex: string | undefined, alpha: number) => {
 interface NowPlayingProps {
   track: Track;
   language: 'pt-BR' | 'en-US';
+  className?: string;
 }
 
-export const NowPlaying: React.FC<NowPlayingProps> = ({ track, language }) => {
+export const NowPlaying: React.FC<NowPlayingProps> = ({ track, language, className = "" }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isSpinning, setIsSpinning] = useState(true);
+
+  // Auto-expand on tablet/desktop mount
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+        setIsExpanded(true);
+    }
+  }, []);
 
   const t = translations[language];
   const trackColor = track.color || '#06b6d4';
@@ -58,7 +67,7 @@ export const NowPlaying: React.FC<NowPlayingProps> = ({ track, language }) => {
     <>
       <div 
         onClick={() => setIsExpanded(!isExpanded)}
-        className="rounded-3xl relative transition-all duration-500 group cursor-pointer border overflow-hidden"
+        className={`rounded-3xl relative transition-all duration-500 group cursor-pointer border overflow-hidden flex flex-col ${className}`}
         style={glowStyle}
       >
         {/* --- Background Layers --- */}
@@ -83,11 +92,11 @@ export const NowPlaying: React.FC<NowPlayingProps> = ({ track, language }) => {
           </div>
         )}
 
-        <div className="relative z-10 w-full">
+        <div className="relative z-10 w-full flex-1 flex flex-col">
             
             {/* --- COLLAPSED STATE (Retraído) --- */}
             {!isExpanded && (
-                <div className="flex items-center gap-4 p-3 sm:p-4">
+                <div className="flex items-center gap-4 p-3 sm:p-4 h-full">
                     {/* Small Vinyl */}
                     <div 
                         className="relative flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 cursor-pointer active:scale-95 transition-transform"
@@ -107,10 +116,10 @@ export const NowPlaying: React.FC<NowPlayingProps> = ({ track, language }) => {
 
                     {/* Info */}
                     <div className="flex-1 min-w-0 flex flex-col justify-center">
-                        <h2 className="text-lg sm:text-xl font-black text-white leading-tight break-words mb-0.5 tracking-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                        <h2 className="text-lg sm:text-xl font-black text-white leading-tight break-words mb-0.5 tracking-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] truncate">
                             {track.name}
                         </h2>
-                        <p className="text-sm sm:text-base text-cyan-200 font-bold mb-2 break-words leading-tight drop-shadow-sm">
+                        <p className="text-sm sm:text-base text-cyan-200 font-bold mb-2 break-words leading-tight drop-shadow-sm truncate">
                             {track.artist}
                         </p>
                         
@@ -130,7 +139,7 @@ export const NowPlaying: React.FC<NowPlayingProps> = ({ track, language }) => {
 
             {/* --- EXPANDED STATE (Expandido) --- */}
             {isExpanded && (
-                <div className="p-4 flex flex-col items-center text-center animate-in fade-in zoom-in-95 duration-300 relative">
+                <div className="p-4 flex flex-col items-center text-center animate-in fade-in zoom-in-95 duration-300 relative h-full justify-between">
                     
                     {/* Rating - Top Right */}
                     <div className="absolute top-4 right-4 z-20">
@@ -139,63 +148,88 @@ export const NowPlaying: React.FC<NowPlayingProps> = ({ track, language }) => {
                          </div>
                     </div>
 
-                    {/* Large Vinyl */}
-                    <div 
-                        className="relative w-32 h-32 sm:w-40 sm:h-40 mb-4 mt-2 cursor-pointer active:scale-95 transition-transform"
-                        onClick={toggleSpin}
-                    >
+                    {/* Section 1: Visuals & Title */}
+                    <div className="flex flex-col items-center w-full">
+                        {/* Large Vinyl */}
                         <div 
-                            className="w-full h-full rounded-full overflow-hidden shadow-2xl border-[3px] border-gray-800 bg-black"
-                            style={{ 
-                                animation: 'spin 4.8s linear infinite', 
-                                animationPlayState: isSpinning ? 'running' : 'paused'
-                            }}
+                            className="relative w-32 h-32 sm:w-40 sm:h-40 mb-4 mt-2 cursor-pointer active:scale-95 transition-transform"
+                            onClick={toggleSpin}
                         >
-                             <CoverArt id={track.id} artist={track.artist} name={track.name} className="w-full h-full opacity-90" priority={true} />
+                            <div 
+                                className="w-full h-full rounded-full overflow-hidden shadow-2xl border-[3px] border-gray-800 bg-black"
+                                style={{ 
+                                    animation: 'spin 4.8s linear infinite', 
+                                    animationPlayState: isSpinning ? 'running' : 'paused'
+                                }}
+                            >
+                                <CoverArt id={track.id} artist={track.artist} name={track.name} className="w-full h-full opacity-90" priority={true} />
+                            </div>
+                            {/* Spindle */}
+                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-black/80 rounded-full z-10 backdrop-blur-sm border border-white/10 flex items-center justify-center pointer-events-none">
+                                <div className="w-2 h-2 bg-black rounded-full border border-gray-600"></div>
+                            </div>
                         </div>
-                        {/* Spindle */}
-                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-black/80 rounded-full z-10 backdrop-blur-sm border border-white/10 flex items-center justify-center pointer-events-none">
-                             <div className="w-2 h-2 bg-black rounded-full border border-gray-600"></div>
+
+                        {/* Main Info - Prominent Typography */}
+                        <h2 className="text-lg sm:text-xl lg:text-2xl font-black text-white leading-tight mb-1 w-full break-words px-1 tracking-tight drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)] line-clamp-2">
+                            {track.name}
+                        </h2>
+                        <p className="text-base sm:text-lg text-cyan-200 font-bold mb-6 w-full break-words px-1 drop-shadow-sm line-clamp-1">
+                            {track.artist}
+                        </p>
+                    </div>
+
+                    {/* Section 2: Core Stats */}
+                    <div className="w-full grid grid-cols-2 xl:grid-cols-4 gap-2 mb-4">
+                        {/* BPM */}
+                        <div className="bg-black/60 rounded-lg p-1.5 flex flex-col items-center justify-center border border-white/10 backdrop-blur-md shadow-inner min-w-0">
+                            <span className="text-[9px] text-gray-400 uppercase font-bold mb-0.5">BPM</span>
+                            <span className="text-sm sm:text-base font-black font-mono text-cyan-400 truncate w-full text-center">{track.bpm}</span>
+                        </div>
+                        {/* Key */}
+                        <div className="bg-black/60 rounded-lg p-1.5 flex flex-col items-center justify-center border border-white/10 backdrop-blur-md shadow-inner min-w-0">
+                            <span className="text-[9px] text-gray-400 uppercase font-bold mb-0.5">Key</span>
+                            <span className={`text-sm sm:text-base font-black truncate w-full text-center ${track.key.includes('m') ? 'text-cyan-400' : 'text-pink-400'}`}>{track.key}</span>
+                        </div>
+                         {/* Plays */}
+                        <div className="bg-black/60 rounded-lg p-1.5 flex flex-col items-center justify-center border border-white/10 backdrop-blur-md shadow-inner min-w-0">
+                            <span className="text-[9px] text-gray-400 uppercase font-bold mb-0.5">Plays</span>
+                            <span className="text-sm sm:text-base font-mono font-bold text-white truncate w-full text-center">{track.playCount}</span>
+                        </div>
+                        {/* Time */}
+                        <div className="bg-black/60 rounded-lg p-1.5 flex flex-col items-center justify-center border border-white/10 backdrop-blur-md shadow-inner min-w-0">
+                            <span className="text-[9px] text-gray-400 uppercase font-bold mb-0.5">Time</span>
+                            <span className="text-sm sm:text-base font-mono font-bold text-white truncate w-full text-center">{track.duration}</span>
                         </div>
                     </div>
 
-                    {/* Main Info - Prominent Typography */}
-                    <h2 className="text-2xl sm:text-3xl font-black text-white leading-tight mb-1 w-full break-words px-1 tracking-tight drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)]">
-                        {track.name}
-                    </h2>
-                    <p className="text-lg text-cyan-200 font-bold mb-6 w-full break-words px-1 drop-shadow-sm">
-                        {track.artist}
-                    </p>
-
-                    {/* Stats Grid - Reorganized: BPM | Key | Plays | Time */}
-                    <div className="w-full grid grid-cols-4 gap-2 mb-4">
-                        {/* BPM */}
-                        <div className="bg-black/60 rounded-lg p-2 flex flex-col items-center justify-center border border-white/10 backdrop-blur-md shadow-inner">
-                            <span className="text-[9px] text-gray-400 uppercase font-bold mb-1">BPM</span>
-                            <span className="text-sm sm:text-base font-black font-mono text-cyan-400">{track.bpm}</span>
+                    {/* Tablet/Desktop Only: Extended Metadata - Occupy optimized space */}
+                    <div className="hidden md:flex w-full flex-col gap-3 mb-4 bg-white/5 p-3 rounded-xl border border-white/5 flex-1 justify-center">
+                        <div className="grid grid-cols-2 gap-4 w-full">
+                            <div className="flex flex-col text-left">
+                                <span className="text-[9px] text-gray-400 uppercase font-bold mb-0.5">Gênero</span>
+                                <span className="text-sm text-gray-200 font-bold truncate">{track.genre || '-'}</span>
+                            </div>
+                            {track.subgenre && (
+                                <div className="flex flex-col text-left">
+                                    <span className="text-[9px] text-cyan-400 uppercase font-bold mb-0.5">Vibe (IA)</span>
+                                    <span className="text-sm text-cyan-100 font-bold truncate">{track.subgenre}</span>
+                                </div>
+                            )}
                         </div>
-                        {/* Key */}
-                        <div className="bg-black/60 rounded-lg p-2 flex flex-col items-center justify-center border border-white/10 backdrop-blur-md shadow-inner">
-                            <span className="text-[9px] text-gray-400 uppercase font-bold mb-1">Key</span>
-                            <span className={`text-sm sm:text-base font-black ${track.key.includes('m') ? 'text-cyan-400' : 'text-pink-400'}`}>{track.key}</span>
-                        </div>
-                         {/* Plays */}
-                        <div className="bg-black/60 rounded-lg p-2 flex flex-col items-center justify-center border border-white/10 backdrop-blur-md shadow-inner">
-                            <span className="text-[9px] text-gray-400 uppercase font-bold mb-1">Plays</span>
-                            <span className="text-sm sm:text-base font-mono font-bold text-white">{track.playCount}</span>
-                        </div>
-                        {/* Time */}
-                        <div className="bg-black/60 rounded-lg p-2 flex flex-col items-center justify-center border border-white/10 backdrop-blur-md shadow-inner">
-                            <span className="text-[9px] text-gray-400 uppercase font-bold mb-1">Time</span>
-                            <span className="text-sm sm:text-base font-mono font-bold text-white">{track.duration}</span>
+                        <div className="w-full border-t border-white/5 pt-2 mt-1">
+                            <div className="flex flex-col text-left">
+                                <span className="text-[9px] text-gray-400 uppercase font-bold mb-0.5">Album / Release</span>
+                                <span className="text-sm text-gray-300 font-medium truncate">{track.album || 'Single'}</span>
+                            </div>
                         </div>
                     </div>
 
                     {/* Footer Info: Directory, Energy, Cues */}
-                    <div className="w-full bg-black/60 rounded-xl p-3 border border-white/10 space-y-3 backdrop-blur-md shadow-inner">
+                    <div className="w-full bg-black/60 rounded-xl p-3 border border-white/10 space-y-3 backdrop-blur-md shadow-inner mt-auto">
                         
                         <div className="flex items-center justify-between text-xs">
-                             <div className="flex items-center gap-2 overflow-hidden">
+                             <div className="flex items-center gap-2 overflow-hidden flex-1 min-w-0">
                                  <span 
                                     className="w-2.5 h-2.5 rounded-full flex-shrink-0 shadow-[0_0_8px_currentColor]"
                                     style={{ backgroundColor: trackColor, color: trackColor }}
@@ -203,7 +237,7 @@ export const NowPlaying: React.FC<NowPlayingProps> = ({ track, language }) => {
                                  <span className="font-bold text-gray-300 truncate uppercase tracking-wide">{track.location}</span>
                              </div>
                              {track.energy && (
-                                 <div className="flex items-center gap-2">
+                                 <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                                      <ZapIcon className="w-3 h-3 text-yellow-500" />
                                      <EnergyBar energy={track.energy} className="h-3 w-12" />
                                  </div>
@@ -212,9 +246,9 @@ export const NowPlaying: React.FC<NowPlayingProps> = ({ track, language }) => {
 
                         {track.cuePoints && track.cuePoints.length > 0 && (
                             <div className="pt-2 border-t border-white/10">
-                                <div className="flex flex-wrap justify-center gap-1.5">
+                                <div className="flex flex-wrap justify-center gap-1.5 max-h-[60px] overflow-y-auto custom-scrollbar">
                                     {track.cuePoints.map((cue, i) => (
-                                        <span key={i} className="text-[9px] font-bold text-cyan-200 bg-cyan-950/60 px-2 py-1 rounded border border-cyan-500/20 shadow-sm">
+                                        <span key={i} className="text-[9px] font-bold text-cyan-200 bg-cyan-950/60 px-2 py-1 rounded border border-cyan-500/20 shadow-sm truncate max-w-[100px]">
                                             {cue}
                                         </span>
                                     ))}

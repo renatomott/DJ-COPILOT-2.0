@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect } from 'react';
 import type { Suggestion, Track } from '../types';
 import { ClockIcon, PlayIcon, XIcon, ActivityIcon, StarIcon, FolderIcon, ZapIcon, BrainIcon, PlusIcon } from './icons';
@@ -125,12 +126,12 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
             {/* 2. HEADER INFO (Right of Art) */}
             <div className="flex-1 min-w-0 flex flex-col justify-center">
                 {/* Title - Larger */}
-                <h4 className={`font-black text-white leading-tight break-words ${isExpanded ? 'text-lg mb-0.5' : 'text-base'}`}>
+                <h4 className={`font-black text-white leading-tight break-words ${isExpanded ? 'text-lg mb-0.5 line-clamp-2' : 'text-base line-clamp-1'}`}>
                     {suggestion.name}
                 </h4>
                 
                 {/* Artist - Bold & Colored */}
-                <p className={`font-bold text-cyan-100 break-words leading-tight ${isExpanded ? 'text-sm mb-2' : 'text-xs mb-1.5'}`}>
+                <p className={`font-bold text-cyan-100 break-words leading-tight truncate ${isExpanded ? 'text-sm mb-2' : 'text-xs mb-1.5'}`}>
                     {suggestion.artist}
                 </p>
 
@@ -185,8 +186,8 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
           {isExpanded && (
             <div className="px-3 pb-3 space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
                 
-                {/* A. Data Grid (Match, BPM, Key, Time) */}
-                <div className="grid grid-cols-4 gap-2">
+                {/* A. Data Grid (Match, BPM, Key, Time) - CHANGED TO 2 COLS FOR ROBUSTNESS */}
+                <div className="grid grid-cols-2 gap-2">
                     {/* Match */}
                     <div className="bg-black/40 rounded border border-white/10 p-1.5 flex flex-col items-center justify-center">
                         <BrainIcon className={`w-3.5 h-3.5 mb-0.5 ${scoreColor}`} />

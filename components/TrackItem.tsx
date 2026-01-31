@@ -76,6 +76,9 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
   const onAirClasses = "bg-cyan-500/10 border-cyan-400 shadow-[0_0_20px_rgba(34,211,238,0.3)] animate-pulse-onair ring-2 ring-cyan-400/50 ring-offset-2 ring-offset-black";
   const defaultClasses = "bg-slate-900/40 border-slate-800 hover:bg-slate-800 hover:border-slate-600";
 
+  // Standard height for retracted cards to avoid jumping content
+  const cardHeightClass = (!isList && !isExpanded) ? 'h-[74px]' : '';
+
   useEffect(() => {
     if (isExpanded && cardRef.current && !isList) {
         setTimeout(() => {
@@ -199,10 +202,10 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
       <div
         ref={cardRef}
         onClick={handleCardClick}
-        className={`${baseClasses} flex flex-col ${isOnAir ? onAirClasses : isSelected ? selectedClasses : defaultClasses}`}
+        className={`${baseClasses} flex flex-col ${isOnAir ? onAirClasses : isSelected ? selectedClasses : defaultClasses} ${cardHeightClass}`}
       >
         {/* Main Content Row */}
-        <div className="flex items-center gap-2.5 p-2 w-full relative">
+        <div className="flex items-center gap-2.5 p-2 w-full relative h-full">
             <div className="w-14 h-14 flex-shrink-0 relative group/cover rounded-lg overflow-hidden">
                 <CoverArt id={track.id} artist={track.artist} name={track.name} className="w-full h-full" priority={false} />
                 
@@ -217,12 +220,12 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
                 </div>
             </div>
             
-            <div className="flex-1 overflow-hidden min-w-0 flex flex-col justify-center">
+            <div className="flex-1 overflow-hidden min-w-0 flex flex-col justify-center h-full">
                 <div className="flex justify-between items-start gap-2 mb-0.5">
                     <HighlightText 
                         text={track.name} 
                         query={searchQuery}
-                        className={`font-bold text-base leading-snug text-white break-words tracking-tight`}
+                        className={`font-bold text-base leading-snug text-white break-words tracking-tight line-clamp-1`}
                     />
                     
                     {track.bpm && (
@@ -276,7 +279,7 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
                     </div>
 
                     {track.location && (
-                        <div className="flex items-center gap-1.5 max-w-[50%] sm:max-w-none justify-end" title={`Folder: ${track.location}`}>
+                        <div className="flex items-center gap-1.5 max-w-[50%] sm:max-w-none justify-end min-w-0" title={`Folder: ${track.location}`}>
                             {track.color && (
                                 <span 
                                     className="w-2.5 h-2.5 rounded-full flex-shrink-0 ring-1 ring-white/10 shadow-sm" 
@@ -307,7 +310,7 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
                         <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1">
                             <TagIcon className="w-3 h-3" /> Gênero
                         </span>
-                        <span className="text-sm font-bold text-white">{track.genre || '-'}</span>
+                        <span className="text-sm font-bold text-white truncate">{track.genre || '-'}</span>
                      </div>
                      <div className="flex flex-col gap-1">
                         <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1">
@@ -329,7 +332,7 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
                         </span>
                         <div className="flex flex-wrap gap-2">
                             {track.cuePoints.map((cue, idx) => (
-                                <span key={idx} className="bg-slate-800 text-cyan-300 text-[10px] font-bold px-2 py-1 rounded border border-slate-700 shadow-sm">
+                                <span key={idx} className="bg-slate-800 text-cyan-300 text-[10px] font-bold px-2 py-1 rounded border border-slate-700 shadow-sm truncate max-w-[150px]">
                                     {cue}
                                 </span>
                             ))}
