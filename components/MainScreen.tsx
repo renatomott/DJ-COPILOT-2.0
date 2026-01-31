@@ -688,31 +688,17 @@ export const MainScreen: React.FC<MainScreenProps> = ({
           </div>
         )}
         
-        {/* TAB: MASHUPS (Normal Scroll) */}
+        {/* TAB: MASHUPS (Renovated Layout) */}
         {activeTab === 'mashup' && (
-            <div className="flex-1 overflow-y-auto custom-scrollbar px-4 pb-24 md:pb-8">
-                <div className="md:max-w-4xl md:mx-auto">
-                    <MashupFinder playlist={playlist} onSelectTrack={handleSelectTrack} onAddToQueue={(t) => handleAddToQueue(undefined, t)} language={language} />
-                </div>
+            <div className="flex-1 h-full md:overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <MashupFinder playlist={playlist} onSelectTrack={handleSelectTrack} onAddToQueue={(t) => handleAddToQueue(undefined, t)} language={language} />
             </div>
         )}
 
-        {/* TAB: BUILDER (Split View on Desktop or Normal) */}
+        {/* TAB: BUILDER (Renovated Layout) */}
         {activeTab === 'builder' && (
-          <div className="flex-1 overflow-y-auto custom-scrollbar px-4 pb-24 md:pb-8 md:grid md:grid-cols-12 md:gap-6">
-              {/* Queue List (Right on Mobile, but visually primary content) */}
-              <div className="md:col-span-7 lg:col-span-8 md:order-2">
-                 <SetBuilder queue={queue} setQueue={setQueue} onSelectTrack={handleSelectTrack} currentTrackId={currentTrack?.id} language={language} fullPlaylist={playlist} />
-              </div>
-              {/* Tools/Planner (Sticky Left on Tablet) */}
-              <div className="md:col-span-5 lg:col-span-4 md:order-1 h-fit md:sticky md:top-4">
-                 <div className="bg-slate-900/40 rounded-3xl p-4 border border-white/5 hidden md:block mb-4">
-                     <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-2 flex items-center gap-2">
-                         <LayersIcon className="w-4 h-4 text-cyan-400" /> Ferramentas
-                     </h3>
-                     <p className="text-xs text-slate-400 mb-4">Use o planejador abaixo para gerar sequências automáticas.</p>
-                 </div>
-              </div>
+          <div className="flex-1 h-full md:overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+             <SetBuilder queue={queue} setQueue={setQueue} onSelectTrack={handleSelectTrack} currentTrackId={currentTrack?.id} language={language} fullPlaylist={playlist} />
           </div>
         )}
         

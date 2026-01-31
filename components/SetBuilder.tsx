@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useRef } from 'react';
 import type { Track } from '../types';
 import { TrackItem } from './TrackItem';
-import { TrashIcon, DownloadIcon, WandSparklesIcon, BrainIcon, SparklesIcon, PlusIcon, SearchIcon, XIcon, ZapIcon, BarChartIcon, TrendingUpIcon, UploadIcon } from './icons';
+import { TrashIcon, DownloadIcon, WandSparklesIcon, BrainIcon, SparklesIcon, PlusIcon, SearchIcon, XIcon, ZapIcon, BarChartIcon, TrendingUpIcon, UploadIcon, LayersIcon } from './icons';
 import { translations } from '../utils/translations';
 import { planAutoSet } from '../services/geminiService';
 import { detectClash } from '../utils/harmonicUtils';
@@ -360,218 +360,225 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
   }, [fullPlaylist, plannerParams]);
 
   return (
-    <div className="pb-24 md:pb-8 animate-in fade-in slide-in-from-right-4 duration-500 md:grid md:grid-cols-12 md:gap-6">
+    <div className="h-full md:grid md:grid-cols-12 md:gap-6 md:px-6 md:pb-6 relative flex flex-col px-4 pb-24 md:overflow-hidden">
       <input type="file" ref={importFileRef} className="hidden" accept=".txt" onChange={handleImport} />
       
       {/* --- Column 1: Planner & Tools (Sticky on Desktop) --- */}
-      <div className="md:col-span-5 lg:col-span-4 md:sticky md:top-24 h-fit space-y-4">
-          <div className="flex items-center justify-between mb-2 md:mb-0 px-1 relative z-30">
-            <h2 className="text-xl font-bold text-white md:hidden">{t.yourSet} {queue.length}</h2>
-            
-            {/* Action Bar */}
-            <div className="flex gap-2 w-full md:w-auto justify-end">
-                <button 
-                    onClick={() => setShowPlanner(!showPlanner)} 
-                    className={`p-2 rounded-lg transition-all min-h-[44px] min-w-[44px] flex items-center justify-center border ${showPlanner ? 'bg-cyan-600 border-cyan-400 text-white shadow-lg' : 'bg-slate-900 border-slate-800 text-cyan-400 hover:bg-slate-800'}`}
-                    title={t.plannerTitle}
-                >
-                    <SparklesIcon className="w-5 h-5" />
-                </button>
-                {queue.length > 0 ? (
-                    <>
-                        <button onClick={exportBoth} className="px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-white font-bold text-xs flex items-center gap-2 hover:bg-slate-800 transition-colors shadow-lg min-h-[44px]">
-                            <DownloadIcon className="w-4 h-4" />
-                            <span className="hidden xs:inline">{t.downloadAll}</span>
-                        </button>
+      {/* SIDEBAR STYLE from Library Tab */}
+      <div className="w-full md:col-span-5 lg:col-span-5 flex-shrink-0 md:h-full md:border-r md:border-white/5 bg-[#020617]/95 md:bg-slate-950/40 backdrop-blur-xl md:backdrop-blur-none z-40 transition-all duration-300 flex flex-col rounded-xl overflow-hidden mb-4 md:mb-0">
+          <div className="p-4 border-b border-white/5 space-y-4 overflow-y-auto custom-scrollbar h-full">
+                
+                {/* Header for Mobile/Desktop Unified */}
+                <div className="flex items-center justify-between relative z-30">
+                    <h2 className="text-xl font-bold text-white uppercase tracking-widest flex items-center gap-2">
+                        <LayersIcon className="w-5 h-5 text-cyan-400" />
+                        {t.navBuilder}
+                    </h2>
+                    
+                    {/* Action Bar */}
+                    <div className="flex gap-2 w-full md:w-auto justify-end">
                         <button 
-                            onClick={handleClear} 
-                            className="p-2 bg-red-950/20 rounded-lg text-red-500 hover:bg-red-900/40 border border-red-500/30 transition-all min-h-[44px] min-w-[44px] flex items-center justify-center shadow-lg active:scale-95"
-                            title="Limpar Set"
+                            onClick={() => setShowPlanner(!showPlanner)} 
+                            className={`p-2 rounded-lg transition-all min-h-[36px] min-w-[36px] flex items-center justify-center border ${showPlanner ? 'bg-cyan-600 border-cyan-400 text-white shadow-lg' : 'bg-slate-900 border-slate-800 text-cyan-400 hover:bg-slate-800'}`}
+                            title={t.plannerTitle}
                         >
-                            <TrashIcon className="w-4 h-4" />
+                            <SparklesIcon className="w-4 h-4" />
                         </button>
-                    </>
-                ) : (
-                    <button onClick={() => importFileRef.current?.click()} className="px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-cyan-400 font-bold text-xs flex items-center gap-2 hover:bg-slate-800 transition-colors min-h-[44px]">
-                        <UploadIcon className="w-4 h-4" />
-                        <span>{t.importPlan}</span>
-                    </button>
-                )}
-            </div>
-          </div>
-          
-          {queue.length > 0 && <EnergyTimeline queue={queue} />}
-
-          {/* PLANNER UI */}
-          {(showPlanner || window.innerWidth >= 768) && (
-              <div className={`mb-6 bg-gradient-to-br from-cyan-950/40 via-slate-950 to-black rounded-3xl border border-cyan-500/30 shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden ${window.innerWidth >= 768 && !showPlanner ? 'hidden md:block' : ''}`}>
-                    <div className="p-5 border-b border-white/5 bg-white/5 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-cyan-600 rounded-xl shadow-lg shadow-cyan-500/20">
-                                <BrainIcon className="w-6 h-6 text-white" />
-                            </div>
-                            <div>
-                                <h3 className="text-sm font-bold text-white uppercase tracking-widest">{t.plannerTitle}</h3>
-                                <p className="text-[10px] text-cyan-300 font-bold opacity-80">{t.plannerSub}</p>
-                            </div>
-                        </div>
-                        <div className="flex flex-col items-end">
-                            <span className="text-[9px] font-bold text-white/40 uppercase">{t.matchingTracks}</span>
-                            <span className="text-xs font-mono font-bold text-cyan-400">{matchingCount}</span>
-                        </div>
+                        {queue.length > 0 ? (
+                            <>
+                                <button onClick={exportBoth} className="px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-white font-bold text-xs flex items-center gap-2 hover:bg-slate-800 transition-colors shadow-lg min-h-[36px]">
+                                    <DownloadIcon className="w-4 h-4" />
+                                </button>
+                                <button 
+                                    onClick={handleClear} 
+                                    className="p-2 bg-red-950/20 rounded-lg text-red-500 hover:bg-red-900/40 border border-red-500/30 transition-all min-h-[36px] min-w-[36px] flex items-center justify-center shadow-lg active:scale-95"
+                                    title="Limpar Set"
+                                >
+                                    <TrashIcon className="w-4 h-4" />
+                                </button>
+                            </>
+                        ) : (
+                            <button onClick={() => importFileRef.current?.click()} className="px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-cyan-400 font-bold text-xs flex items-center gap-2 hover:bg-slate-800 transition-colors min-h-[36px]">
+                                <UploadIcon className="w-4 h-4" />
+                            </button>
+                        )}
                     </div>
+                </div>
+                
+                {queue.length > 0 && <EnergyTimeline queue={queue} />}
 
-                    <div className="p-5 space-y-5">
-                        {/* Row 1: Mode & Length */}
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="flex p-1 bg-black/60 rounded-xl border border-white/5">
-                                <button onClick={() => setPlannerParams(p => ({...p, isStrict: false}))} className={`flex-1 flex items-center justify-center gap-1 py-3 text-[9px] font-bold uppercase rounded-lg transition-all ${!plannerParams.isStrict ? 'bg-slate-800 text-cyan-400 shadow-lg' : 'text-gray-500'}`}>
-                                    Pref.
-                                </button>
-                                <button onClick={() => setPlannerParams(p => ({...p, isStrict: true}))} className={`flex-1 flex items-center justify-center gap-1 py-3 text-[9px] font-bold uppercase rounded-lg transition-all ${plannerParams.isStrict ? 'bg-cyan-600 text-white shadow-lg' : 'text-gray-500'}`}>
-                                    Obg.
-                                </button>
-                            </div>
-                            
-                            <div className="flex p-1 bg-black/60 rounded-xl border border-white/5">
-                                {[5, 10, 15, 20].map(len => (
-                                    <button key={len} onClick={() => setPlannerParams(p => ({...p, length: len}))} className={`flex-1 py-2 text-[10px] font-bold rounded-lg transition-all ${plannerParams.length === len ? 'bg-cyan-600 text-white' : 'text-gray-500 hover:text-white'}`}>
-                                        {len}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Row 2: Progression */}
-                        <div>
-                            <label className="text-[9px] font-bold text-white/50 uppercase tracking-wider block mb-2">{t.progression}</label>
-                            <div className="flex gap-2">
-                                {['Linear', 'Rising', 'Chaos'].map(prog => (
-                                    <button 
-                                        key={prog}
-                                        onClick={() => setPlannerParams(p => ({...p, progression: prog}))}
-                                        className={`flex-1 py-3 rounded-xl border text-[10px] font-bold uppercase tracking-wider transition-all ${plannerParams.progression === prog ? 'bg-cyan-900/40 border-cyan-500 text-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.2)]' : 'bg-black/40 border-white/5 text-gray-500 hover:border-white/20'}`}
-                                    >
-                                        {prog === 'Rising' && <TrendingUpIcon className="w-3 h-3 inline mr-1" />}
-                                        {prog}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Row 3: Technical Filters */}
-                        <div className="grid grid-cols-2 gap-4">
-                            {/* BPM Range */}
-                            <div>
-                                <label className="text-[9px] font-bold text-white/50 uppercase tracking-wider block mb-2">BPM Range</label>
-                                <div className="flex items-center gap-2">
-                                    <input 
-                                        type="number" 
-                                        placeholder="Min" 
-                                        value={plannerParams.bpmMin} 
-                                        onChange={(e) => setPlannerParams(p => ({...p, bpmMin: e.target.value}))}
-                                        className="w-full bg-black/60 border border-white/10 rounded-xl p-2 text-center text-xs font-mono text-white focus:border-cyan-500 outline-none" 
-                                    />
-                                    <span className="text-white/20">-</span>
-                                    <input 
-                                        type="number" 
-                                        placeholder="Max" 
-                                        value={plannerParams.bpmMax} 
-                                        onChange={(e) => setPlannerParams(p => ({...p, bpmMax: e.target.value}))}
-                                        className="w-full bg-black/60 border border-white/10 rounded-xl p-2 text-center text-xs font-mono text-white focus:border-cyan-500 outline-none" 
-                                    />
+                {/* PLANNER UI */}
+                {(showPlanner || window.innerWidth >= 768) && (
+                    <div className={`bg-gradient-to-br from-cyan-950/20 via-slate-950/50 to-black/50 rounded-2xl border border-cyan-500/20 shadow-lg animate-in fade-in duration-300 overflow-hidden ${window.innerWidth >= 768 && !showPlanner ? 'hidden md:block' : ''}`}>
+                            <div className="p-4 border-b border-white/5 bg-white/5 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-1.5 bg-cyan-600 rounded-lg shadow-lg shadow-cyan-500/20">
+                                        <BrainIcon className="w-4 h-4 text-white" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xs font-bold text-white uppercase tracking-widest">{t.plannerTitle}</h3>
+                                        <p className="text-[9px] text-cyan-300 font-bold opacity-80">{t.plannerSub}</p>
+                                    </div>
+                                </div>
+                                <div className="flex flex-col items-end">
+                                    <span className="text-[8px] font-bold text-white/40 uppercase">{t.matchingTracks}</span>
+                                    <span className="text-xs font-mono font-bold text-cyan-400">{matchingCount}</span>
                                 </div>
                             </div>
 
-                            {/* Energy */}
-                            <div>
-                                <label className="text-[9px] font-bold text-white/50 uppercase tracking-wider block mb-2">Min Energy</label>
-                                <div className="flex gap-1 h-[34px]">
-                                    {[0, 1, 2, 3, 4, 5].map(lvl => (
-                                        <button 
-                                            key={lvl} 
-                                            onClick={() => setPlannerParams(p => ({...p, minEnergy: lvl}))}
-                                            className={`flex-1 rounded-md text-[10px] font-bold border transition-all ${plannerParams.minEnergy === lvl ? 'bg-cyan-600 border-cyan-400 text-white' : 'bg-black/40 border-white/5 text-gray-600 hover:bg-white/5'}`}
-                                        >
-                                            {lvl === 0 ? 'All' : lvl}
+                            <div className="p-4 space-y-4">
+                                {/* Row 1: Mode & Length */}
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="flex p-0.5 bg-black/60 rounded-lg border border-white/5">
+                                        <button onClick={() => setPlannerParams(p => ({...p, isStrict: false}))} className={`flex-1 flex items-center justify-center gap-1 py-2 text-[8px] font-bold uppercase rounded-md transition-all ${!plannerParams.isStrict ? 'bg-slate-800 text-cyan-400 shadow-lg' : 'text-gray-500'}`}>
+                                            Pref.
                                         </button>
-                                    ))}
+                                        <button onClick={() => setPlannerParams(p => ({...p, isStrict: true}))} className={`flex-1 flex items-center justify-center gap-1 py-2 text-[8px] font-bold uppercase rounded-md transition-all ${plannerParams.isStrict ? 'bg-cyan-600 text-white shadow-lg' : 'text-gray-500'}`}>
+                                            Obg.
+                                        </button>
+                                    </div>
+                                    
+                                    <div className="flex p-0.5 bg-black/60 rounded-lg border border-white/5">
+                                        {[5, 10, 15, 20].map(len => (
+                                            <button key={len} onClick={() => setPlannerParams(p => ({...p, length: len}))} className={`flex-1 py-1 text-[9px] font-bold rounded-md transition-all ${plannerParams.length === len ? 'bg-cyan-600 text-white' : 'text-gray-500 hover:text-white'}`}>
+                                                {len}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
 
-                        {/* Mandatory Tracks */}
-                        <div className="bg-black/30 rounded-xl p-3 border border-white/5">
-                            <label className="text-[9px] font-bold text-white/50 uppercase tracking-wider block mb-2">{t.mandatoryTracks}</label>
-                            
-                            {/* List Selected */}
-                            {mustHaves.length > 0 && (
-                                <div className="flex flex-wrap gap-2 mb-3">
-                                    {mustHaves.map(m => (
-                                        <span key={m.id} className="flex items-center gap-1 bg-cyan-900/30 text-cyan-300 border border-cyan-500/30 px-2 py-1 rounded-lg text-[10px] font-bold">
-                                            {m.name}
-                                            <button onClick={() => toggleMustHave(m)} className="hover:text-white"><XIcon className="w-3 h-3" /></button>
-                                        </span>
-                                    ))}
+                                {/* Row 2: Progression */}
+                                <div>
+                                    <label className="text-[8px] font-bold text-white/50 uppercase tracking-wider block mb-1.5">{t.progression}</label>
+                                    <div className="flex gap-2">
+                                        {['Linear', 'Rising', 'Chaos'].map(prog => (
+                                            <button 
+                                                key={prog}
+                                                onClick={() => setPlannerParams(p => ({...p, progression: prog}))}
+                                                className={`flex-1 py-2 rounded-lg border text-[9px] font-bold uppercase tracking-wider transition-all ${plannerParams.progression === prog ? 'bg-cyan-900/40 border-cyan-500 text-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.2)]' : 'bg-black/40 border-white/5 text-gray-500 hover:border-white/20'}`}
+                                            >
+                                                {prog === 'Rising' && <TrendingUpIcon className="w-3 h-3 inline mr-1" />}
+                                                {prog}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
-                            )}
 
-                            {/* Search Input */}
-                            <div className="relative">
-                                <input 
-                                    type="text" 
-                                    placeholder={t.searchToPlan} 
-                                    value={planSearch}
-                                    onChange={(e) => setPlanSearch(e.target.value)}
-                                    className="w-full bg-black/60 border border-white/10 rounded-xl pl-8 pr-3 py-2 text-xs text-white focus:border-cyan-500 outline-none"
-                                />
-                                <SearchIcon className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-gray-500" />
-                            </div>
-
-                            {/* Search Results Dropdown */}
-                            {filteredSearch.length > 0 && (
-                                <div className="mt-2 space-y-1 max-h-32 overflow-y-auto custom-scrollbar">
-                                    {filteredSearch.map(t => (
-                                        <div 
-                                            key={t.id} 
-                                            onClick={() => toggleMustHave(t)}
-                                            className="flex items-center justify-between p-2 hover:bg-white/10 rounded-lg cursor-pointer group"
-                                        >
-                                            <div className="min-w-0">
-                                                <p className="text-xs font-bold text-white truncate">{t.name}</p>
-                                                <p className="text-[10px] text-gray-500 truncate">{t.artist}</p>
-                                            </div>
-                                            <PlusIcon className="w-4 h-4 text-cyan-500 opacity-0 group-hover:opacity-100" />
+                                {/* Row 3: Technical Filters */}
+                                <div className="grid grid-cols-2 gap-3">
+                                    {/* BPM Range */}
+                                    <div>
+                                        <label className="text-[8px] font-bold text-white/50 uppercase tracking-wider block mb-1.5">BPM Range</label>
+                                        <div className="flex items-center gap-2">
+                                            <input 
+                                                type="number" 
+                                                placeholder="Min" 
+                                                value={plannerParams.bpmMin} 
+                                                onChange={(e) => setPlannerParams(p => ({...p, bpmMin: e.target.value}))}
+                                                className="w-full bg-black/60 border border-white/10 rounded-lg p-1.5 text-center text-[10px] font-mono text-white focus:border-cyan-500 outline-none" 
+                                            />
+                                            <span className="text-white/20">-</span>
+                                            <input 
+                                                type="number" 
+                                                placeholder="Max" 
+                                                value={plannerParams.bpmMax} 
+                                                onChange={(e) => setPlannerParams(p => ({...p, bpmMax: e.target.value}))}
+                                                className="w-full bg-black/60 border border-white/10 rounded-lg p-1.5 text-center text-[10px] font-mono text-white focus:border-cyan-500 outline-none" 
+                                            />
                                         </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
+                                    </div>
 
-                        {/* Playlists */}
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-bold text-white/50 uppercase tracking-wider block">{t.targetPlaylists}</label>
-                            <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto custom-scrollbar p-1">
-                                {availableFolders.map(folder => (
-                                    <button key={folder} onClick={() => toggleTargetPlaylist(folder)} className={`px-2.5 py-2 rounded-lg border text-[9px] font-bold transition-all ${plannerParams.targetPlaylists.includes(folder) ? 'bg-cyan-600 border-cyan-400 text-white' : 'bg-black/40 border-white/5 text-gray-500 hover:border-white/20'}`}>
-                                        {folder}
-                                    </button>
-                                ))}
+                                    {/* Energy */}
+                                    <div>
+                                        <label className="text-[8px] font-bold text-white/50 uppercase tracking-wider block mb-1.5">Min Energy</label>
+                                        <div className="flex gap-1 h-[28px]">
+                                            {[0, 1, 2, 3, 4, 5].map(lvl => (
+                                                <button 
+                                                    key={lvl} 
+                                                    onClick={() => setPlannerParams(p => ({...p, minEnergy: lvl}))}
+                                                    className={`flex-1 rounded text-[9px] font-bold border transition-all ${plannerParams.minEnergy === lvl ? 'bg-cyan-600 border-cyan-400 text-white' : 'bg-black/40 border-white/5 text-gray-600 hover:bg-white/5'}`}
+                                                >
+                                                    {lvl === 0 ? 'All' : lvl}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Mandatory Tracks */}
+                                <div className="bg-black/30 rounded-lg p-3 border border-white/5">
+                                    <label className="text-[8px] font-bold text-white/50 uppercase tracking-wider block mb-2">{t.mandatoryTracks}</label>
+                                    
+                                    {/* List Selected */}
+                                    {mustHaves.length > 0 && (
+                                        <div className="flex flex-wrap gap-2 mb-3">
+                                            {mustHaves.map(m => (
+                                                <span key={m.id} className="flex items-center gap-1 bg-cyan-900/30 text-cyan-300 border border-cyan-500/30 px-2 py-1 rounded text-[9px] font-bold">
+                                                    {m.name}
+                                                    <button onClick={() => toggleMustHave(m)} className="hover:text-white"><XIcon className="w-3 h-3" /></button>
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Search Input */}
+                                    <div className="relative">
+                                        <input 
+                                            type="text" 
+                                            placeholder={t.searchToPlan} 
+                                            value={planSearch}
+                                            onChange={(e) => setPlanSearch(e.target.value)}
+                                            className="w-full bg-black/60 border border-white/10 rounded-lg pl-7 pr-3 py-1.5 text-[10px] text-white focus:border-cyan-500 outline-none"
+                                        />
+                                        <SearchIcon className="absolute left-2 top-2 w-3 h-3 text-gray-500" />
+                                    </div>
+
+                                    {/* Search Results Dropdown */}
+                                    {filteredSearch.length > 0 && (
+                                        <div className="mt-2 space-y-1 max-h-32 overflow-y-auto custom-scrollbar">
+                                            {filteredSearch.map(t => (
+                                                <div 
+                                                    key={t.id} 
+                                                    onClick={() => toggleMustHave(t)}
+                                                    className="flex items-center justify-between p-1.5 hover:bg-white/10 rounded-md cursor-pointer group"
+                                                >
+                                                    <div className="min-w-0">
+                                                        <p className="text-[10px] font-bold text-white truncate">{t.name}</p>
+                                                        <p className="text-[9px] text-gray-500 truncate">{t.artist}</p>
+                                                    </div>
+                                                    <PlusIcon className="w-3 h-3 text-cyan-500 opacity-0 group-hover:opacity-100" />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Playlists */}
+                                <div className="space-y-2">
+                                    <label className="text-[8px] font-bold text-white/50 uppercase tracking-wider block">{t.targetPlaylists}</label>
+                                    <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto custom-scrollbar p-1">
+                                        {availableFolders.map(folder => (
+                                            <button key={folder} onClick={() => toggleTargetPlaylist(folder)} className={`px-2 py-1.5 rounded-md border text-[9px] font-bold transition-all ${plannerParams.targetPlaylists.includes(folder) ? 'bg-cyan-600 border-cyan-400 text-white' : 'bg-black/40 border-white/5 text-gray-500 hover:border-white/20'}`}>
+                                                {folder}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                
+                                <button onClick={handleAutoPlan} disabled={isPlanning || fullPlaylist.length === 0} className="w-full py-3 bg-white text-black rounded-xl font-bold text-xs uppercase tracking-widest shadow-xl hover:bg-cyan-50 transition-all flex items-center justify-center gap-3 disabled:opacity-50 min-h-[44px]">
+                                    {isPlanning ? (<><div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div> {t.addingToQueue}</>) : (<><ZapIcon className="w-4 h-4 text-cyan-600" /> {t.btnPlan}</>)}
+                                </button>
                             </div>
-                        </div>
-                        
-                        <button onClick={handleAutoPlan} disabled={isPlanning || fullPlaylist.length === 0} className="w-full py-5 bg-white text-black rounded-2xl font-bold text-sm uppercase tracking-widest shadow-xl hover:bg-cyan-50 transition-all flex items-center justify-center gap-3 disabled:opacity-50 min-h-[60px]">
-                            {isPlanning ? (<><div className="w-6 h-6 border-4 border-black border-t-transparent rounded-full animate-spin"></div> {t.addingToQueue}</>) : (<><ZapIcon className="w-6 h-6 text-cyan-600" /> {t.btnPlan}</>)}
-                        </button>
                     </div>
-              </div>
-          )}
+                )}
+          </div>
       </div>
       
       {/* --- Column 2: List content (Right Side) --- */}
-      <div className="md:col-span-7 lg:col-span-8">
-          <div className="hidden md:flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold text-white">{t.yourSet} ({queue.length})</h2>
+      {/* CONTENT STYLE from Library Tab */}
+      <div className="md:col-span-7 lg:col-span-7 flex-1 md:h-full md:overflow-y-auto custom-scrollbar md:pr-2 pt-4 md:pt-0 relative">
+          <div className="hidden md:flex items-center justify-between mb-4 sticky top-0 bg-[#020617]/95 backdrop-blur-sm p-2 z-10 border-b border-white/5">
+              <h2 className="text-xl font-bold text-white">{t.yourSet} ({queue.length})</h2>
           </div>
 
           {queue.length > 0 ? (
