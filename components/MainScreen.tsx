@@ -37,7 +37,8 @@ import { MashupFinder } from './MashupFinder';
 import { getGenreTheme } from '../utils/themeUtils';
 import { TransitionToast } from './TransitionToast';
 import { SwipeableItem } from './SwipeableItem';
-import { MiniPlayer } from './MiniPlayer';
+// MiniPlayer import removed from here as it's now only used in Header, but kept if needed for other persistent UI
+import { MiniPlayer } from './MiniPlayer'; 
 
 interface MainScreenProps {
   playlist: Track[];
@@ -406,6 +407,27 @@ export const MainScreen: React.FC<MainScreenProps> = ({
       return getPredominantColor(tracks);
   };
 
+  // Calculate Header Logic: Which player to show?
+  const headerPlayerProps = useMemo(() => {
+      if (activeTab === 'deck') {
+          // Show Next Track (if available) on Deck Tab
+          return {
+              playerTrack: nextTrackInfo?.track || null, // Might be null if queue empty
+              playerVariant: 'next' as const,
+              playerLabel: 'NEXT',
+              onPlayerClick: nextTrackInfo?.track ? () => handleSelectTrack(nextTrackInfo.track!) : undefined
+          };
+      } else {
+          // Show Current Track (On Air) on other tabs
+          return {
+              playerTrack: currentTrack,
+              playerVariant: 'default' as const,
+              playerLabel: undefined, // No label for On Air usually
+              onPlayerClick: () => setActiveTab('deck')
+          };
+      }
+  }, [activeTab, nextTrackInfo, currentTrack]);
+
   return (
     <div 
         className={`min-h-screen text-slate-200 font-sans selection:bg-cyan-500/30 transition-colors duration-1000 ease-in-out ${isHighContrast ? 'contrast-125 grayscale bg-black' : `bg-gradient-to-br ${theme.gradientFrom} via-slate-950 ${theme.gradientTo}`} ${!isHighContrast && 'aurora-bg'}`}
@@ -414,9 +436,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({
         onReset={onReset} 
         showMenuButton={true} 
         onToggleMenu={() => setSidebarExpanded(!sidebarExpanded)} 
-        currentTrack={currentTrack}
-        showMiniPlayer={activeTab !== 'deck'}
-        onNavigateToDeck={() => setActiveTab('deck')}
+        {...headerPlayerProps}
       />
       
       {/* Toast Notification */}
@@ -429,14 +449,6 @@ export const MainScreen: React.FC<MainScreenProps> = ({
 
       <input type="file" ref={galleryInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
       <input type="file" ref={cameraInputRef} className="hidden" accept="image/*" capture="environment" onChange={handleImageUpload} />
-
-      {/* Persistent Mini Player (Mobile Only - Replaced by Component in Header usually, but kept for overlay logic if needed) */}
-      {/* Note: The Header Mini Player handles desktop/top mobile. 
-          If a persistent bottom player is needed on other tabs, we can use MiniPlayer component here too. 
-          But req was specifically about ON AIR (Header) and NEXT (Deck tab). 
-      */}
-      
-      {/* ... (Mobile Mini Player code removed/refactored to Header logic mostly, keeping clean) ... */}
 
       {showImageSourceModal && (
         <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-4 animate-in fade-in duration-200">
@@ -491,26 +503,6 @@ export const MainScreen: React.FC<MainScreenProps> = ({
 
                 {/* 2. Right Column: Suggestions (SCROLLABLE ON DESKTOP) */}
                 <div className="md:col-span-7 lg:col-span-7 md:h-full md:overflow-y-auto custom-scrollbar md:pr-2">
-                    
-                    {/* --- NEXT TRACK MINI PLAYER (Deck Tab Exclusive) --- */}
-                    {nextTrackInfo && (
-                        <div className="mb-4 animate-in slide-in-from-top-4 duration-500">
-                            <MiniPlayer 
-                                track={nextTrackInfo.track} 
-                                variant="next" 
-                                label="NEXT"
-                                onClick={() => handleSelectTrack(nextTrackInfo.track)}
-                            />
-                            {/* Optional: Compact Warning if Clash detected in Next */}
-                            {nextTrackInfo.clash?.hasClash && (
-                                <div className="mt-1 flex items-center justify-center gap-2 bg-red-950/40 py-1 px-2 rounded-b-lg border-x border-b border-red-500/20 mx-2">
-                                    <AlertTriangleIcon className="w-3 h-3 text-red-500" />
-                                    <span className="text-[10px] text-red-300 font-bold uppercase">{nextTrackInfo.clash.reasons[0]}</span>
-                                </div>
-                            )}
-                        </div>
-                    )}
-
                     <SuggestionPanel currentTrack={currentTrack} playlist={playlist.filter(t => enabledDirectories.includes(t.location))} suggestions={suggestions} setSuggestions={setSuggestions} onSelectTrack={handleSelectTrack} onAddToQueue={(t) => handleAddToQueue(undefined, t)} language={language} />
                 </div>
               </div>
