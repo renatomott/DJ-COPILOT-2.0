@@ -91,25 +91,54 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
   const bgClasses = isExpanded ? 'bg-slate-900/90 rounded-xl' : 'bg-black/40 backdrop-blur-md hover:bg-black/50 rounded-lg';
   const onAirClasses = isOnAir ? "ring-2 ring-cyan-400/50 shadow-[0_0_20px_rgba(34,211,238,0.3)] animate-pulse-onair" : "";
 
+  // Enhanced Scroll Logic to handle Sticky Headers in Builder/Library
   useEffect(() => {
     if (isExpanded && cardRef.current && !isList) {
         setTimeout(() => {
-            if (window.innerWidth < 768) {
-                // Mobile: Calculate scroll position manually to avoid header overlap
-                // Header is roughly 110-120px tall on mobile including padding
-                const offset = 120;
-                const elementPosition = cardRef.current?.getBoundingClientRect().top || 0;
-                const offsetPosition = elementPosition + window.pageYOffset - offset;
+            const el = cardRef.current;
+            if (!el) return;
+
+            // Find the nearest scrollable parent
+            let scrollParent = el.parentElement;
+            while (scrollParent) {
+                const style = window.getComputedStyle(scrollParent);
+                if ((style.overflowY === 'auto' || style.overflowY === 'scroll') && scrollParent.scrollHeight > scrollParent.clientHeight) {
+                    break;
+                }
+                scrollParent = scrollParent.parentElement;
+            }
+
+            // Offset calculation:
+            // Mobile Header: ~120px
+            // Desktop Sticky Header (Builder): ~60-80px
+            // Use 140px to be safe and ensure visibility below sticky elements + aesthetic spacing
+            const scrollOffset = 140;
+
+            if (scrollParent && scrollParent !== document.body && scrollParent !== document.documentElement) {
+                // Handle scrolling within a container (e.g., Sidebar layout on Desktop)
+                const parentRect = scrollParent.getBoundingClientRect();
+                const elementRect = el.getBoundingClientRect();
                 
-                window.scrollTo({
-                    top: offsetPosition,
+                // Calculate position relative to the scroll container's current scroll
+                const relativeTop = elementRect.top - parentRect.top;
+                const currentScroll = scrollParent.scrollTop;
+                const targetScroll = currentScroll + relativeTop - scrollOffset;
+
+                scrollParent.scrollTo({
+                    top: Math.max(0, targetScroll),
                     behavior: 'smooth'
                 });
             } else {
-                // Desktop: Standard scrollIntoView works fine with scroll-mt
-                cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                // Handle Window/Body scrolling (Mobile)
+                const elementTop = el.getBoundingClientRect().top;
+                const targetScroll = elementTop + window.pageYOffset - scrollOffset;
+                
+                window.scrollTo({
+                    top: targetScroll,
+                    behavior: 'smooth'
+                });
             }
-        }, 150);
+        }, 200); // 200ms delay to allow expansion animation to complete
     }
   }, [isExpanded, isList]);
 
