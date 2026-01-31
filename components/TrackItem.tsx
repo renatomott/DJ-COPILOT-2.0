@@ -14,6 +14,7 @@ interface TrackItemProps {
   isOnAir?: boolean;
   onAddToQueue?: (e: React.MouseEvent, track: Track) => void;
   variant?: ViewMode;
+  searchQuery?: string; // New prop for highlighting
 }
 
 const renderRating = (rating: number) => {
@@ -32,54 +33,69 @@ const renderRating = (rating: number) => {
   return <div className="flex items-center gap-0.5">{stars}</div>;
 };
 
-export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelected, isExpanded = false, onToggleExpand, isOnAir, onAddToQueue, variant = 'card' }) => {
+// Helper for Smart Search Highlight
+const HighlightText: React.FC<{ text: string; query?: string; className?: string }> = ({ text, query, className }) => {
+    if (!query || query.length < 2) return <span className={className}>{text}</span>;
+    
+    const parts = text.split(new RegExp(`(${query})`, 'gi'));
+    return (
+        <span className={className}>
+            {parts.map((part, i) => 
+                part.toLowerCase() === query.toLowerCase() ? (
+                    <span key={i} className="text-yellow-300 bg-yellow-900/30 rounded-sm px-0.5">{part}</span>
+                ) : (
+                    part
+                )
+            )}
+        </span>
+    );
+};
+
+export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelected, isExpanded = false, onToggleExpand, isOnAir, onAddToQueue, variant = 'card', searchQuery }) => {
   const cardRef = useRef<HTMLDivElement>(null);
   const isList = variant === 'list';
   
+  // Energy Heatmap Color (Subtle gradient overlay)
+  const energy = track.energy || 3;
+  let energyGradient = '';
+  if (energy >= 4.5) energyGradient = 'bg-gradient-to-r from-red-900/10 via-transparent to-transparent'; // High Energy
+  else if (energy >= 3.5) energyGradient = 'bg-gradient-to-r from-orange-900/10 via-transparent to-transparent'; 
+  else if (energy <= 2) energyGradient = 'bg-gradient-to-r from-blue-900/10 via-transparent to-transparent'; // Low Energy
+
   // Base classes
-  const baseClasses = `rounded-xl cursor-pointer transition-all duration-300 border relative group overflow-hidden`;
-  const selectedClasses = "bg-cyan-950/20 border-cyan-500 shadow-md ring-1 ring-cyan-500/30";
+  const baseClasses = `rounded-xl cursor-pointer transition-all duration-300 border relative group overflow-hidden ${energyGradient}`;
+  const selectedClasses = "bg-cyan-950/40 border-cyan-500 shadow-md ring-1 ring-cyan-500/30";
   const onAirClasses = "bg-cyan-500/10 border-cyan-400 shadow-[0_0_20px_rgba(34,211,238,0.3)] animate-pulse-onair ring-2 ring-cyan-400/50 ring-offset-2 ring-offset-black";
   const defaultClasses = "bg-slate-900/40 border-slate-800 hover:bg-slate-800 hover:border-slate-600";
 
-  // Effect to scroll to element when it expands
   useEffect(() => {
     if (isExpanded && cardRef.current && !isList) {
         setTimeout(() => {
             const element = cardRef.current;
             if (element) {
-                const headerOffset = 85; // Altura do cabeçalho + margem
+                const headerOffset = 85; 
                 const elementPosition = element.getBoundingClientRect().top;
                 const offsetPosition = elementPosition + window.scrollY - headerOffset;
-
-                window.scrollTo({
-                    top: offsetPosition,
-                    behavior: "smooth"
-                });
+                window.scrollTo({ top: offsetPosition, behavior: "smooth" });
             }
         }, 150);
     }
   }, [isExpanded, isList]);
 
   const handleCardClick = (e: React.MouseEvent) => {
-    // In list mode, keep default select behavior
     if (isList) {
         onSelect(track);
         return;
     }
-
-    // In card mode
     if (onToggleExpand) {
-        // Normal library behavior: toggle expansion
         onToggleExpand();
     } else {
-        // Fallback (e.g. SetBuilder): if no expand logic, just select/load
         onSelect(track);
     }
   };
 
-  const handlePlayAction = (e: React.MouseEvent) => {
-      e.stopPropagation();
+  const handlePlayAction = (e?: React.MouseEvent) => {
+      e?.stopPropagation();
       onSelect(track);
   };
 
@@ -95,7 +111,7 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
             onClick={handleCardClick} 
             className={`${baseClasses} flex items-center gap-3 px-3 py-2 ${isOnAir ? onAirClasses : isSelected ? selectedClasses : defaultClasses}`}
         >
-            {/* Left: BPM & Key (Stacked for compactness) */}
+            {/* Left: BPM & Key */}
             <div className="flex flex-col items-center justify-center gap-0.5 min-w-[3rem] border-r border-white/5 pr-3">
                  <span className="text-[11px] font-mono font-bold text-white">{track.bpm}</span>
                  <span className={`text-[9px] font-mono font-bold px-1.5 rounded-sm w-full text-center ${track.key && track.key.includes('m') ? 'bg-cyan-900/40 text-cyan-300' : 'bg-pink-900/40 text-pink-300'}`}>
@@ -106,11 +122,26 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
             {/* Middle: Title & Artist & Folder */}
             <div className="flex-1 min-w-0 flex flex-col justify-center">
                 <div className="flex items-center gap-2">
-                    <p className={`text-[13px] font-bold truncate leading-tight ${isSelected ? 'text-cyan-100' : 'text-white'}`}>{track.name}</p>
+                    {track.color && (
+                        <span 
+                            className="w-2 h-2 rounded-full flex-shrink-0 shadow-sm ring-1 ring-white/10" 
+                            style={{ backgroundColor: track.color }} 
+                            title="Cor da Faixa"
+                        />
+                    )}
+                    <HighlightText 
+                        text={track.name} 
+                        query={searchQuery} 
+                        className={`text-[13px] font-bold truncate leading-tight ${isSelected ? 'text-cyan-100' : 'text-white'}`} 
+                    />
                     {track.energy && <EnergyBar energy={track.energy} className="w-8 scale-75 hidden sm:flex" />}
                 </div>
                 <div className="flex items-center gap-2 mt-0.5">
-                    <p className="text-[10px] text-slate-400 truncate font-bold uppercase max-w-[50%]">{track.artist}</p>
+                    <HighlightText 
+                        text={track.artist} 
+                        query={searchQuery} 
+                        className="text-[10px] text-slate-300 truncate font-bold uppercase max-w-[50%]" 
+                    />
                     {track.location && (
                         <>
                             <div className="w-px h-2 bg-slate-700"></div>
@@ -120,20 +151,27 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
                 </div>
             </div>
 
-            {/* Right: Metadata & Action */}
-            <div className="flex items-center gap-3 pl-2 border-l border-white/5">
+            {/* Right: Metadata & Action Buttons */}
+            <div className="flex items-center gap-2 pl-2 border-l border-white/5">
                  <div className="hidden sm:block opacity-80 scale-90">
                     {renderRating(track.rating)}
                  </div>
-                 <div className="flex items-center gap-1">
-                    <ClockIcon className="w-3 h-3 text-slate-600" />
-                    <span className="text-[10px] font-mono font-bold text-slate-500">{track.duration}</span>
-                 </div>
                  
+                 {/* Play Button */}
+                 <button 
+                    onClick={(e) => handlePlayAction(e)} 
+                    className="p-1.5 text-cyan-400 hover:text-white transition-colors bg-cyan-900/20 hover:bg-cyan-600 rounded-lg border border-cyan-500/20"
+                    title="Carregar no Deck"
+                 >
+                    <PlayIcon className="w-4 h-4 fill-current" />
+                 </button>
+
+                 {/* Queue Button */}
                 {onAddToQueue && (
                     <button 
                         onClick={handleAddAction} 
-                        className="p-1.5 text-slate-500 hover:text-white transition-colors bg-white/5 hover:bg-cyan-600 rounded-lg ml-1"
+                        className="p-1.5 text-slate-400 hover:text-white transition-colors bg-white/5 hover:bg-green-600 rounded-lg border border-white/5"
+                        title="Adicionar à Fila"
                     >
                         <PlusIcon className="w-4 h-4" />
                     </button>
@@ -143,12 +181,11 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
       );
   }
 
-  // BPM Class - Balanced increase (not huge)
   const bpmClass = isExpanded 
     ? "text-xs sm:text-sm font-black font-mono text-cyan-300 bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-500/40 shadow-[0_0_10px_rgba(6,182,212,0.15)] transition-all duration-300"
     : "text-[9px] font-mono font-bold text-cyan-400 bg-black/40 px-1.5 py-0.5 rounded border border-slate-700 shadow-sm transition-all duration-300";
 
-  // CARD VIEW LAYOUT (Default) - Expandable
+  // CARD VIEW LAYOUT (Default)
   return (
     <>
       <style>{`@keyframes pulse-onair { 0%, 100% { border-color: rgba(34, 211, 238, 0.4); box-shadow: 0 0 10px rgba(34, 211, 238, 0.2); } 50% { border-color: rgba(34, 211, 238, 1); box-shadow: 0 0 25px rgba(34, 211, 238, 0.4); } } .animate-pulse-onair { animation: pulse-onair 1.5s infinite cubic-bezier(0.4, 0, 0.6, 1); }`}</style>
@@ -176,9 +213,12 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
             
             <div className="flex-1 overflow-hidden min-w-0 flex flex-col justify-center">
                 <div className="flex justify-between items-start gap-2 mb-0.5">
-                    <p className={`font-bold text-base leading-tight text-white line-clamp-1 break-words tracking-tight`}>{track.name}</p>
+                    <HighlightText 
+                        text={track.name} 
+                        query={searchQuery}
+                        className={`font-bold text-base leading-tight text-white line-clamp-1 break-words tracking-tight`}
+                    />
                     
-                    {/* Dynamic BPM Display - Scaled appropriately */}
                     {track.bpm && (
                         <span className={`flex-shrink-0 ${bpmClass}`}>
                             {track.bpm}
@@ -186,9 +226,13 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
                     )}
                 </div>
                 <div className="flex items-center justify-between gap-2 mb-1">
-                    <p className="text-[11px] text-slate-400 line-clamp-1 font-bold flex-1">{track.artist}</p>
+                    <HighlightText 
+                        text={track.artist} 
+                        query={searchQuery}
+                        className="text-[11px] text-slate-400 line-clamp-1 font-bold flex-1"
+                    />
                     
-                    {/* Collapsed Location (Visible only when NOT expanded, to avoid duplication) */}
+                    {/* Collapsed Location */}
                     {track.location && !isExpanded && (
                         <div className="flex items-center gap-1 flex-shrink-0 justify-end max-w-[60%]">
                              {track.color && (
@@ -210,9 +254,8 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
 
         {/* Expanded Info Section */}
         {isExpanded && (
-            <div className="px-3 pb-3 pt-1 animate-in slide-in-from-top-2 fade-in duration-200 border-t border-white/5 bg-black/20">
-                
-                {/* 1. Technical Stats & Location Row (Responsive Grid) */}
+            <div className="px-3 pb-3 pt-1 animate-in slide-in-from-top-2 fade-in duration-200 border-t border-white/5 bg-black/20" onClick={(e) => e.stopPropagation()}>
+                {/* 1. Technical Stats */}
                 <div className="flex flex-wrap sm:grid sm:grid-cols-2 items-center justify-between gap-2 mb-3 bg-white/5 p-2 rounded-lg border border-white/5 mt-2">
                     <div className="flex items-center gap-3">
                          <div className="flex items-center gap-1.5" title="Duração">
@@ -242,7 +285,7 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
                     )}
                 </div>
 
-                {/* 2. Análise IA (Enrichment) */}
+                {/* 2. Análise IA */}
                 {track.subgenre && (
                     <div className="mb-3 p-2 bg-gradient-to-r from-cyan-900/20 to-transparent rounded border-l-2 border-cyan-500">
                         <p className="text-[9px] text-cyan-300 font-bold uppercase tracking-wider mb-0.5 flex items-center gap-1">
@@ -252,7 +295,7 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
                     </div>
                 )}
 
-                {/* 3. Gênero e Energia (Grid Responsive) */}
+                {/* 3. Gênero e Energia */}
                 <div className="grid grid-cols-2 sm:grid-cols-2 gap-4 mb-3">
                      <div className="flex flex-col gap-1">
                         <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-1">
@@ -288,22 +331,22 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
                     </div>
                 )}
 
-                {/* 5. Action Buttons */}
-                <div className="flex gap-3 mt-2">
+                {/* 5. Action Buttons (Explicit) */}
+                <div className="flex gap-3 mt-2 items-center">
                     <button 
-                        onClick={handlePlayAction}
-                        className="flex-1 bg-cyan-600 hover:bg-cyan-500 text-white py-3 rounded-xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-cyan-900/20 active:scale-95 transition-all"
+                        onClick={(e) => handlePlayAction(e)}
+                        className="flex-1 bg-cyan-600 hover:bg-cyan-500 text-white p-3 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-cyan-900/40 active:scale-95 transition-all h-[50px]"
                     >
-                        <PlayIcon className="w-4 h-4 fill-current" />
-                        Carregar
+                        <PlayIcon className="w-5 h-5 fill-current" />
+                        LOAD
                     </button>
+                    
                     {onAddToQueue && (
                         <button 
                             onClick={handleAddAction}
-                            className="flex-1 bg-slate-800 hover:bg-slate-700 text-white py-3 rounded-xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 border border-slate-700 active:scale-95 transition-all"
+                            className="bg-slate-800 hover:bg-slate-700 text-white p-3 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 border border-slate-700 active:scale-95 transition-all h-[50px] aspect-square"
                         >
-                            <PlusIcon className="w-4 h-4" />
-                            Queue
+                            <PlusIcon className="w-6 h-6" />
                         </button>
                     )}
                 </div>

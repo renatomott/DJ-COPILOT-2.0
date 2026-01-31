@@ -20,7 +20,9 @@ import {
     AlertTriangleIcon,
     GitMergeIcon,
     PlusIcon,
-    ZapIcon
+    ZapIcon,
+    ArrowUpIcon,
+    MicIcon
 } from './icons';
 import { NowPlaying } from './NowPlaying';
 import { SuggestionPanel } from './SuggestionPanel';
@@ -32,6 +34,10 @@ import { identifyTrackFromImage } from '../services/geminiService';
 import { fileToBase64 } from '../utils/fileUtils';
 import { detectClash } from '../utils/harmonicUtils';
 import { MashupFinder } from './MashupFinder';
+import { getGenreTheme } from '../utils/themeUtils';
+import { TransitionToast } from './TransitionToast';
+import { VoiceSearch } from './VoiceSearch';
+import { SwipeableItem } from './SwipeableItem';
 
 interface MainScreenProps {
   playlist: Track[];
@@ -107,65 +113,56 @@ export const MainScreen: React.FC<MainScreenProps> = ({
   const [expandedTrackId, setExpandedTrackId] = useState<string | null>(null);
   const [isIdentifying, setIsIdentifying] = useState(false);
   const [showImageSourceModal, setShowImageSourceModal] = useState(false);
+  const [showVoiceSearch, setShowVoiceSearch] = useState(false);
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const [transitionToast, setTransitionToast] = useState<{ visible: boolean; data: any } | null>(null);
   
-  // Swipe Logic Refs
-  const touchStartX = useRef(0);
-  const touchStartY = useRef(0);
-
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
   const t = translations[language];
 
-  const triggerHaptic = () => {
-    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(10);
-  };
-
-  // REACTIVE BACKGROUND COLOR
-  const bgGradient = useMemo(() => {
-    if (!currentTrack || isHighContrast) return 'bg-[#020617]';
-    
-    // Determine color based on Key (Camelot simplified) or Energy
-    const key = currentTrack.key || '';
-    let fromColor = 'from-slate-900';
-    let toColor = 'to-black';
-
-    if (key.includes('m')) { // Minor keys = Cooler colors
-        if (key.startsWith('1') || key.startsWith('2')) fromColor = 'from-indigo-950'; // 1A-2A
-        else if (key.startsWith('3') || key.startsWith('4')) fromColor = 'from-green-950'; // 3A-4A
-        else if (key.startsWith('8') || key.startsWith('9')) fromColor = 'from-rose-950'; // 8A-9A (High energy)
-        else fromColor = 'from-slate-900';
-    } else { // Major keys = Warmer colors
-        if (key.startsWith('8') || key.startsWith('9')) fromColor = 'from-orange-950';
-        else fromColor = 'from-cyan-950';
-    }
-
-    return `bg-gradient-to-br ${fromColor} via-slate-950 ${toColor}`;
-  }, [currentTrack, isHighContrast]);
-
-  const handleSwipeStart = (e: React.TouchEvent) => {
-      touchStartX.current = e.touches[0].clientX;
-      touchStartY.current = e.touches[0].clientY;
-  };
-
-  const handleSwipeEnd = (e: React.TouchEvent) => {
-      const touchEndX = e.changedTouches[0].clientX;
-      const touchEndY = e.changedTouches[0].clientY;
-      
-      const diffX = touchEndX - touchStartX.current;
-      const diffY = touchEndY - touchStartY.current;
-
-      // Only horizontal swipes
-      if (Math.abs(diffX) > 80 && Math.abs(diffY) < 60) {
-          const tabs: ('deck' | 'library' | 'mashup' | 'builder' | 'setup')[] = ['deck', 'library', 'mashup', 'builder', 'setup'];
-          const currentIndex = tabs.indexOf(activeTab);
-          
-          if (diffX < 0 && currentIndex < tabs.length - 1) {
-              setActiveTab(tabs[currentIndex + 1]);
-          } else if (diffX > 0 && currentIndex > 0) {
-              setActiveTab(tabs[currentIndex - 1]);
+  // Helper to find predominant color for a folder
+  const getPredominantColor = useMemo(() => (tracks: Track[]) => {
+      const counts: Record<string, number> = {};
+      let maxCount = 0;
+      let dominant = null;
+      for (const t of tracks) {
+          if (t.color) {
+              counts[t.color] = (counts[t.color] || 0) + 1;
+              if (counts[t.color] > maxCount) {
+                  maxCount = counts[t.color];
+                  dominant = t.color;
+              }
           }
       }
+      return dominant || undefined;
+  }, []);
+
+  // Theme Logic
+  const theme = useMemo(() => getGenreTheme(currentTrack), [currentTrack]);
+
+  // Determine current track folder color
+  const currentTrackFolderColor = useMemo(() => {
+    if (!currentTrack || !playlist) return undefined;
+    const folderTracks = playlist.filter(t => t.location === currentTrack.location);
+    return getPredominantColor(folderTracks);
+  }, [currentTrack, playlist, getPredominantColor]);
+
+  // Scroll Listener for FAB
+  useEffect(() => {
+    const handleScroll = () => {
+        const totalScroll = document.documentElement.scrollTop;
+        const windowHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+        const scroll = windowHeight > 0 ? totalScroll / windowHeight : 0;
+        setScrollProgress(Number(scroll));
+    }
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const triggerHaptic = () => {
+    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(10);
   };
 
   const handleSelectTrack = (track: Track) => {
@@ -178,14 +175,29 @@ export const MainScreen: React.FC<MainScreenProps> = ({
       setExpandedTrackId(prev => (prev === trackId ? null : trackId));
   };
 
-  const handleAddToQueue = (e: React.MouseEvent, track: Track) => {
-    e.stopPropagation();
+  const handleAddToQueue = (e: React.MouseEvent | undefined, track: Track) => {
+    e?.stopPropagation();
+    
+    // Calculate transition stats for Toast
+    const referenceTrack = queue.length > 0 ? queue[queue.length - 1] : currentTrack;
+    if (referenceTrack) {
+        setTransitionToast({
+            visible: true,
+            data: {
+                prevBpm: referenceTrack.bpm,
+                newBpm: track.bpm,
+                prevKey: referenceTrack.key,
+                newKey: track.key,
+                prevEnergy: referenceTrack.energy || 3,
+                newEnergy: track.energy || 3
+            }
+        });
+    }
+
     setQueue(prev => [...prev, track]);
-    // Enhanced Visual Feedback could be a toast here, but haptic for now
     triggerHaptic();
   };
 
-  // ... (Identical helper functions from original file: toggleDirectory, toggleFolderAccordion, handleImageUpload, useMemos) ...
   const toggleDirectory = (dir: string) => {
     setEnabledDirectories(
         enabledDirectories.includes(dir) 
@@ -262,30 +274,122 @@ export const MainScreen: React.FC<MainScreenProps> = ({
 
   useMemo(() => { if (searchQuery || filters.keys.length > 0 || filters.genres.length > 0) { setExpandedFolders(Object.keys(groupedPlaylist)); } }, [searchQuery, filters, groupedPlaylist]);
 
-  // SMART CHIPS LOGIC
-  const smartChips = useMemo(() => {
+  // SMART CHIPS / FILTER PILLS
+  const filterPills = useMemo(() => {
       if (!currentTrack) return [];
       const bpm = Math.round(parseFloat(currentTrack.bpm));
+      
+      const targetMinBpm = (bpm - 5).toString();
+      const targetMaxBpm = (bpm + 5).toString();
+      const isBpmActive = filters.minBpm === targetMinBpm && filters.maxBpm === targetMaxBpm;
+      
+      const isKeyActive = filters.keys.includes(currentTrack.key);
+      const isFolderActive = searchQuery === currentTrack.location;
+
       return [
-          { label: `~${bpm} BPM`, action: () => setFilters(prev => ({ ...prev, minBpm: (bpm-5).toString(), maxBpm: (bpm+5).toString() })) },
-          { label: `${currentTrack.key}`, action: () => setFilters(prev => ({ ...prev, keys: [currentTrack.key] })) },
-          { label: `Mesma Pasta`, action: () => { setSearchQuery(currentTrack.location); onGroupingModeChange('all'); } }
+          { 
+              label: `± BPM`, 
+              action: () => setFilters(prev => ({ 
+                  ...prev, 
+                  minBpm: isBpmActive ? '' : targetMinBpm, 
+                  maxBpm: isBpmActive ? '' : targetMaxBpm 
+              })), 
+              active: isBpmActive 
+          },
+          { 
+              label: `Key ${currentTrack.key}`, 
+              action: () => setFilters(prev => ({ 
+                  ...prev, 
+                  keys: isKeyActive ? prev.keys.filter(k => k !== currentTrack.key) : [currentTrack.key] 
+              })), 
+              active: isKeyActive 
+          },
+          { 
+              label: `Same Folder`, 
+              action: () => { 
+                  if (isFolderActive) {
+                      setSearchQuery('');
+                      onGroupingModeChange('folder'); // Reset to default grouping
+                  } else {
+                      setSearchQuery(currentTrack.location); 
+                      onGroupingModeChange('all'); 
+                  }
+              }, 
+              active: isFolderActive 
+          }
       ];
-  }, [currentTrack, onGroupingModeChange]);
+  }, [currentTrack, filters, searchQuery, onGroupingModeChange]);
+
+  const renderTrackItem = (track: Track) => {
+      const item = (
+          <TrackItem 
+              key={track.id} 
+              track={track} 
+              onSelect={handleSelectTrack} 
+              isSelected={currentTrack?.id === track.id} 
+              isExpanded={expandedTrackId === track.id} 
+              onToggleExpand={() => handleToggleExpandTrack(track.id)} 
+              onAddToQueue={handleAddToQueue} 
+              variant={viewMode} 
+              searchQuery={searchQuery} 
+          />
+      );
+
+      // Only enable SwipeableItem for CARD view
+      if (viewMode === 'card') {
+          return (
+              <SwipeableItem 
+                  key={track.id} 
+                  onLeftAction={() => handleSelectTrack(track)} 
+                  onRightAction={() => handleAddToQueue(undefined, track)}
+              >
+                  {item}
+              </SwipeableItem>
+          );
+      }
+
+      return item;
+  };
 
   return (
     <div 
-        className={`min-h-screen text-slate-200 font-sans selection:bg-cyan-500/30 transition-colors duration-1000 ease-in-out ${isHighContrast ? 'contrast-125 grayscale bg-black' : bgGradient} ${!isHighContrast && 'aurora-bg'}`}
-        onTouchStart={handleSwipeStart}
-        onTouchEnd={handleSwipeEnd}
+        className={`min-h-screen text-slate-200 font-sans selection:bg-cyan-500/30 transition-colors duration-1000 ease-in-out ${isHighContrast ? 'contrast-125 grayscale bg-black' : `bg-gradient-to-br ${theme.gradientFrom} via-slate-950 ${theme.gradientTo}`} ${!isHighContrast && 'aurora-bg'}`}
     >
       <Header onReset={onReset} />
       
-      {/* Hidden Inputs */}
+      {/* Toast Notification */}
+      {transitionToast && (
+          <TransitionToast 
+            {...transitionToast.data} 
+            onClose={() => setTransitionToast(null)} 
+          />
+      )}
+
+      {/* Voice Search Modal */}
+      <VoiceSearch 
+        isOpen={showVoiceSearch} 
+        onClose={() => setShowVoiceSearch(false)}
+        onSearch={(query) => { setSearchQuery(query); onGroupingModeChange('all'); }} 
+      />
+
       <input type="file" ref={galleryInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
       <input type="file" ref={cameraInputRef} className="hidden" accept="image/*" capture="environment" onChange={handleImageUpload} />
 
-      {/* Image Source Selection Modal */}
+      {/* Persistent Mini Player */}
+      {currentTrack && activeTab !== 'deck' && (
+          <div className="fixed bottom-[60px] left-0 right-0 z-[85] px-2 animate-in slide-in-from-bottom-2">
+              <div className="bg-slate-900/95 backdrop-blur-md border border-slate-700/50 rounded-xl p-2 flex items-center gap-3 shadow-2xl" onClick={() => setActiveTab('deck')}>
+                  <div className={`w-8 h-8 rounded-full border border-white/10 flex items-center justify-center bg-slate-800 ${theme.primary === 'red' ? 'animate-pulse' : ''}`}>
+                      <PlayIcon className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-white truncate">{currentTrack.name}</p>
+                      <p className="text-[10px] text-slate-400 truncate font-mono">{currentTrack.bpm} BPM • {currentTrack.key}</p>
+                  </div>
+              </div>
+          </div>
+      )}
+
       {showImageSourceModal && (
         <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-4 animate-in fade-in duration-200">
             <div className="bg-slate-900 border border-slate-700 w-full max-w-sm rounded-3xl p-6 shadow-2xl space-y-4 animate-in slide-in-from-bottom-10 duration-300">
@@ -316,8 +420,14 @@ export const MainScreen: React.FC<MainScreenProps> = ({
                     </div>
                 )}
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-                    <div className="md:col-span-12"><NowPlaying track={currentTrack} language={language} /></div>
-                    <div className="md:col-span-12"><SuggestionPanel currentTrack={currentTrack} playlist={playlist.filter(t => enabledDirectories.includes(t.location))} suggestions={suggestions} setSuggestions={setSuggestions} onSelectTrack={handleSelectTrack} onAddToQueue={(t) => setQueue(prev => [...prev, t])} language={language} /></div>
+                    <div className="md:col-span-12">
+                        <NowPlaying 
+                            track={currentTrack} 
+                            language={language} 
+                            folderColor={currentTrackFolderColor}
+                        />
+                    </div>
+                    <div className="md:col-span-12"><SuggestionPanel currentTrack={currentTrack} playlist={playlist.filter(t => enabledDirectories.includes(t.location))} suggestions={suggestions} setSuggestions={setSuggestions} onSelectTrack={handleSelectTrack} onAddToQueue={(t) => handleAddToQueue(undefined, t)} language={language} /></div>
                 </div>
               </>
             ) : (
@@ -338,21 +448,31 @@ export const MainScreen: React.FC<MainScreenProps> = ({
         {/* TAB: LIBRARY */}
         {activeTab === 'library' && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="flex gap-2 mb-2">
+            {/* Search Bar Row */}
+            <div className="flex gap-2 mb-2 sticky top-[72px] z-30 bg-[#020617]/90 backdrop-blur-sm p-1 rounded-2xl">
+                <button 
+                    onClick={() => setShowVoiceSearch(true)}
+                    className="p-3 bg-slate-900 border border-slate-800 rounded-xl text-cyan-400 hover:text-white transition-colors"
+                >
+                    <MicIcon className="w-5 h-5" />
+                </button>
                 <div className="relative flex-1">
-                    <input type="text" placeholder={t.searchPlaceholder} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-2xl px-5 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all pl-11 min-h-[50px]" />
+                    <input type="text" placeholder={t.searchPlaceholder} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-slate-900 border border-slate-800 rounded-xl px-5 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all pl-11 min-h-[50px]" />
                     <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                 </div>
-                <button onClick={() => onViewModeChange(viewMode === 'card' ? 'list' : 'card')} className={`px-4 rounded-2xl border transition-all flex items-center justify-center ${viewMode === 'list' ? 'bg-cyan-600 border-cyan-400 text-white' : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-cyan-400'}`} title="Alternar Visualização">{viewMode === 'card' ? <LayersIcon className="w-5 h-5" /> : <ListIcon className="w-5 h-5" />}</button>
-                <button onClick={() => onGroupingModeChange(groupingMode === 'all' ? 'folder' : 'all')} className={`px-4 rounded-2xl border transition-all flex items-center justify-center ${groupingMode === 'folder' ? 'bg-cyan-600 border-cyan-400 text-white' : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-cyan-400'}`} title="Agrupar por Pastas"><FolderIcon className="w-5 h-5" /></button>
+                <button onClick={() => onViewModeChange(viewMode === 'card' ? 'list' : 'card')} className={`px-4 rounded-xl border transition-all flex items-center justify-center ${viewMode === 'list' ? 'bg-cyan-600 border-cyan-400 text-white' : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-cyan-400'}`} title="Alternar Visualização">{viewMode === 'card' ? <LayersIcon className="w-5 h-5" /> : <ListIcon className="w-5 h-5" />}</button>
             </div>
 
-            {/* Smart Chips */}
+            {/* Quick Filter Pills (Context Aware) */}
             {currentTrack && (
-                <div className="flex gap-2 mb-3 overflow-x-auto custom-scrollbar pb-1">
-                    {smartChips.map((chip, idx) => (
-                        <button key={idx} onClick={chip.action} className="bg-white/10 hover:bg-cyan-600 hover:text-white px-3 py-1 rounded-full text-[10px] font-bold text-cyan-300 border border-white/5 whitespace-nowrap transition-colors">
-                            {chip.label}
+                <div className="flex gap-2 mb-3 overflow-x-auto custom-scrollbar pb-1 sticky top-[130px] z-20 pl-1">
+                    {filterPills.map((pill, idx) => (
+                        <button 
+                            key={idx} 
+                            onClick={pill.action} 
+                            className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider border whitespace-nowrap transition-all shadow-sm ${pill.active ? 'bg-cyan-600 text-white border-cyan-400' : 'bg-slate-900/80 text-slate-400 border-slate-700 hover:border-cyan-500 hover:text-white'}`}
+                        >
+                            {pill.label}
                         </button>
                     ))}
                 </div>
@@ -369,29 +489,62 @@ export const MainScreen: React.FC<MainScreenProps> = ({
                 </div>
                 {groupingMode === 'all' ? (
                     <div className={viewMode === 'card' ? 'grid grid-cols-1 md:grid-cols-2 gap-2' : 'space-y-1.5'}>
-                        {filteredPlaylist.map(track => (<TrackItem key={track.id} track={track} onSelect={handleSelectTrack} isSelected={currentTrack?.id === track.id} isExpanded={expandedTrackId === track.id} onToggleExpand={() => handleToggleExpandTrack(track.id)} onAddToQueue={handleAddToQueue} variant={viewMode} />))}
+                        {filteredPlaylist.map(track => renderTrackItem(track))}
                     </div>
                 ) : (
                     <div className="space-y-3">
-                        {Object.entries(groupedPlaylist).map(([folder, tracks]: [string, Track[]]) => (
-                            <div key={folder} className="bg-slate-900/40 rounded-2xl border border-slate-800 overflow-hidden">
-                                <button onClick={() => toggleFolderAccordion(folder)} className="w-full p-4 flex items-center justify-between hover:bg-white/5 transition-colors sticky top-0 z-10 bg-slate-900/90 backdrop-blur-sm"><div className="flex items-center gap-3 overflow-hidden"><FolderIcon className="w-4 h-4 text-cyan-500 flex-shrink-0" /><span className="text-xs font-bold uppercase text-white break-words text-left">{folder}</span><span className="text-xs font-bold text-slate-500 bg-black/40 px-2 py-0.5 rounded-full flex-shrink-0">{tracks.length}</span></div><ChevronDownIcon className={`w-4 h-4 text-slate-500 transition-transform duration-300 flex-shrink-0 ${expandedFolders.includes(folder) ? 'rotate-180' : ''}`} /></button>
-                                {expandedFolders.includes(folder) && (<div className={`p-2 border-t border-slate-800 bg-black/20 animate-in slide-in-from-top-2 ${viewMode === 'card' ? 'grid grid-cols-1 md:grid-cols-2 gap-2' : 'space-y-0.5'}`}>{tracks.map(track => (<TrackItem key={track.id} track={track} onSelect={handleSelectTrack} isSelected={currentTrack?.id === track.id} isExpanded={expandedTrackId === track.id} onToggleExpand={() => handleToggleExpandTrack(track.id)} onAddToQueue={handleAddToQueue} variant={viewMode} />))}</div>)}
-                            </div>
-                        ))}
+                        {Object.entries(groupedPlaylist).map(([folder, tracks]: [string, Track[]]) => {
+                            const folderColor = getPredominantColor(tracks) || '';
+                            
+                            return (
+                                <div key={folder} className="bg-slate-900/40 rounded-2xl border border-slate-800 overflow-hidden">
+                                    <button onClick={() => toggleFolderAccordion(folder)} className="w-full p-4 flex items-center justify-between hover:bg-white/5 transition-colors sticky top-0 z-10 bg-slate-900/90 backdrop-blur-sm"><div className="flex items-center gap-3 overflow-hidden">
+                                        <div style={{ color: folderColor || '#06b6d4' }}>
+                                            <FolderIcon className="w-4 h-4 flex-shrink-0" />
+                                        </div>
+                                        <span className="text-xs font-bold uppercase text-white break-words text-left">{folder}</span><span className="text-xs font-bold text-slate-500 bg-black/40 px-2 py-0.5 rounded-full flex-shrink-0">{tracks.length}</span></div><ChevronDownIcon className={`w-4 h-4 text-slate-500 transition-transform duration-300 flex-shrink-0 ${expandedFolders.includes(folder) ? 'rotate-180' : ''}`} /></button>
+                                    {expandedFolders.includes(folder) && (
+                                        <div className={`p-2 border-t border-slate-800 bg-black/20 animate-in slide-in-from-top-2 ${viewMode === 'card' ? 'grid grid-cols-1 md:grid-cols-2 gap-2' : 'space-y-0.5'}`}>
+                                            {tracks.map(track => renderTrackItem(track))}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
                     </div>
                 )}
             </div>
-            {/* Contextual FAB for Library */}
-            <div className="fixed bottom-24 right-4 z-50">
-                 <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="w-12 h-12 bg-cyan-600 rounded-full shadow-2xl flex items-center justify-center text-white active:scale-90 transition-transform"><SearchIcon className="w-5 h-5" /></button>
-            </div>
+            
+            {/* Scroll Progress FAB */}
+            {activeTab === 'library' && (
+                <div className="fixed bottom-24 right-4 z-50">
+                     <button 
+                        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} 
+                        className="w-12 h-12 bg-cyan-600 rounded-full shadow-2xl flex items-center justify-center text-white active:scale-90 transition-transform relative group overflow-hidden"
+                     >
+                        {/* Circular Progress SVG */}
+                        <svg className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none" viewBox="0 0 100 100">
+                            <circle cx="50" cy="50" r="46" stroke="rgba(0,0,0,0.2)" strokeWidth="8" fill="none" />
+                            <circle 
+                                cx="50" cy="50" r="46" 
+                                stroke="white" 
+                                strokeWidth="8" 
+                                fill="none" 
+                                strokeDasharray="289" 
+                                strokeDashoffset={289 - (289 * scrollProgress)} 
+                                className="transition-all duration-100 ease-linear"
+                            />
+                        </svg>
+                        <ArrowUpIcon className="w-5 h-5 relative z-10" />
+                     </button>
+                </div>
+            )}
           </div>
         )}
         
-        {/* TAB: MASHUPS (New) */}
+        {/* TAB: MASHUPS */}
         {activeTab === 'mashup' && (
-            <MashupFinder playlist={playlist} onSelectTrack={handleSelectTrack} onAddToQueue={(t) => setQueue(prev => [...prev, t])} language={language} />
+            <MashupFinder playlist={playlist} onSelectTrack={handleSelectTrack} onAddToQueue={(t) => handleAddToQueue(undefined, t)} language={language} />
         )}
 
         {/* TAB: BUILDER */}
@@ -402,6 +555,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({
         {/* TAB: SETUP */}
         {activeTab === 'setup' && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-4 max-w-2xl mx-auto">
+                {/* ... existing setup content ... */}
                 <h2 className="text-2xl font-bold text-white px-2 mb-2">{t.settingsTitle}</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <section className="bg-slate-900/50 border border-slate-800 rounded-3xl p-6 transition-all hover:bg-slate-900/70">

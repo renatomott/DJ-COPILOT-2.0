@@ -2,9 +2,10 @@
 import React, { useState, useMemo, useRef } from 'react';
 import type { Track } from '../types';
 import { TrackItem } from './TrackItem';
-import { TrashIcon, ArrowUpIcon, SaveIcon, DownloadIcon, WandSparklesIcon, RefreshCwIcon, BrainIcon, SparklesIcon, ChevronDownIcon, MusicIcon, PlusIcon, SearchIcon, XIcon, ZapIcon, StarIcon, FolderIcon, ListIcon, ClockIcon, ActivityIcon, UploadIcon, PlayIcon, BarChartIcon } from './icons';
+import { TrashIcon, ArrowUpIcon, SaveIcon, DownloadIcon, WandSparklesIcon, RefreshCwIcon, BrainIcon, SparklesIcon, ChevronDownIcon, MusicIcon, PlusIcon, SearchIcon, XIcon, ZapIcon, StarIcon, FolderIcon, ListIcon, ClockIcon, ActivityIcon, UploadIcon, PlayIcon, BarChartIcon, TrendingUpIcon } from './icons';
 import { translations } from '../utils/translations';
 import { planAutoSet } from '../services/geminiService';
+import { detectClash } from '../utils/harmonicUtils';
 import { Loader } from './Loader';
 // @ts-ignore
 import { jsPDF } from 'jspdf';
@@ -130,16 +131,17 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
   const [isPlanning, setIsPlanning] = useState(false);
   const [mustHaves, setMustHaves] = useState<Track[]>([]);
   const [planSearch, setPlanSearch] = useState('');
-  const [isBrowsingFolders, setIsBrowsingFolders] = useState(false);
-  const [selectedBrowseFolder, setSelectedBrowseFolder] = useState<string | null>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
 
   const [plannerParams, setPlannerParams] = useState({
       progression: 'Rising',
       length: 10,
       isStrict: false,
-      minRating: 0,
-      targetPlaylists: [] as string[]
+      minRating: 3,
+      targetPlaylists: [] as string[],
+      bpmMin: '',
+      bpmMax: '',
+      minEnergy: 0 // 0 = any
   });
 
   const availableFolders = useMemo(() => {
@@ -308,7 +310,15 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
       setIsPlanning(true);
       try {
           const currentTrack = fullPlaylist.find(t => t.id === currentTrackId) || null;
-          const sequence = await planAutoSet(fullPlaylist, currentTrack, mustHaves, plannerParams, language);
+          
+          const params = {
+              ...plannerParams,
+              bpmRange: (plannerParams.bpmMin && plannerParams.bpmMax) 
+                  ? { min: parseFloat(plannerParams.bpmMin), max: parseFloat(plannerParams.bpmMax) } 
+                  : undefined
+          };
+
+          const sequence = await planAutoSet(fullPlaylist, currentTrack, mustHaves, params, language);
           if (sequence && sequence.length > 0) {
               setQueue(sequence);
               setShowPlanner(false);
@@ -321,7 +331,7 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
       }
   };
 
-  const filteredLibraryForPlan = useMemo(() => {
+  const filteredSearch = useMemo(() => {
       if (!planSearch || planSearch.length < 2) return [];
       return fullPlaylist.filter(t => 
         (t.name.toLowerCase().includes(planSearch.toLowerCase()) || 
@@ -329,11 +339,6 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
         !mustHaves.find(m => m.id === t.id)
       ).slice(0, 5);
   }, [planSearch, fullPlaylist, mustHaves]);
-
-  const tracksInSelectedFolder = useMemo(() => {
-      if (!selectedBrowseFolder) return [];
-      return fullPlaylist.filter(t => t.location === selectedBrowseFolder);
-  }, [selectedBrowseFolder, fullPlaylist]);
 
   const toggleMustHave = (track: Track) => {
       if (mustHaves.find(m => m.id === track.id)) {
@@ -346,22 +351,15 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
 
   const matchingCount = useMemo(() => {
       return fullPlaylist.filter(t => {
+          const bpm = parseFloat(t.bpm) || 0;
           const matchesRating = t.rating >= plannerParams.minRating;
           const matchesPlaylist = plannerParams.targetPlaylists.length === 0 || plannerParams.targetPlaylists.includes(t.location);
-          return matchesRating && matchesPlaylist;
+          const matchesBpm = (!plannerParams.bpmMin || bpm >= parseFloat(plannerParams.bpmMin)) && 
+                             (!plannerParams.bpmMax || bpm <= parseFloat(plannerParams.bpmMax));
+          const matchesEnergy = (!plannerParams.minEnergy || (t.energy || 0) >= plannerParams.minEnergy);
+          return matchesRating && matchesPlaylist && matchesBpm && matchesEnergy;
       }).length;
-  }, [fullPlaylist, plannerParams.minRating, plannerParams.targetPlaylists]);
-
-  const renderRatingMini = (rating: number) => {
-      const stars = rating > 5 ? Math.round(rating / 20) : rating;
-      return (
-          <div className="flex gap-0.5">
-              {[1, 2, 3, 4, 5].map(s => (
-                  <StarIcon key={s} className={`w-2 h-2 ${s <= stars ? 'text-yellow-500 fill-current' : 'text-white/5'}`} />
-              ))}
-          </div>
-      );
-  };
+  }, [fullPlaylist, plannerParams]);
 
   return (
     <div className="pb-24 animate-in fade-in slide-in-from-right-4 duration-500">
@@ -408,7 +406,6 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
       {queue.length > 0 && <EnergyTimeline queue={queue} />}
 
       {showPlanner && (
-          // Planner Modal Content (same as before, just adding wrapper for better transition potentially later)
           <div className="mb-6 bg-gradient-to-br from-cyan-950/40 via-slate-950 to-black rounded-3xl border border-cyan-500/30 shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden">
                 <div className="p-5 border-b border-white/5 bg-white/5 flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -426,16 +423,134 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
                     </div>
                 </div>
 
-                <div className="p-5 space-y-6">
-                    <div className="flex p-1 bg-black/60 rounded-xl border border-white/5">
-                        <button onClick={() => setPlannerParams(p => ({...p, isStrict: false}))} className={`flex-1 flex items-center justify-center gap-2 py-3 text-[10px] font-bold uppercase rounded-lg transition-all ${!plannerParams.isStrict ? 'bg-slate-800 text-cyan-400 shadow-lg' : 'text-gray-500'}`}>
-                            <SparklesIcon className="w-3 h-3" /> {t.modeInspired}
-                        </button>
-                        <button onClick={() => setPlannerParams(p => ({...p, isStrict: true}))} className={`flex-1 flex items-center justify-center gap-2 py-3 text-[10px] font-bold uppercase rounded-lg transition-all ${plannerParams.isStrict ? 'bg-cyan-600 text-white shadow-lg' : 'text-gray-500'}`}>
-                            <ZapIcon className="w-3 h-3" /> {t.modeStrict}
-                        </button>
+                <div className="p-5 space-y-5">
+                    {/* Row 1: Mode & Length */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="flex p-1 bg-black/60 rounded-xl border border-white/5">
+                            <button onClick={() => setPlannerParams(p => ({...p, isStrict: false}))} className={`flex-1 flex items-center justify-center gap-1 py-3 text-[9px] font-bold uppercase rounded-lg transition-all ${!plannerParams.isStrict ? 'bg-slate-800 text-cyan-400 shadow-lg' : 'text-gray-500'}`}>
+                                Pref.
+                            </button>
+                            <button onClick={() => setPlannerParams(p => ({...p, isStrict: true}))} className={`flex-1 flex items-center justify-center gap-1 py-3 text-[9px] font-bold uppercase rounded-lg transition-all ${plannerParams.isStrict ? 'bg-cyan-600 text-white shadow-lg' : 'text-gray-500'}`}>
+                                Obg.
+                            </button>
+                        </div>
+                        
+                        <div className="flex p-1 bg-black/60 rounded-xl border border-white/5">
+                            {[5, 10, 15, 20].map(len => (
+                                <button key={len} onClick={() => setPlannerParams(p => ({...p, length: len}))} className={`flex-1 py-2 text-[10px] font-bold rounded-lg transition-all ${plannerParams.length === len ? 'bg-cyan-600 text-white' : 'text-gray-500 hover:text-white'}`}>
+                                    {len}
+                                </button>
+                            ))}
+                        </div>
                     </div>
-                    {/* Rest of the planner inputs... */}
+
+                    {/* Row 2: Progression */}
+                    <div>
+                        <label className="text-[9px] font-bold text-white/50 uppercase tracking-wider block mb-2">{t.progression}</label>
+                        <div className="flex gap-2">
+                            {['Linear', 'Rising', 'Chaos'].map(prog => (
+                                <button 
+                                    key={prog}
+                                    onClick={() => setPlannerParams(p => ({...p, progression: prog}))}
+                                    className={`flex-1 py-3 rounded-xl border text-[10px] font-bold uppercase tracking-wider transition-all ${plannerParams.progression === prog ? 'bg-cyan-900/40 border-cyan-500 text-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.2)]' : 'bg-black/40 border-white/5 text-gray-500 hover:border-white/20'}`}
+                                >
+                                    {prog === 'Rising' && <TrendingUpIcon className="w-3 h-3 inline mr-1" />}
+                                    {prog}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Row 3: Technical Filters */}
+                    <div className="grid grid-cols-2 gap-4">
+                        {/* BPM Range */}
+                        <div>
+                            <label className="text-[9px] font-bold text-white/50 uppercase tracking-wider block mb-2">BPM Range</label>
+                            <div className="flex items-center gap-2">
+                                <input 
+                                    type="number" 
+                                    placeholder="Min" 
+                                    value={plannerParams.bpmMin} 
+                                    onChange={(e) => setPlannerParams(p => ({...p, bpmMin: e.target.value}))}
+                                    className="w-full bg-black/60 border border-white/10 rounded-xl p-2 text-center text-xs font-mono text-white focus:border-cyan-500 outline-none" 
+                                />
+                                <span className="text-white/20">-</span>
+                                <input 
+                                    type="number" 
+                                    placeholder="Max" 
+                                    value={plannerParams.bpmMax} 
+                                    onChange={(e) => setPlannerParams(p => ({...p, bpmMax: e.target.value}))}
+                                    className="w-full bg-black/60 border border-white/10 rounded-xl p-2 text-center text-xs font-mono text-white focus:border-cyan-500 outline-none" 
+                                />
+                            </div>
+                        </div>
+
+                        {/* Energy */}
+                        <div>
+                            <label className="text-[9px] font-bold text-white/50 uppercase tracking-wider block mb-2">Min Energy</label>
+                            <div className="flex gap-1 h-[34px]">
+                                {[0, 1, 2, 3, 4, 5].map(lvl => (
+                                    <button 
+                                        key={lvl} 
+                                        onClick={() => setPlannerParams(p => ({...p, minEnergy: lvl}))}
+                                        className={`flex-1 rounded-md text-[10px] font-bold border transition-all ${plannerParams.minEnergy === lvl ? 'bg-cyan-600 border-cyan-400 text-white' : 'bg-black/40 border-white/5 text-gray-600 hover:bg-white/5'}`}
+                                    >
+                                        {lvl === 0 ? 'All' : lvl}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Mandatory Tracks */}
+                    <div className="bg-black/30 rounded-xl p-3 border border-white/5">
+                        <label className="text-[9px] font-bold text-white/50 uppercase tracking-wider block mb-2">{t.mandatoryTracks}</label>
+                        
+                        {/* List Selected */}
+                        {mustHaves.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mb-3">
+                                {mustHaves.map(m => (
+                                    <span key={m.id} className="flex items-center gap-1 bg-cyan-900/30 text-cyan-300 border border-cyan-500/30 px-2 py-1 rounded-lg text-[10px] font-bold">
+                                        {m.name}
+                                        <button onClick={() => toggleMustHave(m)} className="hover:text-white"><XIcon className="w-3 h-3" /></button>
+                                    </span>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Search Input */}
+                        <div className="relative">
+                            <input 
+                                type="text" 
+                                placeholder={t.searchToPlan} 
+                                value={planSearch}
+                                onChange={(e) => setPlanSearch(e.target.value)}
+                                className="w-full bg-black/60 border border-white/10 rounded-xl pl-8 pr-3 py-2 text-xs text-white focus:border-cyan-500 outline-none"
+                            />
+                            <SearchIcon className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-gray-500" />
+                        </div>
+
+                        {/* Search Results Dropdown */}
+                        {filteredSearch.length > 0 && (
+                            <div className="mt-2 space-y-1 max-h-32 overflow-y-auto custom-scrollbar">
+                                {filteredSearch.map(t => (
+                                    <div 
+                                        key={t.id} 
+                                        onClick={() => toggleMustHave(t)}
+                                        className="flex items-center justify-between p-2 hover:bg-white/10 rounded-lg cursor-pointer group"
+                                    >
+                                        <div className="min-w-0">
+                                            <p className="text-xs font-bold text-white truncate">{t.name}</p>
+                                            <p className="text-[10px] text-gray-500 truncate">{t.artist}</p>
+                                        </div>
+                                        <PlusIcon className="w-4 h-4 text-cyan-500 opacity-0 group-hover:opacity-100" />
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Playlists */}
                     <div className="space-y-2">
                         <label className="text-[10px] font-bold text-white/50 uppercase tracking-wider block">{t.targetPlaylists}</label>
                         <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto custom-scrollbar p-1">
@@ -462,15 +577,26 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
                 const isOnAir = track.id === currentTrackId;
                 if (index > 0) {
                     const prev = queue[index-1];
+                    const clashInfo = detectClash(prev.key, prev.bpm, track.key, track.bpm);
                     const bpmDiffVal = parseFloat(track.bpm) - parseFloat(prev.bpm);
                     const bpmDiff = bpmDiffVal > 0 ? `+${bpmDiffVal.toFixed(1)}` : bpmDiffVal.toFixed(1);
+                    
+                    // Visual Connection Line Logic
+                    const lineColor = clashInfo.hasClash 
+                        ? (clashInfo.severity === 'critical' ? 'bg-red-500' : 'bg-yellow-500') 
+                        : 'bg-green-500';
+                    const textColor = clashInfo.hasClash 
+                        ? (clashInfo.severity === 'critical' ? 'text-red-400' : 'text-yellow-400') 
+                        : 'text-green-400';
+
                     transitionInfo = (
                         <div className="flex justify-center items-center py-1 relative">
-                            <div className="h-6 w-px bg-slate-800 absolute top-[-0.75rem]"></div>
-                            <div className="bg-black/60 border border-slate-800/50 rounded-full px-3 py-1 text-[8px] font-mono font-bold text-slate-500 flex gap-3 shadow-sm z-10 scale-90">
-                                <span className={track.key === prev.key ? 'text-cyan-400' : 'text-slate-500'}>{prev.key} → {track.key}</span>
+                            {/* Visual Connection Line */}
+                            <div className={`h-6 w-0.5 ${lineColor} absolute top-[-0.75rem] opacity-50`}></div>
+                            <div className={`bg-black/80 border border-white/5 rounded-full px-3 py-1 text-[8px] font-mono font-bold flex gap-3 shadow-lg z-10 scale-90 ${textColor}`}>
+                                <span className={track.key === prev.key ? 'text-white' : 'text-slate-400'}>{prev.key} → {track.key}</span>
                                 <div className="w-px h-2 bg-slate-700/50 self-center"></div>
-                                <span className={Math.abs(bpmDiffVal) > 5 ? 'text-red-400' : 'text-green-500'}>{bpmDiff} BPM</span>
+                                <span>{bpmDiff} BPM</span>
                             </div>
                         </div>
                     );

@@ -44,6 +44,8 @@ export const planAutoSet = async (
       isStrict: boolean;
       minRating: number;
       targetPlaylists: string[];
+      bpmRange?: { min: number, max: number };
+      minEnergy?: number;
     },
     language: 'pt-BR' | 'en-US' = 'pt-BR'
 ): Promise<Track[]> => {
@@ -52,35 +54,51 @@ export const planAutoSet = async (
         
         let pool = playlist;
 
+        // Pré-filtragem local para otimizar tokens e garantir hard constraints se 'Strict'
         if (params.isStrict) {
             pool = pool.filter(t => {
+                const bpm = parseFloat(t.bpm) || 0;
                 const matchesRating = t.rating >= params.minRating;
                 const matchesPlaylist = params.targetPlaylists.length === 0 || params.targetPlaylists.includes(t.location);
+                const matchesBpm = (!params.bpmRange) || (bpm >= params.bpmRange.min && bpm <= params.bpmRange.max);
+                const matchesEnergy = (!params.minEnergy) || ((t.energy || 0) >= params.minEnergy);
                 const isMustHave = mustHaveTracks.some(m => m.id === t.id);
-                return isMustHave || (matchesRating && matchesPlaylist);
+                
+                return isMustHave || (matchesRating && matchesPlaylist && matchesBpm && matchesEnergy);
             });
         }
 
-        const tracksData = pool.slice(0, 250).map(t => 
-            `ID:${t.id}|${t.name}|${t.key}|${t.bpm}|R:${t.rating}|P:${t.location}`
+        // Se a filtragem estrita remover tudo, volta ao pool original (fallback) para a IA tentar resolver
+        if (pool.length < params.length) {
+            console.warn("Filtros muito estritos, usando pool completo como fallback");
+            pool = playlist;
+        }
+
+        const tracksData = pool.slice(0, 300).map(t => 
+            `ID:${t.id}|${t.name}|Key:${t.key}|BPM:${t.bpm}|Energy:${t.energy || '?'}|Rating:${t.rating}`
         ).join('\n');
 
         const mustHaveIds = mustHaveTracks.map(t => t.id).join(', ');
 
         const prompt = `
         Objetivo: Criar um set de DJ com EXATAMENTE ${params.length} faixas.
-        Estratégia: ${params.progression} (Linear=Vibe constante, Rising=Aumento gradual de energia, Chaos=Variações dinâmicas).
+        Estratégia de Vibe: ${params.progression}.
+        
+        Parametros Desejados:
+        - BPM entre ${params.bpmRange?.min || 0} e ${params.bpmRange?.max || 999}.
+        - Energia Mínima: ${params.minEnergy || 0} (escala 1-5).
+        - Rating Mínimo: ${params.minRating}.
         
         REGRAS CRÍTICAS:
         1. As seguintes faixas SÃO OBRIGATÓRIAS e DEVEM estar na sequência final: [${mustHaveIds}].
-        2. Encaixe estas faixas obrigatórias na ordem que faça mais sentido harmônico (Camelot) e de energia.
-        3. Preencha as lacunas com outras faixas da biblioteca para atingir o total de ${params.length} faixas.
-        4. ${params.isStrict ? 'RESTRITO A:' : 'PREFERÊNCIA POR (MODO INSPIRADO):'} Rating >= ${params.minRating} e Playlists: [${params.targetPlaylists.join(', ')}].
+        2. Encaixe estas faixas obrigatórias na ordem que faça mais sentido harmônico (Camelot) e de energia segundo a estratégia.
+        3. Preencha as lacunas com outras faixas da biblioteca fornecida.
+        4. O set deve ter coesão harmônica (mixagem em tom compatível).
         5. Se possível, comece com: ${startTrack ? `${startTrack.name} (ID:${startTrack.id})` : 'A melhor opção'}.
         
-        Retorne APENAS um JSON com o array de IDs: { "ids": ["id1", "id2", ...] }.
+        Retorne APENAS um JSON com o array de IDs na ordem de mixagem: { "ids": ["id1", "id2", ...] }.
         
-        Biblioteca disponível:
+        Biblioteca Disponível:
         ${tracksData}
         `;
 
@@ -100,7 +118,15 @@ export const planAutoSet = async (
 
         const parsed = JSON.parse(response.text || '{"ids":[]}');
         const ids = Array.isArray(parsed.ids) ? parsed.ids : [];
-        return ids.map((id: string) => playlist.find(t => t.id === id)).filter((t: any) => !!t);
+        
+        // Reconstrói objetos mantendo a ordem da IA
+        const orderedTracks: Track[] = [];
+        ids.forEach((id: string) => {
+            const track = playlist.find(t => t.id === id);
+            if (track) orderedTracks.push(track);
+        });
+        
+        return orderedTracks;
     } catch (err) {
         handleApiError(err, "planAutoSet");
         return [];
@@ -207,7 +233,7 @@ export const getTrackSuggestions = async (currentTrack: Track, playlist: Track[]
     const availableTracks = candidates.sort(() => 0.5 - Math.random()).slice(0, 80).map(t => `ID: ${t.id}, "${t.name}" (${t.bpm} BPM, Tom: ${t.key})`).join('\n');
     if (!availableTracks) return { suggestions: [], cuePoints: [] };
     const langInstruction = language === 'pt-BR' ? 'Português do Brasil' : 'Inglês (English)';
-    const prompt = `Faixa atual: "${currentTrack.name}" (${currentTrack.bpm} BPM, Tom ${currentTrack.key}). Analise as faixas disponíveis e sugira as 5 melhores combinações. Retorne JSON com "suggestions" (id, matchScore, reason em ${langInstruction}) e "cuePoints" (strings).\n\n${availableTracks}`;
+    const prompt = `Faixa atual: "${currentTrack.name}" (${currentTrack.bpm} BPM, Tom ${currentTrack.key}). Analise as faixas disponíveis e sugira as 5 melhores combinações. Retorne JSON com "suggestions" (id, matchScore de 0 a 100, reason em ${langInstruction}) e "cuePoints" (strings).\n\n${availableTracks}`;
     const response = await ai.models.generateContent({
       model: textModel,
       contents: prompt,
@@ -236,7 +262,18 @@ export const getTrackSuggestions = async (currentTrack: Track, playlist: Track[]
     const data = JSON.parse(response.text || "{}");
     const suggestions = (data.suggestions || []).map((s: any) => {
       const t = playlist.find(track => track.id === s.id);
-      return t ? { ...t, matchScore: s.matchScore, reason: s.reason } : null;
+      
+      // Fix for "1%" issue: Normalize Match Score
+      let score = s.matchScore;
+      // If score is 0-1, multiply by 100. If score is ~1 (like 0.99), make it 99.
+      if (score <= 1) {
+          score = Math.round(score * 100);
+      }
+      // Safety cap
+      if (score > 100) score = 100;
+      // If after calc score is 1 (meaning it was 0.01), it's probably low confidence or scale error, but let's keep it.
+      
+      return t ? { ...t, matchScore: score, reason: s.reason } : null;
     }).filter((s: any) => s !== null);
     return { suggestions, cuePoints: data.cuePoints || [] };
   } catch (err) {

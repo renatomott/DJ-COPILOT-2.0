@@ -25,6 +25,7 @@ export const SuggestionPanel: React.FC<SuggestionPanelProps> = ({ currentTrack, 
   
   const t = translations[language];
   const isFetching = useRef(false);
+  const lastTrackId = useRef<string | null>(null);
 
   const handleDismiss = (trackId: string) => {
     setSuggestions(prev => prev.filter(s => s.id !== trackId));
@@ -33,8 +34,10 @@ export const SuggestionPanel: React.FC<SuggestionPanelProps> = ({ currentTrack, 
   const loadSuggestions = useCallback(async (force: boolean = false) => {
     if (!currentTrack) return;
     
-    // Se já temos sugestões e não foi um refresh forçado, não faça nada
-    if (!force && suggestions.length > 0) {
+    // Logic update: If track changed, we MUST load, regardless of force flag
+    const trackChanged = lastTrackId.current !== currentTrack.id;
+    
+    if (!force && !trackChanged && suggestions.length > 0) {
       return;
     }
 
@@ -43,6 +46,12 @@ export const SuggestionPanel: React.FC<SuggestionPanelProps> = ({ currentTrack, 
     setIsLoading(true);
     setError(null);
     isFetching.current = true;
+    
+    // Clear old suggestions if track changed to avoid confusion
+    if (trackChanged) {
+        setSuggestions([]);
+        lastTrackId.current = currentTrack.id;
+    }
 
     try {
       const { suggestions: result, cuePoints } = await getTrackSuggestions(currentTrack, playlist, [], language);
@@ -83,9 +92,12 @@ export const SuggestionPanel: React.FC<SuggestionPanelProps> = ({ currentTrack, 
       }
   };
 
+  // Trigger load whenever currentTrack ID changes
   useEffect(() => {
-    loadSuggestions();
-  }, [currentTrack.id, loadSuggestions]);
+    if (currentTrack?.id) {
+        loadSuggestions(true); // Force load for new track
+    }
+  }, [currentTrack?.id]); 
 
   const handleRefresh = (e: React.MouseEvent) => {
     e.stopPropagation();

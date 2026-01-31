@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { MusicIcon } from './icons';
 
 interface SkeletonLoaderProps {
   variant?: 'card' | 'list';
@@ -21,10 +22,12 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({ variant = 'card'
     );
   }
 
-  // Card Variant
+  // Card Variant - Vinyl Style
   return (
     <div className={`bg-slate-900/40 border border-slate-800 rounded-xl p-3 mb-2 flex items-center gap-3 ${shimmer}`}>
-      <div className="w-14 h-14 sm:w-16 sm:h-16 bg-slate-800 rounded-xl flex-shrink-0"></div>
+      <div className="w-14 h-14 sm:w-16 sm:h-16 bg-slate-800 rounded-full flex-shrink-0 flex items-center justify-center border border-white/5">
+          <div className="w-6 h-6 bg-slate-700 rounded-full animate-pulse"></div>
+      </div>
       <div className="flex-1 min-w-0 py-1">
         <div className="space-y-2 mb-3">
           <div className="h-4 bg-slate-800 rounded w-3/4"></div>
