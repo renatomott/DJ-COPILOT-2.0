@@ -73,9 +73,8 @@ export const NowPlaying: React.FC<NowPlayingProps> = ({ track, language }) => {
             }}
         />
 
-        {/* 2. Predominantly Black Overlay - Balanced for Deep Black + Glow */}
-        {/* 70% Black opacity ensures the card looks black, but the intense 100% glow behind it shines through as a deep tint */}
-        <div className="absolute inset-0 z-0 bg-black/70 backdrop-blur-3xl transition-colors duration-500" />
+        {/* 2. Predominantly Black Overlay - Increased Transparency as requested */}
+        <div className="absolute inset-0 z-0 bg-black/30 backdrop-blur-3xl transition-colors duration-500" />
 
         {/* 3. Optional Visual Texture from Track */}
         {track.visualUrl && (

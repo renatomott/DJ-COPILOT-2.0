@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect } from 'react';
 import type { Suggestion, Track } from '../types';
 import { ClockIcon, PlayIcon, XIcon, ActivityIcon, StarIcon, FolderIcon, ZapIcon, BrainIcon, PlusIcon } from './icons';
@@ -73,9 +72,16 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
   const scoreColor = matchScoreDisplay >= 90 ? 'text-green-400' : 
                      matchScoreDisplay >= 75 ? 'text-cyan-400' : 'text-yellow-400';
 
-  const isBpmMatch = Math.abs(parseFloat(currentTrack.bpm) - parseFloat(suggestion.bpm)) < 1.0;
+  const bpmCurrent = parseFloat(currentTrack.bpm);
+  const bpmSuggestion = parseFloat(suggestion.bpm);
+  const isBpmMatch = Math.abs(bpmCurrent - bpmSuggestion) < 1.0;
   const isKeyMatch = currentTrack.key === suggestion.key;
   
+  // BPM Difference Calculation
+  const bpmDiff = bpmSuggestion - bpmCurrent;
+  const bpmDiffFormatted = (bpmDiff > 0 ? '+' : '') + bpmDiff.toFixed(1);
+  const bpmDiffColor = Math.abs(bpmDiff) > 6 ? 'text-red-400' : Math.abs(bpmDiff) > 3 ? 'text-yellow-400' : 'text-gray-400';
+
   // Gold Outline Logic
   const goldBorderClass = "ring-1 ring-yellow-500/80 bg-yellow-900/20";
   const defaultBorderClass = "border border-white/10 bg-black/40";
@@ -113,10 +119,6 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                   className="w-full h-full"
                   priority={isExpanded}
                 />
-                {/* Play Overlay */}
-                <div className={`absolute inset-0 bg-black/30 flex items-center justify-center ${isExpanded ? 'opacity-100' : 'opacity-0'}`}>
-                    {isExpanded && <PlayIcon className="w-8 h-8 text-white/80" />}
-                </div>
               </div>
             </div>
 
@@ -191,30 +193,33 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                 {/* A. Data Grid (Match, BPM, Key, Time) */}
                 <div className="grid grid-cols-4 gap-2">
                     {/* Match */}
-                    <div className="bg-black/40 rounded border border-white/10 p-1.5 flex flex-col items-center">
+                    <div className="bg-black/40 rounded border border-white/10 p-1.5 flex flex-col items-center justify-center">
                         <BrainIcon className={`w-3.5 h-3.5 mb-0.5 ${scoreColor}`} />
                         <span className={`text-sm font-black ${scoreColor}`}>{matchScoreDisplay}%</span>
                     </div>
                     {/* BPM */}
-                    <div className={`rounded p-1.5 flex flex-col items-center ${isBpmMatch ? goldBorderClass : defaultBorderClass}`}>
+                    <div className={`rounded p-1.5 flex flex-col items-center justify-center ${isBpmMatch ? goldBorderClass : defaultBorderClass}`}>
                         <span className="text-[9px] text-gray-500 uppercase font-bold">BPM</span>
-                        <span className={`text-sm font-mono font-black ${isBpmMatch ? 'text-yellow-400' : 'text-white'}`}>{suggestion.bpm}</span>
+                        <div className="flex flex-col items-center leading-none">
+                            <span className={`text-sm font-mono font-black ${isBpmMatch ? 'text-yellow-400' : 'text-white'}`}>{suggestion.bpm}</span>
+                            <span className={`text-[9px] font-mono font-bold ${bpmDiffColor}`}>{bpmDiffFormatted}</span>
+                        </div>
                     </div>
                     {/* Key */}
-                    <div className={`rounded p-1.5 flex flex-col items-center ${isKeyMatch ? goldBorderClass : defaultBorderClass}`}>
+                    <div className={`rounded p-1.5 flex flex-col items-center justify-center ${isKeyMatch ? goldBorderClass : defaultBorderClass}`}>
                         <span className="text-[9px] text-gray-500 uppercase font-bold">Key</span>
                         <span className={`text-sm font-mono font-black ${isKeyMatch ? 'text-yellow-400' : suggestion.key.includes('m') ? 'text-cyan-400' : 'text-pink-400'}`}>{suggestion.key}</span>
                     </div>
                     {/* Time */}
-                    <div className="bg-black/40 rounded border border-white/10 p-1.5 flex flex-col items-center">
+                    <div className="bg-black/40 rounded border border-white/10 p-1.5 flex flex-col items-center justify-center">
                         <ClockIcon className="w-3.5 h-3.5 mb-0.5 text-gray-500" />
                         <span className="text-sm font-mono font-black text-gray-300">{suggestion.duration}</span>
                     </div>
                 </div>
 
-                {/* B. Reason */}
-                <div className="bg-white/5 rounded-lg p-2.5 border border-white/5">
-                    <p className="text-[11px] text-gray-300 italic leading-relaxed text-center">
+                {/* B. Reason - Increased Font Size */}
+                <div className="bg-white/5 rounded-lg p-3 border border-white/5">
+                    <p className="text-sm text-gray-200 italic leading-relaxed text-center font-medium">
                         "{suggestion.reason}"
                     </p>
                 </div>

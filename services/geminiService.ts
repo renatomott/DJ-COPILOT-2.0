@@ -233,7 +233,22 @@ export const getTrackSuggestions = async (currentTrack: Track, playlist: Track[]
     const availableTracks = candidates.sort(() => 0.5 - Math.random()).slice(0, 80).map(t => `ID: ${t.id}, "${t.name}" (${t.bpm} BPM, Tom: ${t.key})`).join('\n');
     if (!availableTracks) return { suggestions: [], cuePoints: [] };
     const langInstruction = language === 'pt-BR' ? 'Português do Brasil' : 'Inglês (English)';
-    const prompt = `Faixa atual: "${currentTrack.name}" (${currentTrack.bpm} BPM, Tom ${currentTrack.key}). Analise as faixas disponíveis e sugira as 5 melhores combinações. Retorne JSON com "suggestions" (id, matchScore, reason em ${langInstruction}) e "cuePoints" (strings).\n\n${availableTracks}`;
+    
+    // Updated prompt with stricter BPM constraints
+    const prompt = `
+    Faixa atual: "${currentTrack.name}" (${currentTrack.bpm} BPM, Tom ${currentTrack.key}). 
+    
+    Analise as faixas disponíveis e sugira as 5 melhores combinações para um set de DJ.
+    
+    REGRAS DE MATCH SCORE (0.0 a 1.0):
+    1. PROXIMIDADE DE BPM É CRÍTICA. Se a diferença for maior que 8%, o matchScore DEVE ser menor que 0.5.
+    2. Priorize BPMs compatíveis (+/- 4%).
+    3. Considere mistura harmônica (Camelot Wheel).
+    4. matchScore acima de 0.9 deve ter BPM quase idêntico e tom perfeito.
+    
+    Retorne JSON com "suggestions" (id, matchScore, reason em ${langInstruction}) e "cuePoints" (strings).
+    \n\n${availableTracks}`;
+    
     const response = await ai.models.generateContent({
       model: textModel,
       contents: prompt,
