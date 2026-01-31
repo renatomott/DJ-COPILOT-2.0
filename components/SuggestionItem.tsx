@@ -169,6 +169,11 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                              <span className={`text-[11px] md:text-sm font-mono font-black px-1.5 py-0.5 rounded ${isKeyMatch ? 'text-yellow-400 ring-1 ring-yellow-500/50' : suggestion.key.includes('m') ? 'text-cyan-300 bg-cyan-950/30' : 'text-pink-300 bg-pink-950/30'}`}>
                                 {suggestion.key}
                              </span>
+
+                             {/* Duration (Tablet Only) */}
+                             <span className="hidden md:block text-[11px] md:text-sm font-mono font-bold text-slate-400 bg-white/5 px-1.5 py-0.5 rounded">
+                                {suggestion.duration}
+                             </span>
                          </div>
 
                          {/* Row B: Metadata (Folder, Duration, Rating) */}
@@ -185,7 +190,8 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
 
                             {/* Right: Duration & Stars */}
                             <div className="flex items-center gap-2 flex-shrink-0 pl-2">
-                                <span className="text-[10px] font-mono text-slate-500 font-bold">{suggestion.duration}</span>
+                                {/* Duration (Mobile Only - Hidden on Tablet because it's on top row) */}
+                                <span className="text-[10px] font-mono text-slate-500 font-bold md:hidden">{suggestion.duration}</span>
                                 {renderRating(suggestion.rating, "w-2 h-2")}
                             </div>
                          </div>

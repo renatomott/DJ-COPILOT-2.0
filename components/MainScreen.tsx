@@ -609,7 +609,9 @@ export const MainScreen: React.FC<MainScreenProps> = ({
                                     className={`w-full text-left px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-between group truncate ${enabledDirectories.length === 1 && enabledDirectories[0] === dir ? 'bg-cyan-600/20 text-cyan-400 border border-cyan-500/20' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}
                                 >
                                     <div className="flex items-center gap-2 truncate">
-                                        <FolderIcon className="w-4 h-4 flex-shrink-0" style={{ color: dirColor || '#475569' }} />
+                                        <div style={{ color: dirColor || '#475569' }}>
+                                            <FolderIcon className="w-4 h-4 flex-shrink-0" />
+                                        </div>
                                         <span className="truncate">{dir}</span>
                                     </div>
                                     {enabledDirectories.length === 1 && enabledDirectories[0] === dir && <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full"></div>}

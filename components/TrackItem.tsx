@@ -72,7 +72,8 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
   const matchStyle = "ring-1 ring-yellow-500/80 shadow-[0_0_8px_rgba(234,179,8,0.3)] text-yellow-400";
   
   // Dynamic Border/Glow based on track color
-  const trackColor = track.color || '#334155';
+  // Default to WHITE if no color is assigned, as requested.
+  const trackColor = track.color || '#FFFFFF';
   const glowColor = hexToRgba(trackColor, 0.4);
 
   // Common Container Styles (Matching SuggestionItem)
@@ -222,6 +223,12 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
                             <span className={`text-[11px] md:text-sm font-mono font-black px-1.5 py-0.5 rounded ${isKeyMatch ? matchStyle : track.key.includes('m') ? 'text-cyan-300 bg-cyan-950/30' : 'text-pink-300 bg-pink-950/30'}`}>
                                 {track.key}
                             </span>
+                            
+                            {/* Duration (Tablet Only) */}
+                            <span className="hidden md:block text-[11px] md:text-sm font-mono font-bold text-slate-400 bg-white/5 px-1.5 py-0.5 rounded">
+                                {track.duration}
+                            </span>
+
                              {/* Energy Mini */}
                              {track.energy && (
                                 <div className="bg-black/40 px-1.5 py-1 rounded border border-white/5 flex items-center gap-1">
@@ -245,7 +252,8 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
                             
                             {/* Time & Rating */}
                             <div className="flex items-center gap-2 flex-shrink-0 pl-2">
-                                <span className="text-xs font-mono text-slate-500 font-bold">{track.duration}</span>
+                                {/* Duration (Mobile Only - Hidden on Tablet because it's on top row) */}
+                                <span className="text-xs font-mono text-slate-500 font-bold md:hidden">{track.duration}</span>
                                 {renderRating(track.rating, "w-3 h-3")}
                             </div>
                         </div>
