@@ -76,8 +76,8 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
   const onAirClasses = "bg-cyan-500/10 border-cyan-400 shadow-[0_0_20px_rgba(34,211,238,0.3)] animate-pulse-onair ring-2 ring-cyan-400/50 ring-offset-2 ring-offset-black";
   const defaultClasses = "bg-slate-900/40 border-slate-800 hover:bg-slate-800 hover:border-slate-600";
 
-  // Standard height for retracted cards to avoid jumping content
-  const cardHeightClass = (!isList && !isExpanded) ? 'h-[74px]' : '';
+  // CHANGED: Replaced fixed height 'h-[74px]' with 'min-h-[90px] h-auto' to allow content to grow and prevent cutting off.
+  const cardHeightClass = (!isList && !isExpanded) ? 'min-h-[90px] h-auto' : '';
 
   useEffect(() => {
     if (isExpanded && cardRef.current && !isList) {
