@@ -549,7 +549,8 @@ export const MainScreen: React.FC<MainScreenProps> = ({
                 </div>
                 {groupingMode === 'all' ? (
                     // GRID LAYOUT FOR LARGER SCREENS
-                    <div className={viewMode === 'card' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 md:gap-4' : 'space-y-1.5'}>
+                    // CHANGED: lg:grid-cols-2 instead of 3 to accommodate horizontal tablet request
+                    <div className={viewMode === 'card' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-2 md:gap-4' : 'space-y-1.5'}>
                         {filteredPlaylist.map(track => renderTrackItem(track))}
                     </div>
                 ) : (
@@ -565,7 +566,8 @@ export const MainScreen: React.FC<MainScreenProps> = ({
                                         </div>
                                         <span className="text-xs md:text-sm font-bold uppercase text-white break-words text-left">{folder}</span><span className="text-xs font-bold text-slate-500 bg-black/40 px-2 py-0.5 rounded-full flex-shrink-0">{tracks.length}</span></div><ChevronDownIcon className={`w-4 h-4 text-slate-500 transition-transform duration-300 flex-shrink-0 ${expandedFolders.includes(folder) ? 'rotate-180' : ''}`} /></button>
                                     {expandedFolders.includes(folder) && (
-                                        <div className={`p-2 border-t border-slate-800 bg-black/20 animate-in slide-in-from-top-2 ${viewMode === 'card' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2' : 'space-y-0.5'}`}>
+                                        // CHANGED: lg:grid-cols-2 instead of 3 for inner folder grid as well
+                                        <div className={`p-2 border-t border-slate-800 bg-black/20 animate-in slide-in-from-top-2 ${viewMode === 'card' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-2' : 'space-y-0.5'}`}>
                                             {tracks.map(track => renderTrackItem(track))}
                                         </div>
                                     )}
