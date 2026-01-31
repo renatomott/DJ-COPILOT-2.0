@@ -37,6 +37,7 @@ import { MashupFinder } from './MashupFinder';
 import { getGenreTheme } from '../utils/themeUtils';
 import { TransitionToast } from './TransitionToast';
 import { SwipeableItem } from './SwipeableItem';
+import { MiniPlayer } from './MiniPlayer';
 
 interface MainScreenProps {
   playlist: Track[];
@@ -108,18 +109,6 @@ const NavButton: React.FC<NavButtonProps> = ({ active, onClick, icon, label, bad
         )}
     </button>
 );
-
-// Helper to render stars in the floating bar
-const renderRatingMini = (rating: number) => {
-  const stars = rating > 5 ? Math.round(rating / 20) : rating;
-  return (
-      <div className="flex gap-0.5">
-          {[1, 2, 3, 4, 5].map(s => (
-              <StarIcon key={s} className={`w-2 h-2 ${s <= stars ? 'text-yellow-500 fill-current' : 'text-white/20'}`} />
-          ))}
-      </div>
-  );
-};
 
 export const MainScreen: React.FC<MainScreenProps> = ({
   playlist,
@@ -268,7 +257,9 @@ export const MainScreen: React.FC<MainScreenProps> = ({
   const nextTrackInfo = useMemo(() => {
     if (queue.length === 0) return null;
     const currentIndex = currentTrack ? queue.findIndex(t => t.id === currentTrack.id) : -1;
-    const nextIndex = currentIndex + 1;
+    // If current track is not in queue (or queue is fresh), suggest first. If it is, suggest next.
+    const nextIndex = currentIndex === -1 ? 0 : currentIndex + 1;
+    
     if (nextIndex < queue.length) {
         const nextTrack = queue[nextIndex];
         const clashInfo = currentTrack ? detectClash(currentTrack.key, currentTrack.bpm, nextTrack.key, nextTrack.bpm) : null;
@@ -439,34 +430,13 @@ export const MainScreen: React.FC<MainScreenProps> = ({
       <input type="file" ref={galleryInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
       <input type="file" ref={cameraInputRef} className="hidden" accept="image/*" capture="environment" onChange={handleImageUpload} />
 
-      {/* Persistent Mini Player (Mobile Only) */}
-      {currentTrack && activeTab !== 'deck' && (
-          <div className="md:hidden fixed bottom-[74px] left-0 right-0 z-[85] px-2 animate-in slide-in-from-bottom-2 transition-all duration-300">
-              <div 
-                className="bg-slate-900/95 backdrop-blur-md border border-slate-700/50 rounded-r-xl rounded-l-sm p-2 flex items-center gap-3 shadow-2xl border-l-[6px]" 
-                style={{ borderLeftColor: currentTrack.color || '#FFFFFF' }}
-                onClick={() => setActiveTab('deck')}
-              >
-                  <div className={`w-10 h-10 rounded-md border border-white/10 flex items-center justify-center bg-slate-800 flex-shrink-0 overflow-hidden`}>
-                      <div className="w-full h-full relative">
-                         {/* Simple Icon Fallback or Cover Art if possible (using simple icon for perf on mobile mini player usually, but let's use PlayIcon for now) */}
-                         <div className={`absolute inset-0 flex items-center justify-center ${theme.primary === 'red' ? 'animate-pulse' : ''}`}>
-                            <PlayIcon className="w-5 h-5 text-white" />
-                         </div>
-                      </div>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                      <p className="text-sm font-black text-white truncate">{currentTrack.name}</p>
-                      <div className="flex items-center gap-2 text-xs">
-                        <span className="truncate text-slate-300 font-bold">{currentTrack.artist}</span>
-                        <div className="w-px h-3 bg-slate-600"></div>
-                        <span className="font-mono text-slate-400">{currentTrack.bpm}</span>
-                        <span className={`font-mono font-black ${currentTrack.key.includes('m') ? 'text-cyan-400' : 'text-pink-400'}`}>{currentTrack.key}</span>
-                      </div>
-                  </div>
-              </div>
-          </div>
-      )}
+      {/* Persistent Mini Player (Mobile Only - Replaced by Component in Header usually, but kept for overlay logic if needed) */}
+      {/* Note: The Header Mini Player handles desktop/top mobile. 
+          If a persistent bottom player is needed on other tabs, we can use MiniPlayer component here too. 
+          But req was specifically about ON AIR (Header) and NEXT (Deck tab). 
+      */}
+      
+      {/* ... (Mobile Mini Player code removed/refactored to Header logic mostly, keeping clean) ... */}
 
       {showImageSourceModal && (
         <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-4 animate-in fade-in duration-200">
@@ -521,18 +491,28 @@ export const MainScreen: React.FC<MainScreenProps> = ({
 
                 {/* 2. Right Column: Suggestions (SCROLLABLE ON DESKTOP) */}
                 <div className="md:col-span-7 lg:col-span-7 md:h-full md:overflow-y-auto custom-scrollbar md:pr-2">
-                    {/* Optional Clash Warning inside scroll area or sticky above? Let's put it top of scroll area */}
-                    {nextTrackInfo?.clash?.hasClash && (
-                        <div className="mb-4 bg-red-950/40 border border-red-500/30 rounded-xl p-3 flex items-center gap-3 animate-pulse">
-                            <AlertTriangleIcon className="w-6 h-6 text-red-500" />
-                            <div><p className="text-xs font-bold text-red-400 uppercase tracking-widest">Clash Warning</p><p className="text-[10px] text-red-300/80">{nextTrackInfo.clash.reasons.join(', ')}</p></div>
+                    
+                    {/* --- NEXT TRACK MINI PLAYER (Deck Tab Exclusive) --- */}
+                    {nextTrackInfo && (
+                        <div className="mb-4 animate-in slide-in-from-top-4 duration-500">
+                            <MiniPlayer 
+                                track={nextTrackInfo.track} 
+                                variant="next" 
+                                label="NEXT"
+                                onClick={() => handleSelectTrack(nextTrackInfo.track)}
+                            />
+                            {/* Optional: Compact Warning if Clash detected in Next */}
+                            {nextTrackInfo.clash?.hasClash && (
+                                <div className="mt-1 flex items-center justify-center gap-2 bg-red-950/40 py-1 px-2 rounded-b-lg border-x border-b border-red-500/20 mx-2">
+                                    <AlertTriangleIcon className="w-3 h-3 text-red-500" />
+                                    <span className="text-[10px] text-red-300 font-bold uppercase">{nextTrackInfo.clash.reasons[0]}</span>
+                                </div>
+                            )}
                         </div>
                     )}
+
                     <SuggestionPanel currentTrack={currentTrack} playlist={playlist.filter(t => enabledDirectories.includes(t.location))} suggestions={suggestions} setSuggestions={setSuggestions} onSelectTrack={handleSelectTrack} onAddToQueue={(t) => handleAddToQueue(undefined, t)} language={language} />
                 </div>
-
-                {/* Mobile Next Track Toast (Hidden on Desktop split view usually, or keep it) */}
-                {nextTrackInfo && (<div className="md:hidden fixed bottom-24 left-4 right-4 z-[80] pointer-events-none flex justify-center"><div className={`pointer-events-auto w-full max-w-lg backdrop-blur-xl text-white rounded-2xl p-3 shadow-[0_10px_40px_rgba(0,0,0,0.4)] border flex items-center min-h-[70px] animate-in slide-in-from-bottom-5 active:scale-[0.98] transition-all ${nextTrackInfo.clash?.hasClash ? 'bg-red-950/90 border-red-500/40' : 'bg-cyan-600/90 border-cyan-400/30'}`}><button onClick={(e) => { e.stopPropagation(); triggerHaptic(); handleSelectTrack(nextTrackInfo.track); }} className="bg-black/30 p-3 rounded-xl flex-shrink-0 shadow-inner hover:bg-black/50 transition-colors mr-3 active:scale-90"><PlayIcon className="w-5 h-5 text-white" /></button><div className="flex-1 overflow-hidden"><div className="flex justify-between items-center mb-0.5"><p className="text-[9px] font-bold uppercase tracking-[0.2em] opacity-80 flex items-center gap-2">{nextTrackInfo.clash?.hasClash && <AlertTriangleIcon className="w-3 h-3 text-white animate-pulse" />}{t.nextInQueue}</p><div className="flex items-center gap-1.5 opacity-80"><span className="text-[9px] font-mono text-white">{nextTrackInfo.track.duration}</span>{renderRatingMini(nextTrackInfo.track.rating)}</div></div><p className="text-sm font-bold truncate text-white tracking-tight leading-tight">{nextTrackInfo.track.name}</p><p className="text-[10px] truncate opacity-70 mt-0.5">{nextTrackInfo.track.location}</p></div></div></div>)}
               </div>
             ) : (
               <div className="text-center py-20 flex flex-col items-center justify-center h-full">
@@ -647,13 +627,8 @@ export const MainScreen: React.FC<MainScreenProps> = ({
                 </div>
 
                 {/* Content Render Logic */}
-                {/* 
-                   On Tablet/Desktop: We Force 'all' grouping mode visually because folders are in sidebar.
-                   On Mobile: We respect groupingMode state.
-                */}
                 {(groupingMode === 'all' || window.innerWidth >= 768) ? (
                     // GRID LAYOUT
-                    // CHANGED: 'md:grid-cols-1' ensures 1 card per line on tablet/desktop as requested.
                     <div className={viewMode === 'card' ? 'grid grid-cols-1 md:grid-cols-1 gap-2 md:gap-3' : 'space-y-1.5'}>
                         {filteredPlaylist.length > 0 ? (
                             filteredPlaylist.map(track => renderTrackItem(track))

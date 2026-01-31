@@ -86,22 +86,18 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
   const goldBorderClass = "ring-1 ring-yellow-500/80 bg-yellow-900/20";
   const defaultBorderClass = "border border-white/10 bg-black/40";
 
-  const glowColor = hexToRgba(suggestion.color, 0.4);
+  // FIXED: Default to White if no color, as requested
+  const trackColor = suggestion.color || '#FFFFFF'; 
+  const glowColor = hexToRgba(trackColor, 0.4);
   
-  // Dynamic Border Left Color
-  const leftBorderColor = suggestion.color || '#334155'; // Fallback slate
-
+  // FIXED: Use absolute div for color bar, remove border styles from container
   const containerStyle = isExpanded 
     ? { 
         boxShadow: `0 0 30px -5px ${glowColor}`, 
         borderColor: 'rgba(255,255,255,0.2)',
-        borderLeftColor: leftBorderColor,
-        borderLeftWidth: '6px'
       }
     : { 
         borderColor: 'rgba(255,255,255,0.1)',
-        borderLeftColor: leftBorderColor,
-        borderLeftWidth: '6px'
       };
 
   return (
@@ -116,9 +112,15 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
         <div 
           ref={itemRef}
           onClick={onToggleExpand}
-          className={`relative overflow-hidden transition-all duration-300 border cursor-pointer scroll-mt-24 ${isExpanded ? 'bg-slate-900/90 rounded-xl' : 'bg-black/40 backdrop-blur-md hover:bg-black/50 rounded-lg'}`}
+          className={`relative overflow-hidden transition-all duration-300 border cursor-pointer scroll-mt-24 pl-[6px] ${isExpanded ? 'bg-slate-900/90 rounded-xl' : 'bg-black/40 backdrop-blur-md hover:bg-black/50 rounded-lg'}`}
           style={containerStyle}
         >
+          {/* Robust Color Bar (Absolute positioning prevents loss on style updates) */}
+          <div 
+            className="absolute left-0 top-0 bottom-0 w-[6px] z-10 transition-colors duration-300" 
+            style={{ backgroundColor: trackColor }} 
+          />
+
           {/* --- CONTENT CONTAINER --- */}
           {/* Always Keep Row Layout for Header to save vertical space */}
           <div className={`flex flex-row gap-3 ${isExpanded ? 'p-3 items-start' : 'items-center p-2.5'}`}>

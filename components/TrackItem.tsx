@@ -77,22 +77,17 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
   const glowColor = hexToRgba(trackColor, 0.4);
 
   // Common Container Styles (Matching SuggestionItem)
+  // FIXED: Removed borderLeft properties to avoid conflicts. Used absolute div instead.
   const containerStyle = isExpanded 
     ? { 
         boxShadow: `0 0 30px -5px ${glowColor}`, 
         borderColor: 'rgba(255,255,255,0.2)',
-        borderLeftColor: trackColor,
-        borderLeftWidth: '6px',
-        borderLeftStyle: 'solid'
       }
     : { 
         borderColor: 'rgba(255,255,255,0.1)',
-        borderLeftColor: trackColor,
-        borderLeftWidth: '6px',
-        borderLeftStyle: 'solid'
       };
 
-  const baseClasses = `relative overflow-hidden transition-all duration-300 border cursor-pointer scroll-mt-24`;
+  const baseClasses = `relative overflow-hidden transition-all duration-300 border cursor-pointer scroll-mt-24 pl-[6px]`; // Added padding-left to compensate for the visual bar if needed, or rely on absolute positioning not affecting flow
   const bgClasses = isExpanded ? 'bg-slate-900/90 rounded-xl' : 'bg-black/40 backdrop-blur-md hover:bg-black/50 rounded-lg';
   const onAirClasses = isOnAir ? "ring-2 ring-cyan-400/50 shadow-[0_0_20px_rgba(34,211,238,0.3)] animate-pulse-onair" : "";
 
@@ -176,6 +171,12 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
         className={`${baseClasses} ${bgClasses} ${onAirClasses}`}
         style={containerStyle}
       >
+          {/* Robust Color Bar (Absolute positioning prevents loss on style updates) */}
+          <div 
+            className="absolute left-0 top-0 bottom-0 w-[6px] z-10 transition-colors duration-300" 
+            style={{ backgroundColor: trackColor }} 
+          />
+
           {/* Main Layout: Row (Image Left, Content Right) */}
           <div className={`flex flex-row gap-3 ${isExpanded ? 'p-3 items-start' : 'items-center p-2.5'}`}>
             

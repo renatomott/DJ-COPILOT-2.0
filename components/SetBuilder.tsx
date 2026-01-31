@@ -2,11 +2,10 @@
 import React, { useState, useMemo, useRef } from 'react';
 import type { Track } from '../types';
 import { TrackItem } from './TrackItem';
-import { TrashIcon, ArrowUpIcon, SaveIcon, DownloadIcon, WandSparklesIcon, RefreshCwIcon, BrainIcon, SparklesIcon, ChevronDownIcon, MusicIcon, PlusIcon, SearchIcon, XIcon, ZapIcon, StarIcon, FolderIcon, ListIcon, ClockIcon, ActivityIcon, UploadIcon, PlayIcon, BarChartIcon, TrendingUpIcon } from './icons';
+import { TrashIcon, DownloadIcon, WandSparklesIcon, BrainIcon, SparklesIcon, PlusIcon, SearchIcon, XIcon, ZapIcon, BarChartIcon, TrendingUpIcon, UploadIcon } from './icons';
 import { translations } from '../utils/translations';
 import { planAutoSet } from '../services/geminiService';
 import { detectClash } from '../utils/harmonicUtils';
-import { Loader } from './Loader';
 // @ts-ignore
 import { jsPDF } from 'jspdf';
 // @ts-ignore
@@ -26,7 +25,7 @@ interface SwipeableRowProps {
     onDelete: () => void;
 }
 
-// SwipeableRow implementation remains the same
+// SwipeableRow implementation
 const SwipeableRow: React.FC<SwipeableRowProps> = ({ children, onDelete }) => {
     const [offsetX, setOffsetX] = useState(0);
     const [isSwiping, setIsSwiping] = useState(false);
@@ -131,6 +130,7 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
   const [isPlanning, setIsPlanning] = useState(false);
   const [mustHaves, setMustHaves] = useState<Track[]>([]);
   const [planSearch, setPlanSearch] = useState('');
+  const [expandedKey, setExpandedKey] = useState<string | null>(null); // Manage expansion by unique key
   const importFileRef = useRef<HTMLInputElement>(null);
 
   const [plannerParams, setPlannerParams] = useState({
@@ -166,6 +166,10 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
     }
   };
 
+  const handleToggleExpand = (key: string) => {
+      setExpandedKey(prev => prev === key ? null : key);
+  };
+
   const handleClear = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -181,12 +185,6 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
   const exportBoth = () => {
       exportTXT();
       exportPDF();
-  };
-
-  const exportM3U = () => {
-    if (queue.length === 0) return;
-    const m3uContent = "#EXTM3U\n" + queue.map(t => `#EXTINF:${parseInt(t.duration) || 0},${t.artist} - ${t.name}\n${t.location}`).join('\n');
-    downloadFile(m3uContent, getSuggestedFileName('m3u'), 'audio/x-mpegurl');
   };
 
   const exportTXT = () => {
@@ -404,7 +402,7 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
           
           {queue.length > 0 && <EnergyTimeline queue={queue} />}
 
-          {/* PLANNER UI (Visible on toggle or always visible on desktop if preferred) */}
+          {/* PLANNER UI */}
           {(showPlanner || window.innerWidth >= 768) && (
               <div className={`mb-6 bg-gradient-to-br from-cyan-950/40 via-slate-950 to-black rounded-3xl border border-cyan-500/30 shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden ${window.innerWidth >= 768 && !showPlanner ? 'hidden md:block' : ''}`}>
                     <div className="p-5 border-b border-white/5 bg-white/5 flex items-center justify-between">
@@ -581,6 +579,9 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
                 {queue.map((track, index) => {
                     let transitionInfo = null;
                     const isOnAir = track.id === currentTrackId;
+                    const uniqueKey = `${track.id}-${index}`;
+                    const isExpanded = expandedKey === uniqueKey;
+
                     if (index > 0) {
                         const prev = queue[index-1];
                         const clashInfo = detectClash(prev.key, prev.bpm, track.key, track.bpm);
@@ -609,7 +610,7 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
                     }
 
                     return (
-                        <div key={`${track.id}-${index}`} className="animate-in slide-in-from-left-2" style={{ animationDelay: `${index * 50}ms` }}>
+                        <div key={uniqueKey} className="animate-in slide-in-from-left-2" style={{ animationDelay: `${index * 50}ms` }}>
                             {transitionInfo}
                             <SwipeableRow onDelete={() => handleRemove(index)}>
                                 <div className="relative group flex items-stretch gap-2">
@@ -618,19 +619,24 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
                                         <div className={`flex-1 w-[1px] bg-gradient-to-b ${isOnAir ? 'from-cyan-400' : 'from-slate-700/30'} to-transparent`}></div>
                                     </div>
                                     <div className="flex-1 relative pb-1">
-                                        <div className={`relative overflow-hidden rounded-xl transition-all duration-300 ${isOnAir ? 'ring-2 ring-cyan-400 ring-offset-1 ring-offset-black scale-[1.01] shadow-[0_0_20px_rgba(6,182,212,0.15)]' : 'opacity-80 hover:opacity-100'}`}>
+                                        <div className={`relative overflow-hidden rounded-xl transition-all duration-300 ${isOnAir ? 'ring-2 ring-cyan-400 ring-offset-1 ring-offset-black scale-[1.01] shadow-[0_0_20px_rgba(6,182,212,0.15)]' : 'hover:scale-[1.01]'}`}>
                                             <TrackItem 
                                                 track={track} 
                                                 onSelect={(t) => onSelectTrack(t)} 
                                                 isSelected={currentTrackId === track.id} 
                                                 isOnAir={isOnAir}
+                                                isExpanded={isExpanded}
+                                                onToggleExpand={() => handleToggleExpand(uniqueKey)}
                                             />
-                                            <button 
-                                                onClick={(e) => { e.stopPropagation(); handleRemove(index); }} 
-                                                className="absolute left-2 bottom-2 p-1.5 bg-black/60 hover:bg-red-600 text-red-500 hover:text-white rounded-lg transition-all opacity-0 group-hover:opacity-100 border border-white/10 hover:border-red-500 flex items-center justify-center min-h-[28px] min-w-[28px] z-20 shadow-lg active:scale-90 backdrop-blur-sm"
-                                            >
-                                                <TrashIcon className="w-3.5 h-3.5" />
-                                            </button>
+                                            {/* Only show delete button when NOT expanded to avoid overlaying detail info */}
+                                            {!isExpanded && (
+                                                <button 
+                                                    onClick={(e) => { e.stopPropagation(); handleRemove(index); }} 
+                                                    className="absolute left-2 bottom-2 p-1.5 bg-black/60 hover:bg-red-600 text-red-500 hover:text-white rounded-lg transition-all opacity-0 group-hover:opacity-100 border border-white/10 hover:border-red-500 flex items-center justify-center min-h-[28px] min-w-[28px] z-20 shadow-lg active:scale-90 backdrop-blur-sm"
+                                                >
+                                                    <TrashIcon className="w-3.5 h-3.5" />
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
