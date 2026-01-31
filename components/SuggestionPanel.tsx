@@ -112,7 +112,7 @@ export const SuggestionPanel: React.FC<SuggestionPanelProps> = ({ currentTrack, 
   };
 
   return (
-    <div className="my-6 p-4 bg-gray-900 rounded-2xl border border-gray-800">
+    <div className="mt-1 mb-6 p-3 bg-gray-900 rounded-2xl border border-gray-800">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <BrainIcon className="w-5 h-5 text-purple-400" />

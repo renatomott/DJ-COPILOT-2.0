@@ -436,7 +436,8 @@ export const MainScreen: React.FC<MainScreenProps> = ({
                         <div><p className="text-xs font-bold text-red-400 uppercase tracking-widest">Clash Warning</p><p className="text-[10px] text-red-300/80">{nextTrackInfo.clash.reasons.join(', ')}</p></div>
                     </div>
                 )}
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                {/* Optimized grid with gap-1 for tight layout */}
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-1">
                     <div className="md:col-span-12"><NowPlaying track={currentTrack} language={language} /></div>
                     <div className="md:col-span-12"><SuggestionPanel currentTrack={currentTrack} playlist={playlist.filter(t => enabledDirectories.includes(t.location))} suggestions={suggestions} setSuggestions={setSuggestions} onSelectTrack={handleSelectTrack} onAddToQueue={(t) => handleAddToQueue(undefined, t)} language={language} /></div>
                 </div>
