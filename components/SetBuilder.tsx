@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import type { Track } from '../types';
 import { TrackItem } from './TrackItem';
-import { TrashIcon, DownloadIcon, WandSparklesIcon, BrainIcon, SparklesIcon, PlusIcon, SearchIcon, XIcon, ZapIcon, BarChartIcon, TrendingUpIcon, UploadIcon, LayersIcon, ChevronDownIcon, PlayIcon, ArrowUpIcon } from './icons';
+import { TrashIcon, DownloadIcon, BrainIcon, SparklesIcon, PlusIcon, SearchIcon, XIcon, ZapIcon, TrendingUpIcon, UploadIcon, LayersIcon, PlayIcon } from './icons';
 import { translations } from '../utils/translations';
 import { planAutoSet } from '../services/geminiService';
 import { detectClash } from '../utils/harmonicUtils';
@@ -21,59 +21,6 @@ interface SetBuilderProps {
   fullPlaylist?: Track[];
   enabledDirectories?: string[];
 }
-
-// Simple Energy Timeline Component
-const EnergyTimeline: React.FC<{ queue: Track[] }> = ({ queue }) => {
-    const [isExpanded, setIsExpanded] = useState(false);
-
-    if (queue.length < 2) return null;
-
-    const points = queue.map((t, i) => {
-        const energy = t.energy || 3; // Default to mid if unknown
-        const x = (i / (queue.length - 1)) * 100;
-        const y = 100 - (energy * 20); // Scale 1-5 to 0-100% (inverted for SVG)
-        return `${x},${y}`;
-    }).join(' ');
-
-    return (
-        <div className="mb-4 bg-slate-900/50 rounded-xl border border-white/5 overflow-hidden">
-            <button 
-                onClick={() => setIsExpanded(!isExpanded)}
-                className="w-full flex items-center justify-between p-3 hover:bg-white/5 transition-colors"
-            >
-                <div className="flex items-center gap-2">
-                    <BarChartIcon className="w-4 h-4 text-cyan-400" />
-                    <span className="text-xs font-bold text-white uppercase tracking-widest">Fluxo de Energia</span>
-                </div>
-                <ChevronDownIcon className={`w-4 h-4 text-slate-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
-            </button>
-            
-            {isExpanded && (
-                <div className="h-24 w-full relative p-3 animate-in slide-in-from-top-2">
-                    <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full overflow-visible">
-                        <defs>
-                            <linearGradient id="energyGradient" x1="0" x2="0" y1="0" y2="1">
-                                <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.5" />
-                                <stop offset="100%" stopColor="#22d3ee" stopOpacity="0" />
-                            </linearGradient>
-                        </defs>
-                        <path d={`M0,100 ${points} 100,100`} fill="url(#energyGradient)" />
-                        <polyline points={points} fill="none" stroke="#22d3ee" strokeWidth="2" vectorEffect="non-scaling-stroke" />
-                        {queue.map((t, i) => (
-                            <circle 
-                                key={i} 
-                                cx={(i / (queue.length - 1)) * 100} 
-                                cy={100 - ((t.energy || 3) * 20)} 
-                                r="1.5" 
-                                fill="#fff" 
-                            />
-                        ))}
-                    </svg>
-                </div>
-            )}
-        </div>
-    );
-};
 
 export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelectTrack, currentTrackId, language, fullPlaylist = [], enabledDirectories = [] }) => {
   const t = translations[language];
@@ -387,12 +334,11 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
       
       {/* --- Column 1: Planner & Tools (Sticky on Desktop) --- */}
       <div className="w-full md:col-span-5 lg:col-span-5 flex-shrink-0 md:h-full md:border-r md:border-white/5 bg-[#020617]/95 md:bg-slate-950/40 backdrop-blur-xl md:backdrop-blur-none z-40 transition-all duration-300 flex flex-col rounded-xl overflow-hidden mb-4 md:mb-0">
-          <div className="p-4 border-b border-white/5 space-y-4 overflow-y-auto custom-scrollbar h-full">
-                {/* ... (Header and Planner content remains same) ... */}
+          <div className="p-3 border-b border-white/5 space-y-2 overflow-y-auto custom-scrollbar h-full">
                 
                 {/* Header */}
-                <div className="flex items-center justify-between relative z-30">
-                    <h2 className="text-xl font-bold text-white uppercase tracking-widest flex items-center gap-2">
+                <div className="flex items-center justify-between relative z-30 mb-2">
+                    <h2 className="text-lg font-bold text-white uppercase tracking-widest flex items-center gap-2">
                         <LayersIcon className="w-5 h-5 text-cyan-400" />
                         {t.navBuilder}
                     </h2>
@@ -427,42 +373,37 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
                     </div>
                 </div>
                 
-                {queue.length > 0 && <EnergyTimeline queue={queue} />}
-
-                {/* PLANNER UI */}
+                {/* PLANNER UI - Compact Layout */}
                 {(showPlanner || window.innerWidth >= 768) && (
                     <div className={`bg-gradient-to-br from-cyan-950/20 via-slate-950/50 to-black/50 rounded-2xl border border-cyan-500/20 shadow-lg animate-in fade-in duration-300 overflow-hidden ${window.innerWidth >= 768 && !showPlanner ? 'hidden md:block' : ''}`}>
-                            <div className="p-4 border-b border-white/5 bg-white/5 flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-1.5 bg-cyan-600 rounded-lg shadow-lg shadow-cyan-500/20">
-                                        <BrainIcon className="w-4 h-4 text-white" />
+                            <div className="p-3 border-b border-white/5 bg-white/5 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <div className="p-1 bg-cyan-600 rounded-lg shadow-lg shadow-cyan-500/20">
+                                        <BrainIcon className="w-3.5 h-3.5 text-white" />
                                     </div>
-                                    <div>
-                                        <h3 className="text-sm font-bold text-white uppercase tracking-widest">{t.plannerTitle}</h3>
-                                        <p className="text-[10px] text-cyan-300 font-bold opacity-80">{t.plannerSub}</p>
-                                    </div>
+                                    <h3 className="text-xs font-bold text-white uppercase tracking-widest">{t.plannerTitle}</h3>
                                 </div>
-                                <div className="flex flex-col items-end">
-                                    <span className="text-[10px] font-bold text-white/40 uppercase">{t.matchingTracks}</span>
-                                    <span className="text-sm font-mono font-bold text-cyan-400">{matchingCount}</span>
+                                {/* Simple Count Badge */}
+                                <div className="bg-black/40 px-2 py-1 rounded text-xs font-mono font-bold text-cyan-400 border border-cyan-500/20" title={t.matchingTracks}>
+                                    {matchingCount}
                                 </div>
                             </div>
 
-                            <div className="p-5 space-y-5">
+                            <div className="p-3 space-y-2.5">
                                 {/* Row 1: Mode & Length */}
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="flex p-1 bg-black/60 rounded-xl border border-white/5">
-                                        <button onClick={() => setPlannerParams(p => ({...p, isStrict: false}))} className={`flex-1 flex items-center justify-center gap-1 py-3 text-[10px] font-bold uppercase rounded-lg transition-all ${!plannerParams.isStrict ? 'bg-slate-800 text-cyan-400 shadow-lg' : 'text-gray-500'}`}>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div className="flex p-0.5 bg-black/60 rounded-lg border border-white/5">
+                                        <button onClick={() => setPlannerParams(p => ({...p, isStrict: false}))} className={`flex-1 flex items-center justify-center gap-1 py-2 text-[10px] font-bold uppercase rounded-md transition-all ${!plannerParams.isStrict ? 'bg-slate-800 text-cyan-400 shadow-lg' : 'text-gray-500'}`}>
                                             Pref.
                                         </button>
-                                        <button onClick={() => setPlannerParams(p => ({...p, isStrict: true}))} className={`flex-1 flex items-center justify-center gap-1 py-3 text-[10px] font-bold uppercase rounded-lg transition-all ${plannerParams.isStrict ? 'bg-cyan-600 text-white shadow-lg' : 'text-gray-500'}`}>
+                                        <button onClick={() => setPlannerParams(p => ({...p, isStrict: true}))} className={`flex-1 flex items-center justify-center gap-1 py-2 text-[10px] font-bold uppercase rounded-md transition-all ${plannerParams.isStrict ? 'bg-cyan-600 text-white shadow-lg' : 'text-gray-500'}`}>
                                             Obg.
                                         </button>
                                     </div>
                                     
-                                    <div className="flex p-1 bg-black/60 rounded-xl border border-white/5">
+                                    <div className="flex p-0.5 bg-black/60 rounded-lg border border-white/5">
                                         {[5, 10, 15, 20].map(len => (
-                                            <button key={len} onClick={() => setPlannerParams(p => ({...p, length: len}))} className={`flex-1 py-2 text-[10px] font-bold rounded-lg transition-all ${plannerParams.length === len ? 'bg-cyan-600 text-white' : 'text-gray-500 hover:text-white'}`}>
+                                            <button key={len} onClick={() => setPlannerParams(p => ({...p, length: len}))} className={`flex-1 py-2 text-[10px] font-bold rounded-md transition-all ${plannerParams.length === len ? 'bg-cyan-600 text-white' : 'text-gray-500 hover:text-white'}`}>
                                                 {len}
                                             </button>
                                         ))}
@@ -471,13 +412,13 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
 
                                 {/* Row 2: Progression */}
                                 <div>
-                                    <label className="text-xs font-bold text-white/70 uppercase tracking-wider block mb-2">{t.progression}</label>
-                                    <div className="flex gap-2">
+                                    <label className="text-[10px] font-bold text-white/50 uppercase tracking-wider block mb-1">{t.progression}</label>
+                                    <div className="flex gap-1">
                                         {['Linear', 'Rising', 'Chaos'].map(prog => (
                                             <button 
                                                 key={prog}
                                                 onClick={() => setPlannerParams(p => ({...p, progression: prog}))}
-                                                className={`flex-1 py-3 rounded-xl border text-[10px] font-bold uppercase tracking-wider transition-all ${plannerParams.progression === prog ? 'bg-cyan-900/40 border-cyan-500 text-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.2)]' : 'bg-black/40 border-white/5 text-gray-500 hover:border-white/20'}`}
+                                                className={`flex-1 py-2 rounded-lg border text-[10px] font-bold uppercase tracking-wider transition-all ${plannerParams.progression === prog ? 'bg-cyan-900/40 border-cyan-500 text-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.2)]' : 'bg-black/40 border-white/5 text-gray-500 hover:border-white/20'}`}
                                             >
                                                 {prog === 'Rising' && <TrendingUpIcon className="w-3 h-3 inline mr-1" />}
                                                 {prog}
@@ -487,17 +428,17 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
                                 </div>
 
                                 {/* Row 3: Technical Filters */}
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-2 gap-2">
                                     {/* BPM Range */}
                                     <div>
-                                        <label className="text-xs font-bold text-white/70 uppercase tracking-wider block mb-2">BPM Range</label>
-                                        <div className="flex items-center gap-2">
+                                        <label className="text-[10px] font-bold text-white/50 uppercase tracking-wider block mb-1">BPM Range</label>
+                                        <div className="flex items-center gap-1">
                                             <input 
                                                 type="number" 
                                                 placeholder="Min" 
                                                 value={plannerParams.bpmMin} 
                                                 onChange={(e) => setPlannerParams(p => ({...p, bpmMin: e.target.value}))}
-                                                className="w-full bg-black/60 border border-white/10 rounded-xl p-3 text-center text-xs font-mono text-white focus:border-cyan-500 outline-none font-bold" 
+                                                className="w-full bg-black/60 border border-white/10 rounded-lg p-2 text-center text-xs font-mono text-white focus:border-cyan-500 outline-none font-bold" 
                                             />
                                             <span className="text-white/20 font-bold">-</span>
                                             <input 
@@ -505,20 +446,20 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
                                                 placeholder="Max" 
                                                 value={plannerParams.bpmMax} 
                                                 onChange={(e) => setPlannerParams(p => ({...p, bpmMax: e.target.value}))}
-                                                className="w-full bg-black/60 border border-white/10 rounded-xl p-3 text-center text-xs font-mono text-white focus:border-cyan-500 outline-none font-bold" 
+                                                className="w-full bg-black/60 border border-white/10 rounded-lg p-2 text-center text-xs font-mono text-white focus:border-cyan-500 outline-none font-bold" 
                                             />
                                         </div>
                                     </div>
 
                                     {/* Energy */}
                                     <div>
-                                        <label className="text-xs font-bold text-white/70 uppercase tracking-wider block mb-2">Min Energy</label>
-                                        <div className="flex gap-1 h-[42px]">
+                                        <label className="text-[10px] font-bold text-white/50 uppercase tracking-wider block mb-1">Min Energy</label>
+                                        <div className="flex gap-0.5 h-[32px]">
                                             {[0, 1, 2, 3, 4, 5].map(lvl => (
                                                 <button 
                                                     key={lvl} 
                                                     onClick={() => setPlannerParams(p => ({...p, minEnergy: lvl}))}
-                                                    className={`flex-1 rounded-lg text-[10px] font-bold border transition-all ${plannerParams.minEnergy === lvl ? 'bg-cyan-600 border-cyan-400 text-white' : 'bg-black/40 border-white/5 text-gray-600 hover:bg-white/5'}`}
+                                                    className={`flex-1 rounded-md text-[10px] font-bold border transition-all ${plannerParams.minEnergy === lvl ? 'bg-cyan-600 border-cyan-400 text-white' : 'bg-black/40 border-white/5 text-gray-600 hover:bg-white/5'}`}
                                                 >
                                                     {lvl === 0 ? 'All' : lvl}
                                                 </button>
@@ -528,14 +469,14 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
                                 </div>
 
                                 {/* Mandatory Tracks */}
-                                <div className="bg-black/30 rounded-xl p-4 border border-white/5">
-                                    <label className="text-xs font-bold text-white/70 uppercase tracking-wider block mb-2">{t.mandatoryTracks}</label>
+                                <div className="bg-black/30 rounded-lg p-2 border border-white/5">
+                                    <label className="text-[10px] font-bold text-white/50 uppercase tracking-wider block mb-1">{t.mandatoryTracks}</label>
                                     
                                     {/* List Selected */}
                                     {mustHaves.length > 0 && (
-                                        <div className="flex flex-wrap gap-2 mb-3">
+                                        <div className="flex flex-wrap gap-1.5 mb-2">
                                             {mustHaves.map(m => (
-                                                <span key={m.id} className="flex items-center gap-1 bg-cyan-900/30 text-cyan-300 border border-cyan-500/30 px-2 py-1 rounded text-[10px] font-bold">
+                                                <span key={m.id} className="flex items-center gap-1 bg-cyan-900/30 text-cyan-300 border border-cyan-500/30 px-2 py-0.5 rounded text-[9px] font-bold">
                                                     {m.name}
                                                     <button onClick={() => toggleMustHave(m)} className="hover:text-white"><XIcon className="w-3 h-3" /></button>
                                                 </span>
@@ -550,9 +491,9 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
                                             placeholder={t.searchToPlan} 
                                             value={planSearch}
                                             onChange={(e) => setPlanSearch(e.target.value)}
-                                            className="w-full bg-black/60 border border-white/10 rounded-xl pl-9 pr-3 py-2.5 text-xs font-bold text-white focus:border-cyan-500 outline-none"
+                                            className="w-full bg-black/60 border border-white/10 rounded-lg pl-8 pr-2 py-1.5 text-xs font-bold text-white focus:border-cyan-500 outline-none"
                                         />
-                                        <SearchIcon className="absolute left-3 top-2.5 w-4 h-4 text-gray-500" />
+                                        <SearchIcon className="absolute left-2.5 top-2 w-3.5 h-3.5 text-gray-500" />
                                     </div>
 
                                     {/* Search Results Dropdown */}
@@ -562,13 +503,13 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
                                                 <div 
                                                     key={t.id} 
                                                     onClick={() => toggleMustHave(t)}
-                                                    className="flex items-center justify-between p-2 hover:bg-white/10 rounded-lg cursor-pointer group"
+                                                    className="flex items-center justify-between p-1.5 hover:bg-white/10 rounded-lg cursor-pointer group"
                                                 >
                                                     <div className="min-w-0">
                                                         <p className="text-xs font-bold text-white truncate">{t.name}</p>
                                                         <p className="text-[10px] text-gray-500 truncate">{t.artist}</p>
                                                     </div>
-                                                    <PlusIcon className="w-4 h-4 text-cyan-500 opacity-0 group-hover:opacity-100" />
+                                                    <PlusIcon className="w-3.5 h-3.5 text-cyan-500 opacity-0 group-hover:opacity-100" />
                                                 </div>
                                             ))}
                                         </div>
@@ -576,11 +517,11 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
                                 </div>
 
                                 {/* Playlists - Enhanced Filtering */}
-                                <div className="space-y-2">
-                                    <label className="text-xs font-bold text-white/70 uppercase tracking-wider block">{t.targetPlaylists}</label>
-                                    <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto custom-scrollbar p-1">
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold text-white/50 uppercase tracking-wider block">{t.targetPlaylists}</label>
+                                    <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto custom-scrollbar p-0.5">
                                         {availableFolders.length > 0 ? availableFolders.map(folder => (
-                                            <button key={folder} onClick={() => toggleTargetPlaylist(folder)} className={`px-3 py-2 rounded-lg border text-[10px] font-bold transition-all ${plannerParams.targetPlaylists.includes(folder) ? 'bg-cyan-600 border-cyan-400 text-white' : 'bg-black/40 border-white/5 text-gray-500 hover:border-white/20'}`}>
+                                            <button key={folder} onClick={() => toggleTargetPlaylist(folder)} className={`px-2 py-1 rounded-md border text-[9px] font-bold transition-all ${plannerParams.targetPlaylists.includes(folder) ? 'bg-cyan-600 border-cyan-400 text-white' : 'bg-black/40 border-white/5 text-gray-500 hover:border-white/20'}`}>
                                                 {folder}
                                             </button>
                                         )) : (
@@ -589,7 +530,7 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
                                     </div>
                                 </div>
                                 
-                                <button onClick={handleAutoPlan} disabled={isPlanning || fullPlaylist.length === 0} className="w-full py-4 bg-white text-black rounded-xl font-bold text-xs uppercase tracking-widest shadow-xl hover:bg-cyan-50 transition-all flex items-center justify-center gap-3 disabled:opacity-50 min-h-[50px]">
+                                <button onClick={handleAutoPlan} disabled={isPlanning || fullPlaylist.length === 0} className="w-full py-3 bg-white text-black rounded-xl font-bold text-xs uppercase tracking-widest shadow-xl hover:bg-cyan-50 transition-all flex items-center justify-center gap-3 disabled:opacity-50 min-h-[40px]">
                                     {isPlanning ? (<><div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div> {t.addingToQueue}</>) : (<><ZapIcon className="w-4 h-4 text-cyan-600" /> {t.btnPlan}</>)}
                                 </button>
                             </div>
@@ -612,9 +553,6 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
                     let transitionInfo = null;
                     const isOnAir = track.id === currentTrackId;
                     
-                    // FIXED: Key usage. Using index as part of key is dangerous for drag/drop, but using only track.id fails if duplicates exist.
-                    // Ideally we'd wrap queue items with unique IDs. Assuming standard usage, we combine id and index but we handle drop carefully.
-                    // For reordering visual stability, let's use track.id if unique in queue, or index fallback.
                     const isDuplicate = queue.filter(t => t.id === track.id).length > 1;
                     const uniqueKey = isDuplicate ? `${track.id}-${index}` : track.id;
                     
