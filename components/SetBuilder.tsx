@@ -547,7 +547,7 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
 
           {queue.length > 0 ? (
             <div 
-                className="space-y-4 px-1 pb-20 touch-none" // Disable browser default touch actions for the list area to help custom drag
+                className="space-y-4 px-1 pb-20"
             >
                 {queue.map((track, index) => {
                     let transitionInfo = null;
