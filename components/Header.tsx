@@ -10,9 +10,10 @@ interface HeaderProps {
     showMenuButton?: boolean;
     currentTrack?: Track | null;
     showMiniPlayer?: boolean;
+    onNavigateToDeck?: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onReset, onToggleMenu, showMenuButton, currentTrack, showMiniPlayer }) => {
+export const Header: React.FC<HeaderProps> = ({ onReset, onToggleMenu, showMenuButton, currentTrack, showMiniPlayer, onNavigateToDeck }) => {
     return (
         <header className="fixed top-0 left-0 right-0 bg-black/80 backdrop-blur-sm z-[90] border-b border-gray-800 transition-all duration-300">
             <div className="container mx-auto px-4 py-3 flex justify-between items-center max-w-full">
@@ -33,18 +34,26 @@ export const Header: React.FC<HeaderProps> = ({ onReset, onToggleMenu, showMenuB
                 
                 {/* Mini Player (Visible when not on Deck tab) */}
                 {showMiniPlayer && currentTrack ? (
-                    <div className="flex items-center gap-3 bg-slate-900/80 border border-white/10 rounded-full pl-1 pr-4 py-1 animate-in fade-in slide-in-from-right-4 shadow-lg backdrop-blur-md max-w-[200px] sm:max-w-xs overflow-hidden">
-                        <div className="w-8 h-8 rounded-full overflow-hidden border border-white/10 relative flex-shrink-0">
+                    <div 
+                        onClick={onNavigateToDeck}
+                        className="flex items-center gap-3 bg-slate-900/90 border border-white/10 rounded-r-xl rounded-l-sm pl-2 pr-5 py-1.5 animate-in fade-in slide-in-from-right-4 shadow-xl backdrop-blur-md max-w-[280px] sm:max-w-md overflow-hidden cursor-pointer hover:bg-slate-800 transition-colors border-l-[6px]"
+                        style={{ borderLeftColor: currentTrack.color || '#FFFFFF' }}
+                    >
+                        <div className="w-10 h-10 rounded-md overflow-hidden border border-white/10 relative flex-shrink-0 shadow-sm">
                             <CoverArt id={currentTrack.id} artist={currentTrack.artist} name={currentTrack.name} className="w-full h-full" />
                         </div>
                         <div className="flex flex-col min-w-0">
-                            <span className="text-[10px] font-bold text-white truncate leading-tight">{currentTrack.name}</span>
-                            <div className="flex items-center gap-2 text-[9px] leading-tight">
-                                <span className="font-bold text-cyan-400 truncate">{currentTrack.artist}</span>
-                                <span className="text-slate-500 font-mono hidden sm:inline">{currentTrack.bpm}</span>
+                            <span className="text-xs font-black text-white truncate leading-tight">{currentTrack.name}</span>
+                            <div className="flex items-center gap-2 text-[11px] leading-tight mt-0.5">
+                                <span className="font-bold text-cyan-400 truncate max-w-[100px]">{currentTrack.artist}</span>
+                                <span className="text-slate-500 font-mono hidden sm:inline border-l border-slate-700 pl-2">
+                                    {currentTrack.bpm} <span className="text-xs text-slate-600">BPM</span>
+                                </span>
+                                <span className={`font-mono font-black ${currentTrack.key.includes('m') ? 'text-cyan-200' : 'text-pink-200'}`}>
+                                    {currentTrack.key}
+                                </span>
                             </div>
                         </div>
-                        <div className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse ml-auto flex-shrink-0 shadow-[0_0_5px_currentColor]"></div>
                     </div>
                 ) : (
                     <div className="w-10"></div> 

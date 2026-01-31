@@ -425,6 +425,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({
         onToggleMenu={() => setSidebarExpanded(!sidebarExpanded)} 
         currentTrack={currentTrack}
         showMiniPlayer={activeTab !== 'deck'}
+        onNavigateToDeck={() => setActiveTab('deck')}
       />
       
       {/* Toast Notification */}
@@ -441,13 +442,27 @@ export const MainScreen: React.FC<MainScreenProps> = ({
       {/* Persistent Mini Player (Mobile Only) */}
       {currentTrack && activeTab !== 'deck' && (
           <div className="md:hidden fixed bottom-[74px] left-0 right-0 z-[85] px-2 animate-in slide-in-from-bottom-2 transition-all duration-300">
-              <div className="bg-slate-900/95 backdrop-blur-md border border-slate-700/50 rounded-xl p-2 flex items-center gap-3 shadow-2xl" onClick={() => setActiveTab('deck')}>
-                  <div className={`w-8 h-8 rounded-full border border-white/10 flex items-center justify-center bg-slate-800 ${theme.primary === 'red' ? 'animate-pulse' : ''}`}>
-                      <PlayIcon className="w-4 h-4 text-white" />
+              <div 
+                className="bg-slate-900/95 backdrop-blur-md border border-slate-700/50 rounded-r-xl rounded-l-sm p-2 flex items-center gap-3 shadow-2xl border-l-[6px]" 
+                style={{ borderLeftColor: currentTrack.color || '#FFFFFF' }}
+                onClick={() => setActiveTab('deck')}
+              >
+                  <div className={`w-10 h-10 rounded-md border border-white/10 flex items-center justify-center bg-slate-800 flex-shrink-0 overflow-hidden`}>
+                      <div className="w-full h-full relative">
+                         {/* Simple Icon Fallback or Cover Art if possible (using simple icon for perf on mobile mini player usually, but let's use PlayIcon for now) */}
+                         <div className={`absolute inset-0 flex items-center justify-center ${theme.primary === 'red' ? 'animate-pulse' : ''}`}>
+                            <PlayIcon className="w-5 h-5 text-white" />
+                         </div>
+                      </div>
                   </div>
                   <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold text-white truncate">{currentTrack.name}</p>
-                      <p className="text-[10px] text-slate-400 truncate font-mono">{currentTrack.bpm} BPM • {currentTrack.key}</p>
+                      <p className="text-sm font-black text-white truncate">{currentTrack.name}</p>
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="truncate text-slate-300 font-bold">{currentTrack.artist}</span>
+                        <div className="w-px h-3 bg-slate-600"></div>
+                        <span className="font-mono text-slate-400">{currentTrack.bpm}</span>
+                        <span className={`font-mono font-black ${currentTrack.key.includes('m') ? 'text-cyan-400' : 'text-pink-400'}`}>{currentTrack.key}</span>
+                      </div>
                   </div>
               </div>
           </div>
