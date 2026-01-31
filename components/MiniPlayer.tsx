@@ -1,8 +1,8 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import type { Track } from '../types';
 import { CoverArt } from './CoverArt';
-import { PlayIcon, ClockIcon } from './icons';
+import { PlayIcon } from './icons';
 
 interface MiniPlayerProps {
     track: Track;
@@ -12,22 +12,63 @@ interface MiniPlayerProps {
     className?: string;
 }
 
+// Helper for dynamic background opacity
+const hexToRgba = (hex: string | undefined, alpha: number) => {
+    if (!hex) return undefined;
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
 export const MiniPlayer: React.FC<MiniPlayerProps> = ({ track, onClick, variant = 'default', label, className = '' }) => {
+    const [showPlayAction, setShowPlayAction] = useState(false);
     const isNext = variant === 'next';
     
-    // Color Schemes
+    // Reset play action state when track changes
+    useEffect(() => {
+        setShowPlayAction(false);
+    }, [track.id]);
+
+    // Handle container click
+    const handleContainerClick = () => {
+        if (isNext) {
+            // First click: Show Play Button
+            setShowPlayAction(true);
+        } else {
+            // Default behavior (On Air): Navigate/Action immediately
+            onClick?.();
+        }
+    };
+
+    // Handle Play Button click (specific to NEXT)
+    const handlePlayClick = (e: React.MouseEvent) => {
+        e.stopPropagation(); // Stop bubbling to container
+        onClick?.(); // Trigger the actual load action
+        setShowPlayAction(false);
+    };
+    
+    // Dynamic Styles based on variant and track color
+    const containerStyle: React.CSSProperties = isNext && track.color ? {
+        backgroundColor: hexToRgba(track.color, 0.2),
+        borderColor: hexToRgba(track.color, 0.3),
+        borderLeftColor: track.color,
+    } : {
+        borderLeftColor: track.color || (isNext ? '#818cf8' : '#FFFFFF')
+    };
+
     const bgClass = isNext 
-        ? 'bg-indigo-950/90 border-indigo-500/30 hover:bg-indigo-900/90' 
-        : 'bg-slate-900/90 border-white/10 hover:bg-slate-800';
+        ? 'backdrop-blur-md hover:brightness-110' // Color handled by inline style
+        : 'bg-slate-900/90 border-white/10 hover:bg-slate-800 backdrop-blur-md';
     
     const artistColor = isNext ? 'text-indigo-200' : 'text-cyan-200';
     const labelColor = isNext ? 'text-indigo-300 bg-indigo-950/60 border-indigo-500/50' : 'text-cyan-300 bg-cyan-950/40 border-cyan-500/30';
 
     return (
         <div 
-            onClick={onClick}
-            className={`flex items-center gap-3 border rounded-r-xl rounded-l-sm pl-2 pr-4 py-2 shadow-xl backdrop-blur-md overflow-hidden cursor-pointer transition-all duration-300 border-l-[6px] group relative ${bgClass} ${className}`}
-            style={{ borderLeftColor: track.color || (isNext ? '#818cf8' : '#FFFFFF') }}
+            onClick={handleContainerClick}
+            className={`flex items-center gap-3 border rounded-r-xl rounded-l-sm pl-2 pr-4 py-2 shadow-xl overflow-hidden cursor-pointer transition-all duration-300 border-l-[6px] group relative ${bgClass} ${className}`}
+            style={containerStyle}
         >
             {/* Optional Top Label (e.g., "NEXT") */}
             {label && (
@@ -39,9 +80,14 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ track, onClick, variant 
             {/* Cover Art */}
             <div className="w-11 h-11 rounded-md overflow-hidden border border-white/10 relative flex-shrink-0 shadow-sm group-hover:scale-105 transition-transform">
                 <CoverArt id={track.id} artist={track.artist} name={track.name} className="w-full h-full" />
-                {isNext && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <PlayIcon className="w-5 h-5 text-white" />
+                
+                {/* NEXT Logic: Overlay appears on click or hover if already active */}
+                {isNext && showPlayAction && (
+                    <div 
+                        onClick={handlePlayClick}
+                        className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-[1px] animate-in fade-in duration-200 z-10 hover:bg-black/40"
+                    >
+                        <PlayIcon className="w-6 h-6 text-white drop-shadow-md scale-110 active:scale-95 transition-transform" />
                     </div>
                 )}
             </div>
