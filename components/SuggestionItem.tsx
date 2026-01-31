@@ -136,7 +136,7 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
 
                 {/* RETRACTED: Compact Stats Row */}
                 {!isExpanded && (
-                    <div className="flex items-center flex-wrap gap-2">
+                    <div className="flex items-center flex-wrap gap-2 w-full">
                          {/* Match % */}
                          <div className="flex items-center gap-1 bg-black/40 px-1.5 py-0.5 rounded text-[10px]">
                             <BrainIcon className={`w-3 h-3 ${scoreColor}`} />
@@ -153,11 +153,11 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                             {suggestion.key}
                          </span>
                         
-                        {/* Dot Location */}
+                        {/* Dot Location - Pushes to far right thanks to flex-1 parent */}
                         {suggestion.location && (
                              <div className="flex items-center gap-1 ml-auto opacity-70">
                                 {suggestion.color ? (
-                                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: suggestion.color }} />
+                                    <span className="w-2 h-2 rounded-full shadow-[0_0_5px_currentColor]" style={{ backgroundColor: suggestion.color, color: suggestion.color }} />
                                 ) : (
                                     <FolderIcon className="w-3 h-3 text-gray-500" />
                                 )}
@@ -178,12 +178,7 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                 )}
             </div>
             
-            {/* Close Button (Retracted) */}
-            {!isExpanded && (
-                <button onClick={(e) => { e.stopPropagation(); onDismiss(suggestion.id); }} className="p-2 text-gray-600 hover:text-white">
-                    <XIcon className="w-4 h-4" />
-                </button>
-            )}
+            {/* Removed X Button from Retracted State */}
           </div>
 
           {/* 3. EXPANDED DETAILS (Below Header) */}

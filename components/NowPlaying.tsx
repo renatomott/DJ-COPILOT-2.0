@@ -132,13 +132,11 @@ export const NowPlaying: React.FC<NowPlayingProps> = ({ track, language }) => {
             {isExpanded && (
                 <div className="p-4 flex flex-col items-center text-center animate-in fade-in zoom-in-95 duration-300 relative">
                     
-                    {/* BPM - Top Right (Visible in expanded as well) */}
+                    {/* Rating - Top Right */}
                     <div className="absolute top-4 right-4 z-20">
-                         {track.bpm && (
-                            <div className="bg-black/50 backdrop-blur-md border border-white/20 px-3 py-1.5 rounded-lg text-sm sm:text-base font-black font-mono text-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.3)] animate-pulse">
-                                {track.bpm} <span className="text-[10px] text-gray-400 font-normal">BPM</span>
-                            </div>
-                         )}
+                         <div className="bg-black/50 backdrop-blur-md border border-white/20 px-3 py-1.5 rounded-full shadow-[0_0_15px_rgba(234,179,8,0.2)]">
+                            {renderRating(track.rating)}
+                         </div>
                     </div>
 
                     {/* Large Vinyl */}
@@ -169,23 +167,27 @@ export const NowPlaying: React.FC<NowPlayingProps> = ({ track, language }) => {
                         {track.artist}
                     </p>
 
-                    {/* Stats Grid - Optimized for Width */}
+                    {/* Stats Grid - Reorganized: BPM | Key | Plays | Time */}
                     <div className="w-full grid grid-cols-4 gap-2 mb-4">
+                        {/* BPM */}
+                        <div className="bg-black/60 rounded-lg p-2 flex flex-col items-center justify-center border border-white/10 backdrop-blur-md shadow-inner">
+                            <span className="text-[9px] text-gray-400 uppercase font-bold mb-1">BPM</span>
+                            <span className="text-sm sm:text-base font-black font-mono text-cyan-400">{track.bpm}</span>
+                        </div>
+                        {/* Key */}
                         <div className="bg-black/60 rounded-lg p-2 flex flex-col items-center justify-center border border-white/10 backdrop-blur-md shadow-inner">
                             <span className="text-[9px] text-gray-400 uppercase font-bold mb-1">Key</span>
                             <span className={`text-sm sm:text-base font-black ${track.key.includes('m') ? 'text-cyan-400' : 'text-pink-400'}`}>{track.key}</span>
                         </div>
-                        <div className="bg-black/60 rounded-lg p-2 flex flex-col items-center justify-center border border-white/10 backdrop-blur-md shadow-inner">
-                            <span className="text-[9px] text-gray-400 uppercase font-bold mb-1">Time</span>
-                            <span className="text-sm sm:text-base font-mono font-bold text-white">{track.duration}</span>
-                        </div>
+                         {/* Plays */}
                         <div className="bg-black/60 rounded-lg p-2 flex flex-col items-center justify-center border border-white/10 backdrop-blur-md shadow-inner">
                             <span className="text-[9px] text-gray-400 uppercase font-bold mb-1">Plays</span>
                             <span className="text-sm sm:text-base font-mono font-bold text-white">{track.playCount}</span>
                         </div>
+                        {/* Time */}
                         <div className="bg-black/60 rounded-lg p-2 flex flex-col items-center justify-center border border-white/10 backdrop-blur-md shadow-inner">
-                            <span className="text-[9px] text-gray-400 uppercase font-bold mb-1">Rating</span>
-                            <div className="scale-90 origin-center">{renderRating(track.rating)}</div>
+                            <span className="text-[9px] text-gray-400 uppercase font-bold mb-1">Time</span>
+                            <span className="text-sm sm:text-base font-mono font-bold text-white">{track.duration}</span>
                         </div>
                     </div>
 
