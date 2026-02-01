@@ -25,7 +25,7 @@ export const Header: React.FC<HeaderProps> = ({
     onPlayerClick 
 }) => {
     return (
-        <header className="fixed top-0 left-0 right-0 bg-black/90 backdrop-blur-xl z-[90] border-b border-white/5 h-[72px] transition-all duration-300">
+        <header className="fixed top-0 left-0 right-0 bg-black/90 backdrop-blur-xl z-[90] border-b border-white/5 h-20 box-border shadow-lg">
             <div className="container mx-auto px-4 h-full flex justify-between items-center max-w-full">
                 <div className="flex items-center gap-4">
                     {showMenuButton && (
@@ -43,18 +43,23 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
                 
                 {/* Unified Mini Player Position - Center Vertically in fixed height */}
-                <div className="flex items-center justify-end h-full py-1.5">
+                <div className="flex items-center justify-end h-full">
                     {playerTrack ? (
-                        <div className="animate-in fade-in slide-in-from-right-4 max-w-[280px] sm:max-w-md w-full">
+                        /* Fixed Width Container for Consistency between On Air / Next states */
+                        <div className="animate-in fade-in slide-in-from-right-4 w-[260px] sm:w-[320px]">
                             <MiniPlayer 
                                 track={playerTrack} 
                                 onClick={onPlayerClick} 
                                 variant={playerVariant}
                                 label={playerLabel}
+                                className="w-full shadow-none border-y-0 rounded-none border-l-[6px] h-14"
                             />
                         </div>
                     ) : (
-                        <div className="w-10 h-10"></div> 
+                        /* Placeholder with same dimensions to maintain vertical rhythm */
+                        <div className="w-[260px] sm:w-[320px] h-14 flex items-center justify-end opacity-20">
+                            {/* Empty state holder if needed, or just invisible spacer */}
+                        </div> 
                     )}
                 </div>
             </div>

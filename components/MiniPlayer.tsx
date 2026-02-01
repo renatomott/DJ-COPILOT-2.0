@@ -49,17 +49,19 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ track, onClick, variant 
     };
     
     // Dynamic Styles based on variant and track color
-    const containerStyle: React.CSSProperties = isNext && track.color ? {
-        backgroundColor: hexToRgba(track.color, 0.2),
-        borderColor: hexToRgba(track.color, 0.3),
-        borderLeftColor: track.color,
+    // REVISÃO: Outlier (Borda) do NEXT deve ser transparente.
+    // A diferenciação é feita pelo background color (blur).
+    const containerStyle: React.CSSProperties = isNext ? {
+        backgroundColor: track.color ? hexToRgba(track.color, 0.2) : 'rgba(99, 102, 241, 0.15)',
+        borderColor: 'transparent', // Garante que o outlier seja transparente
+        borderLeftColor: track.color || '#818cf8',
     } : {
-        borderLeftColor: track.color || (isNext ? '#818cf8' : '#FFFFFF')
+        borderLeftColor: track.color || '#FFFFFF'
     };
 
     const bgClass = isNext 
-        ? 'backdrop-blur-md hover:brightness-110' // Color handled by inline style
-        : 'bg-slate-900/90 border-white/10 hover:bg-slate-800 backdrop-blur-md';
+        ? 'backdrop-blur-md hover:brightness-110' // NEXT: Fundo colorido suave, sem borda definida nas classes
+        : 'bg-slate-900/90 border-white/10 hover:bg-slate-800 backdrop-blur-md'; // ON AIR: Fundo escuro com borda padrão
     
     const artistColor = isNext ? 'text-indigo-200' : 'text-cyan-200';
     const labelColor = isNext ? 'text-indigo-300 bg-indigo-950/60 border-indigo-500/50' : 'text-cyan-300 bg-cyan-950/40 border-cyan-500/30';

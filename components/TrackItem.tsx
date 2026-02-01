@@ -76,20 +76,30 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
   const trackColor = track.color || '#475569';
   const glowColor = hexToRgba(trackColor, 0.4);
 
-  // Common Container Styles (Matching SuggestionItem)
-  // FIXED: Removed borderLeft properties to avoid conflicts. Used absolute div instead.
-  const containerStyle = isExpanded 
-    ? { 
-        boxShadow: `0 0 30px -5px ${glowColor}`, 
-        borderColor: 'rgba(255,255,255,0.2)',
-      }
-    : { 
-        borderColor: 'rgba(255,255,255,0.1)',
-      };
+  // Background Style logic for ON AIR vs Regular
+  const onAirBgStyle = isOnAir ? {
+      backgroundColor: hexToRgba(trackColor, 0.35), // Increased opacity for visibility
+      borderColor: hexToRgba(trackColor, 0.6),
+      boxShadow: `0 0 30px -5px ${hexToRgba(trackColor, 0.4)}`
+  } : {};
 
-  const baseClasses = `relative overflow-hidden transition-all duration-300 border cursor-pointer scroll-mt-32 pl-[6px]`; // Added padding-left to compensate for the visual bar if needed, or rely on absolute positioning not affecting flow
-  const bgClasses = isExpanded ? 'bg-slate-900/90 rounded-xl' : 'bg-black/40 backdrop-blur-md hover:bg-black/50 rounded-lg';
-  const onAirClasses = isOnAir ? "ring-2 ring-cyan-400/50 shadow-[0_0_20px_rgba(34,211,238,0.3)] animate-pulse-onair" : "";
+  // Common Container Styles (Matching SuggestionItem)
+  const containerStyle = {
+      ...(isExpanded ? { boxShadow: `0 0 30px -5px ${glowColor}`, borderColor: 'rgba(255,255,255,0.2)' } : { borderColor: 'rgba(255,255,255,0.1)' }),
+      ...onAirBgStyle
+  };
+
+  const baseClasses = `relative overflow-hidden transition-all duration-300 border cursor-pointer scroll-mt-32 pl-[6px]`; 
+  
+  // Determine BG Class based on state
+  let bgClasses = '';
+  if (isOnAir) {
+      bgClasses = 'backdrop-blur-xl rounded-xl z-10'; // Added z-10 to pop out
+  } else if (isExpanded) {
+      bgClasses = 'bg-slate-900/90 rounded-xl';
+  } else {
+      bgClasses = 'bg-black/40 backdrop-blur-md hover:bg-black/50 rounded-lg';
+  }
 
   // Enhanced Scroll Logic to handle Sticky Headers in Builder/Library
   useEffect(() => {
@@ -223,12 +233,15 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
   // --- CARD VIEW (Standardized with SuggestionItem) ---
   return (
     <>
-      <style>{`@keyframes pulse-onair { 0%, 100% { border-color: rgba(34, 211, 238, 0.4); box-shadow: 0 0 10px rgba(34, 211, 238, 0.2); } 50% { border-color: rgba(34, 211, 238, 1); box-shadow: 0 0 25px rgba(34, 211, 238, 0.4); } } .animate-pulse-onair { animation: pulse-onair 1.5s infinite cubic-bezier(0.4, 0, 0.6, 1); }`}</style>
+      <style>{`
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .vinyl-spin { animation: spin 4s linear infinite; }
+      `}</style>
       
       <div
         ref={cardRef}
         onClick={handleCardClick}
-        className={`${baseClasses} ${bgClasses} ${onAirClasses}`}
+        className={`${baseClasses} ${bgClasses}`}
         style={containerStyle}
       >
           {/* Robust Color Bar (Absolute positioning prevents loss on style updates) */}
@@ -240,18 +253,35 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
           {/* Main Layout: Row (Image Left, Content Right) */}
           <div className={`flex flex-row gap-3 ${isExpanded ? 'p-3 items-start' : 'items-center p-2.5'}`}>
             
-            {/* 1. COVER ART */}
+            {/* 1. COVER ART - VINYL TRANSFORMATION IF ON AIR */}
             <div className={`relative flex-shrink-0 transition-all duration-300 ${isExpanded ? 'w-20 h-20' : 'w-16 h-16'}`}>
-              <div className="w-full h-full rounded-md overflow-hidden shadow-lg border border-white/10 bg-black relative group/cover">
-                <CoverArt id={track.id} artist={track.artist} name={track.name} className="w-full h-full" priority={isExpanded} />
-                {isOnAir && <div className="absolute inset-0 ring-1 ring-cyan-400 z-10 pointer-events-none"></div>}
-                {/* Play Count Overlay */}
-                <div className="absolute bottom-0 left-0 right-0 bg-black/80 backdrop-blur-[1px] h-3.5 flex items-center justify-center pointer-events-none z-10">
-                    <div className="flex items-center gap-0.5">
-                        <PlayIcon className="w-2 h-2 text-white/70" />
-                        <span className="text-[7px] font-bold text-white">{track.playCount}</span>
+              <div 
+                className={`w-full h-full overflow-hidden shadow-lg relative bg-black
+                    ${isOnAir 
+                        ? 'rounded-full border-[2px] border-gray-800 vinyl-spin ring-2 ring-black/40' // Vinyl Mode
+                        : 'rounded-md border border-white/10 group/cover' // Normal Mode
+                    }
+                `}
+              >
+                <CoverArt id={track.id} artist={track.artist} name={track.name} className="w-full h-full opacity-90" priority={isExpanded} />
+                
+                {/* Vinyl Spindle Effect for On Air - Explicitly added here */}
+                {isOnAir && (
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[35%] h-[35%] bg-black rounded-full flex items-center justify-center border border-white/10">
+                         {/* Center Hole */}
+                         <div className="w-[30%] h-[30%] bg-[#111] rounded-full border border-gray-700"></div>
                     </div>
-                </div>
+                )}
+
+                {/* Play Count Overlay - Only for Normal */}
+                {!isOnAir && (
+                    <div className="absolute bottom-0 left-0 right-0 bg-black/80 backdrop-blur-[1px] h-3.5 flex items-center justify-center pointer-events-none z-10">
+                        <div className="flex items-center gap-0.5">
+                            <PlayIcon className="w-2 h-2 text-white/70" />
+                            <span className="text-[7px] font-bold text-white">{track.playCount}</span>
+                        </div>
+                    </div>
+                )}
               </div>
             </div>
 

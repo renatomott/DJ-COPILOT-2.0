@@ -382,7 +382,8 @@ export const MainScreen: React.FC<MainScreenProps> = ({
               <TrackItem 
                   track={track} 
                   onSelect={handleSelectTrack} 
-                  isSelected={currentTrack?.id === track.id} 
+                  isSelected={currentTrack?.id === track.id}
+                  isOnAir={currentTrack?.id === track.id}
                   isExpanded={expandedTrackId === track.id} 
                   onToggleExpand={() => handleToggleExpandTrack(track.id)} 
                   onAddToQueue={handleAddToQueue} 
