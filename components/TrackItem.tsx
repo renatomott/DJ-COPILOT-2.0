@@ -4,6 +4,7 @@ import type { Track, ViewMode } from '../types';
 import { ClockIcon, StarIcon, PlusIcon, ZapIcon, PlayIcon, FolderIcon, TagIcon, ActivityIcon, BrainIcon } from './icons';
 import { CoverArt } from './CoverArt';
 import { EnergyBar } from './EnergyBar';
+import { translations } from '../utils/translations';
 
 interface TrackItemProps {
   track: Track;
@@ -16,6 +17,7 @@ interface TrackItemProps {
   variant?: ViewMode;
   searchQuery?: string;
   referenceTrack?: Track | null; // Faixa "NO AR" para comparação
+  language?: 'pt-BR' | 'en-US';
 }
 
 const renderRating = (rating: number, sizeClass = "w-3 h-3") => {
@@ -61,7 +63,8 @@ const hexToRgba = (hex: string | undefined, alpha: number) => {
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
 
-export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelected, isExpanded = false, onToggleExpand, isOnAir, onAddToQueue, variant = 'card', searchQuery, referenceTrack }) => {
+export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelected, isExpanded = false, onToggleExpand, isOnAir, onAddToQueue, variant = 'card', searchQuery, referenceTrack, language = 'pt-BR' }) => {
+  const t = translations[language];
   const cardRef = useRef<HTMLDivElement>(null);
   const isList = variant === 'list';
   
@@ -408,7 +411,7 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
                     <div className="bg-purple-900/20 border border-purple-500/20 rounded-lg p-2.5 animate-in fade-in slide-in-from-top-1">
                         <div className="flex items-center gap-1.5 mb-1.5">
                             <BrainIcon className="w-3 h-3 text-purple-400" />
-                            <span className="text-[9px] font-bold text-purple-400 uppercase tracking-widest">Motivo da Escolha</span>
+                            <span className="text-[9px] font-bold text-purple-400 uppercase tracking-widest">{t.whyMatch}</span>
                         </div>
                         <p className="text-xs text-purple-100 italic leading-relaxed font-medium">"{track.reason}"</p>
                     </div>

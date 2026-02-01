@@ -390,6 +390,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({
                   variant={viewMode} 
                   searchQuery={searchQuery}
                   referenceTrack={currentTrack}
+                  language={language}
               />
           </SwipeableItem>
       );

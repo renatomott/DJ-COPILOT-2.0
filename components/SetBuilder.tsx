@@ -40,7 +40,7 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
       progression: 'Rising',
       length: 10,
       isStrict: false,
-      ratingMin: 0, // Default to 0 to include unrated tracks
+      ratingMin: 0, 
       ratingMax: 5,
       targetPlaylists: [] as string[],
       bpmMin: '',
@@ -271,7 +271,6 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
       setDraggedIndex(index);
       e.dataTransfer.effectAllowed = 'move';
-      // Fallback for invisible image if needed
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>, index: number) => {
@@ -287,7 +286,6 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
   };
 
   // --- MOBILE TOUCH DRAG HANDLERS ---
-  // Implements custom logic since HTML5 DnD doesn't work on touch
   const handleTouchStart = (e: React.TouchEvent, index: number) => {
       e.stopPropagation(); // Stop SwipeableItem and others
       const touch = e.touches[0];
@@ -301,13 +299,11 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
   const handleTouchMove = (e: React.TouchEvent) => {
       if (!touchDragInfo) return;
       
-      // Prevent scrolling the page while reordering
       if (e.cancelable) e.preventDefault(); 
       
       const touch = e.touches[0];
       const target = document.elementFromPoint(touch.clientX, touch.clientY);
       
-      // Find the row under the finger
       const row = target?.closest('[data-queue-index]');
       if (row) {
           const newIndex = parseInt(row.getAttribute('data-queue-index') || '-1');
@@ -333,27 +329,11 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
       setQueue(newQueue);
   };
 
-  const renderRatingStars = (rating: number) => {
-      const stars = [];
-      const normalizedRating = rating > 5 ? Math.round(rating / 20) : rating;
-      for (let i = 1; i <= 5; i++) {
-        const isFilled = i <= normalizedRating;
-        stars.push(
-          <StarIcon 
-            key={i} 
-            className={`w-2.5 h-2.5 ${isFilled ? 'text-yellow-400 fill-current' : 'text-white/10 stroke-white/30'}`} 
-            filled={isFilled} 
-          />
-        );
-      }
-      return <div className="flex items-center gap-0.5">{stars}</div>;
-  };
-
   return (
     <div className="h-full md:grid md:grid-cols-12 md:gap-6 md:px-6 md:pb-6 relative flex flex-col px-4 pb-24 md:overflow-hidden">
       <input type="file" ref={importFileRef} className="hidden" accept=".txt" onChange={handleImport} />
       
-      {/* --- Column 1: Planner & Tools (Sticky on Desktop) --- */}
+      {/* --- Column 1: Planner & Tools --- */}
       <div className="w-full md:col-span-5 lg:col-span-5 flex-shrink-0 md:h-full md:border-r md:border-white/5 bg-[#020617]/95 md:bg-slate-950/40 backdrop-blur-xl md:backdrop-blur-none z-40 transition-all duration-300 flex flex-col rounded-xl overflow-hidden mb-4 md:mb-0">
           <div className="p-3 border-b border-white/5 space-y-2 overflow-y-auto custom-scrollbar h-full">
                 
@@ -364,7 +344,6 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
                         {t.navBuilder}
                     </h2>
                     
-                    {/* Action Bar */}
                     <div className="flex gap-2 w-full md:w-auto justify-end">
                         <button 
                             onClick={() => setShowPlanner(!showPlanner)} 
@@ -404,7 +383,6 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
                                     </div>
                                     <h3 className="text-xs font-bold text-white uppercase tracking-widest">{t.plannerTitle}</h3>
                                 </div>
-                                {/* Simple Count Badge */}
                                 <div className="bg-black/40 px-2 py-1 rounded text-xs font-mono font-bold text-cyan-400 border border-cyan-500/20" title={t.matchingTracks}>
                                     {matchingCount}
                                 </div>
@@ -601,9 +579,7 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
           </div>
 
           {queue.length > 0 ? (
-            <div 
-                className="space-y-4 px-1 pb-20"
-            >
+            <div className="space-y-4 px-1 pb-20">
                 {queue.map((track, index) => {
                     let transitionInfo = null;
                     const isOnAir = track.id === currentTrackId;
@@ -621,7 +597,6 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
                         const bpmDiffVal = parseFloat(track.bpm) - parseFloat(prev.bpm);
                         const bpmDiff = bpmDiffVal > 0 ? `+${bpmDiffVal.toFixed(1)}` : bpmDiffVal.toFixed(1);
                         
-                        // Visual Connection Line Logic
                         const lineColor = clashInfo.hasClash 
                             ? (clashInfo.severity === 'critical' ? 'bg-red-500' : 'bg-yellow-500') 
                             : 'bg-green-500';
@@ -631,7 +606,6 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
 
                         transitionInfo = (
                             <div className="flex justify-center items-center py-2 relative">
-                                {/* Visual Connection Line */}
                                 <div className={`h-8 w-0.5 ${lineColor} absolute top-[-1rem] opacity-50`}></div>
                                 <div className={`bg-black/90 border border-white/10 rounded-full px-4 py-1.5 font-mono font-bold flex gap-4 shadow-xl z-10 ${textColor}`}>
                                     <span className={`text-base md:text-lg ${track.key === prev.key ? 'text-white' : 'text-slate-400'}`}>{prev.key} → {track.key}</span>
@@ -664,68 +638,19 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
                                 rightColor="bg-red-600"
                                 rightIcon={<TrashIcon className="w-6 h-6 text-white" />}
                             >
-                                <div 
-                                    className={`bg-slate-900/80 rounded-2xl p-4 border relative group active:scale-[0.99] transition-all cursor-grab active:cursor-grabbing ${isOnAir ? 'border-cyan-500 shadow-[0_0_20px_rgba(6,182,212,0.3)] bg-cyan-900/20' : 'border-white/5 hover:border-white/20'}`}
-                                    onClick={() => handleToggleExpand(uniqueKey)}
-                                >
-                                    {/* Number Indicator */}
-                                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-2xl font-black text-white/5 pointer-events-none select-none group-hover:text-white/10 transition-colors">
+                                <div className="relative">
+                                     <div className="absolute left-1 top-1 z-20 bg-black/80 text-white text-[10px] font-bold px-1.5 py-0.5 rounded border border-white/10 backdrop-blur-md pointer-events-none">
                                         {(index + 1).toString().padStart(2, '0')}
-                                    </div>
-
-                                    {/* Content Flex */}
-                                    <div className="flex items-center gap-4 relative z-10 pl-8">
-                                        
-                                        {/* Main Info */}
-                                        <div className="flex-1 min-w-0">
-                                            <h3 className={`font-bold truncate text-base ${isOnAir ? 'text-cyan-300' : 'text-white'}`}>{track.name}</h3>
-                                            <p className="text-xs font-bold text-slate-500 truncate">{track.artist}</p>
-                                        </div>
-
-                                        {/* Meta Chips */}
-                                        <div className="flex items-center gap-2">
-                                            <span className="font-mono text-xs font-bold text-slate-300 bg-black/40 px-2 py-1 rounded">{track.bpm}</span>
-                                            <span className={`font-mono text-xs font-bold px-2 py-1 rounded ${track.key.includes('m') ? 'text-cyan-400 bg-cyan-950/40' : 'text-pink-400 bg-pink-950/40'}`}>{track.key}</span>
-                                        </div>
-                                    </div>
-
-                                    {/* Expanded Details */}
-                                    {isExpanded && (
-                                        <div className="mt-4 pt-4 border-t border-white/5 grid grid-cols-2 gap-4 animate-in fade-in zoom-in-95">
-                                            {/* AI Reason - NEW */}
-                                            {track.reason && (
-                                                <div className="col-span-2 bg-purple-900/20 border border-purple-500/20 rounded-lg p-2.5 mb-2">
-                                                    <div className="flex items-center gap-1.5 mb-1.5">
-                                                        <BrainIcon className="w-3 h-3 text-purple-400" />
-                                                        <span className="text-[9px] font-bold text-purple-400 uppercase tracking-widest">{t.whyMatch}</span>
-                                                    </div>
-                                                    <p className="text-xs text-purple-100 italic leading-relaxed font-medium">"{track.reason}"</p>
-                                                </div>
-                                            )}
-
-                                            {/* Details */}
-                                            <div>
-                                                <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">Duração</p>
-                                                <p className="text-sm font-mono text-white">{track.duration}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">Avaliação</p>
-                                                {renderRatingStars(track.rating)}
-                                            </div>
-                                            <div>
-                                                <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">Gênero</p>
-                                                <p className="text-xs text-white truncate">{track.genre}</p>
-                                            </div>
-                                            <div className="col-span-2 flex gap-2 pt-2">
-                                                 <button onClick={(e) => { e.stopPropagation(); onSelectTrack(track); }} className="flex-1 py-3 bg-cyan-600 rounded-xl text-xs font-bold text-white uppercase tracking-widest hover:bg-cyan-500 transition-colors shadow-lg flex items-center justify-center gap-2">
-                                                     <PlayIcon className="w-4 h-4" /> Load
-                                                 </button>
-                                                 <button onClick={(e) => { e.stopPropagation(); handleRemove(index); }} className="px-4 bg-slate-800 rounded-xl text-red-400 hover:bg-red-900/50 hover:text-red-200 transition-colors">
-                                                     <TrashIcon className="w-4 h-4" />
-                                                 </button>
-                                            </div>
-                                        </div>
-                                    )}
+                                     </div>
+                                     <TrackItem 
+                                        track={track}
+                                        onSelect={onSelectTrack}
+                                        isSelected={isOnAir}
+                                        isOnAir={isOnAir}
+                                        isExpanded={isExpanded}
+                                        onToggleExpand={() => handleToggleExpand(uniqueKey)}
+                                        language={language}
+                                     />
                                 </div>
                             </SwipeableItem>
                         </div>
