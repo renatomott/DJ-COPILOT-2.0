@@ -403,6 +403,17 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
                      )}
                 </div>
 
+                {/* NEW: AI Reason (If available from Set Builder) */}
+                {track.reason && (
+                    <div className="bg-purple-900/20 border border-purple-500/20 rounded-lg p-2.5 animate-in fade-in slide-in-from-top-1">
+                        <div className="flex items-center gap-1.5 mb-1.5">
+                            <BrainIcon className="w-3 h-3 text-purple-400" />
+                            <span className="text-[9px] font-bold text-purple-400 uppercase tracking-widest">Motivo da Escolha</span>
+                        </div>
+                        <p className="text-xs text-purple-100 italic leading-relaxed font-medium">"{track.reason}"</p>
+                    </div>
+                )}
+
                 {/* C. Cues */}
                 {track.cuePoints && track.cuePoints.length > 0 && (
                     <div className="flex flex-wrap gap-1.5 justify-center bg-black/20 p-2 rounded-lg">

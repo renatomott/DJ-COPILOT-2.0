@@ -17,6 +17,7 @@ export interface Track {
   cuePoints?: string[];
   visualUrl?: string;
   isSample?: boolean;
+  reason?: string; // AI Justification for being in a set
 }
 
 export interface Suggestion extends Track {

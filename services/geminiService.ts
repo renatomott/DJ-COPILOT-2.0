@@ -78,8 +78,7 @@ export const planAutoSet = async (
             pool = pool.filter(t => {
                 const bpm = parseFloat(t.bpm) || 0;
                 
-                // Normalize rating (assuming standard Rekordbox 0-255 scale where 51~1 star, or 0-100 scale)
-                // Used same logic as UI to be consistent
+                // Normalize rating
                 const normalizedRating = t.rating > 5 ? Math.round(t.rating / 20) : t.rating;
                 const matchesRating = normalizedRating >= params.ratingRange.min && normalizedRating <= params.ratingRange.max;
                 
@@ -102,6 +101,7 @@ export const planAutoSet = async (
         ).join('\n');
 
         const mustHaveIds = mustHaveTracks.map(t => t.id).join(', ');
+        const langInstruction = language === 'pt-BR' ? 'Português' : 'Inglês';
 
         const prompt = `
         Objetivo: Criar um set de DJ com EXATAMENTE ${params.length} faixas.
@@ -119,7 +119,9 @@ export const planAutoSet = async (
         4. O set deve ter coesão harmônica (mixagem em tom compatível).
         5. Se possível, comece com: ${startTrack ? `${startTrack.name} (ID:${startTrack.id})` : 'A melhor opção'}.
         
-        Retorne APENAS um JSON com o array de IDs na ordem de mixagem: { "ids": ["id1", "id2", ...] }.
+        Retorne um JSON com um array 'playlist'. Cada item deve ter:
+        - 'id': o ID da faixa.
+        - 'reason': Uma explicação detalhada e técnica (em ${langInstruction}) de 1 ou 2 frases sobre por que esta faixa foi escolhida para este momento específico da sequência (ex: "Mantém a energia subindo com tom compatível 4A->4B" ou "Quebra a tensão antes do drop").
         
         Biblioteca Disponível:
         ${tracksData}
@@ -134,20 +136,32 @@ export const planAutoSet = async (
                     responseSchema: {
                         type: Type.OBJECT,
                         properties: {
-                            ids: { type: Type.ARRAY, items: { type: Type.STRING } }
+                            playlist: {
+                                type: Type.ARRAY,
+                                items: {
+                                    type: Type.OBJECT,
+                                    properties: {
+                                        id: { type: Type.STRING },
+                                        reason: { type: Type.STRING }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             });
         });
 
-        const parsed = JSON.parse(response.text || '{"ids":[]}');
-        const ids = Array.isArray(parsed.ids) ? parsed.ids : [];
+        const parsed = JSON.parse(response.text || '{"playlist":[]}');
+        const items = Array.isArray(parsed.playlist) ? parsed.playlist : [];
         
         const orderedTracks: Track[] = [];
-        ids.forEach((id: string) => {
-            const track = playlist.find(t => t.id === id);
-            if (track) orderedTracks.push(track);
+        items.forEach((item: any) => {
+            const track = playlist.find(t => t.id === item.id);
+            if (track) {
+                // Clone track to add specific reasoning for this set without mutating global state permanently
+                orderedTracks.push({ ...track, reason: item.reason });
+            }
         });
         
         return orderedTracks;
