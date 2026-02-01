@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import type { Track } from '../types';
 import { TrackItem } from './TrackItem';
-import { TrashIcon, DownloadIcon, BrainIcon, SparklesIcon, PlusIcon, SearchIcon, XIcon, ZapIcon, TrendingUpIcon, UploadIcon, LayersIcon, PlayIcon } from './icons';
+import { TrashIcon, DownloadIcon, BrainIcon, SparklesIcon, PlusIcon, SearchIcon, XIcon, ZapIcon, TrendingUpIcon, UploadIcon, LayersIcon, PlayIcon, StarIcon } from './icons';
 import { translations } from '../utils/translations';
 import { planAutoSet } from '../services/geminiService';
 import { detectClash } from '../utils/harmonicUtils';
@@ -40,7 +40,8 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
       progression: 'Rising',
       length: 10,
       isStrict: false,
-      minRating: 3,
+      ratingMin: 1,
+      ratingMax: 5,
       targetPlaylists: [] as string[],
       bpmMin: '',
       bpmMax: '',
@@ -216,7 +217,8 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
               ...plannerParams,
               bpmRange: (plannerParams.bpmMin && plannerParams.bpmMax) 
                   ? { min: parseFloat(plannerParams.bpmMin), max: parseFloat(plannerParams.bpmMax) } 
-                  : undefined
+                  : undefined,
+              ratingRange: { min: plannerParams.ratingMin, max: plannerParams.ratingMax }
           };
 
           const sequence = await planAutoSet(fullPlaylist, currentTrack, mustHaves, params, language);
@@ -253,7 +255,10 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
   const matchingCount = useMemo(() => {
       return fullPlaylist.filter(t => {
           const bpm = parseFloat(t.bpm) || 0;
-          const matchesRating = t.rating >= plannerParams.minRating;
+          
+          const normalizedRating = t.rating > 5 ? Math.round(t.rating / 20) : t.rating;
+          const matchesRating = normalizedRating >= plannerParams.ratingMin && normalizedRating <= plannerParams.ratingMax;
+          
           const matchesPlaylist = plannerParams.targetPlaylists.length === 0 || plannerParams.targetPlaylists.includes(t.location);
           const matchesBpm = (!plannerParams.bpmMin || bpm >= parseFloat(plannerParams.bpmMin)) && 
                              (!plannerParams.bpmMax || bpm <= parseFloat(plannerParams.bpmMax));
@@ -451,20 +456,48 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
                                         </div>
                                     </div>
 
-                                    {/* Energy */}
+                                    {/* Rating Range */}
                                     <div>
-                                        <label className="text-[10px] font-bold text-white/50 uppercase tracking-wider block mb-1">Min Energy</label>
-                                        <div className="flex gap-0.5 h-[32px]">
-                                            {[0, 1, 2, 3, 4, 5].map(lvl => (
-                                                <button 
-                                                    key={lvl} 
-                                                    onClick={() => setPlannerParams(p => ({...p, minEnergy: lvl}))}
-                                                    className={`flex-1 rounded-md text-[10px] font-bold border transition-all ${plannerParams.minEnergy === lvl ? 'bg-cyan-600 border-cyan-400 text-white' : 'bg-black/40 border-white/5 text-gray-600 hover:bg-white/5'}`}
-                                                >
-                                                    {lvl === 0 ? 'All' : lvl}
-                                                </button>
-                                            ))}
+                                        <label className="text-[10px] font-bold text-white/50 uppercase tracking-wider block mb-1">Rating (Estrelas)</label>
+                                        <div className="flex items-center gap-1">
+                                            <div className="relative w-full">
+                                                <input
+                                                    type="number"
+                                                    min="1" max="5"
+                                                    value={plannerParams.ratingMin}
+                                                    onChange={(e) => setPlannerParams(p => ({...p, ratingMin: parseInt(e.target.value) || 1}))}
+                                                    className="w-full bg-black/60 border border-white/10 rounded-lg p-2 text-center text-xs font-mono text-white focus:border-cyan-500 outline-none font-bold pl-4"
+                                                />
+                                                <StarIcon className="absolute left-1.5 top-2.5 w-3 h-3 text-yellow-500/50" />
+                                            </div>
+                                            <span className="text-white/20 font-bold">-</span>
+                                            <div className="relative w-full">
+                                                <input
+                                                    type="number"
+                                                    min="1" max="5"
+                                                    value={plannerParams.ratingMax}
+                                                    onChange={(e) => setPlannerParams(p => ({...p, ratingMax: parseInt(e.target.value) || 5}))}
+                                                    className="w-full bg-black/60 border border-white/10 rounded-lg p-2 text-center text-xs font-mono text-white focus:border-cyan-500 outline-none font-bold pl-4"
+                                                />
+                                                <StarIcon className="absolute left-1.5 top-2.5 w-3 h-3 text-yellow-500/50" />
+                                            </div>
                                         </div>
+                                    </div>
+                                </div>
+
+                                {/* Row 4: Energy */}
+                                <div>
+                                    <label className="text-[10px] font-bold text-white/50 uppercase tracking-wider block mb-1">Min Energy</label>
+                                    <div className="flex gap-0.5 h-[32px]">
+                                        {[0, 1, 2, 3, 4, 5].map(lvl => (
+                                            <button 
+                                                key={lvl} 
+                                                onClick={() => setPlannerParams(p => ({...p, minEnergy: lvl}))}
+                                                className={`flex-1 rounded-md text-[10px] font-bold border transition-all ${plannerParams.minEnergy === lvl ? 'bg-cyan-600 border-cyan-400 text-white' : 'bg-black/40 border-white/5 text-gray-600 hover:bg-white/5'}`}
+                                            >
+                                                {lvl === 0 ? 'All' : lvl}
+                                            </button>
+                                        ))}
                                     </div>
                                 </div>
 

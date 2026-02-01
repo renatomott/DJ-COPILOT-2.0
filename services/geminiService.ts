@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import type { Track, Suggestion, MashupPair, SetReport, SuggestionResult } from "../types";
 
@@ -61,7 +62,7 @@ export const planAutoSet = async (
       progression: string; 
       length: number;
       isStrict: boolean;
-      minRating: number;
+      ratingRange: { min: number, max: number };
       targetPlaylists: string[];
       bpmRange?: { min: number, max: number };
       minEnergy?: number;
@@ -76,11 +77,17 @@ export const planAutoSet = async (
         if (params.isStrict) {
             pool = pool.filter(t => {
                 const bpm = parseFloat(t.bpm) || 0;
-                const matchesRating = t.rating >= params.minRating;
+                
+                // Normalize rating (assuming standard Rekordbox 0-255 scale where 51~1 star, or 0-100 scale)
+                // Used same logic as UI to be consistent
+                const normalizedRating = t.rating > 5 ? Math.round(t.rating / 20) : t.rating;
+                const matchesRating = normalizedRating >= params.ratingRange.min && normalizedRating <= params.ratingRange.max;
+                
                 const matchesPlaylist = params.targetPlaylists.length === 0 || params.targetPlaylists.includes(t.location);
                 const matchesBpm = (!params.bpmRange) || (bpm >= params.bpmRange.min && bpm <= params.bpmRange.max);
                 const matchesEnergy = (!params.minEnergy) || ((t.energy || 0) >= params.minEnergy);
                 const isMustHave = mustHaveTracks.some(m => m.id === t.id);
+                
                 return isMustHave || (matchesRating && matchesPlaylist && matchesBpm && matchesEnergy);
             });
         }
@@ -103,7 +110,7 @@ export const planAutoSet = async (
         Parametros Desejados:
         - BPM entre ${params.bpmRange?.min || 0} e ${params.bpmRange?.max || 999}.
         - Energia Mínima: ${params.minEnergy || 0} (escala 1-5).
-        - Rating Mínimo: ${params.minRating}.
+        - Rating (Estrelas): entre ${params.ratingRange.min} e ${params.ratingRange.max}.
         
         REGRAS CRÍTICAS:
         1. As seguintes faixas SÃO OBRIGATÓRIAS e DEVEM estar na sequência final: [${mustHaveIds}].
