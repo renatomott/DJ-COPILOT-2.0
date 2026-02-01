@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import type { Track } from '../types';
 import { TrackItem } from './TrackItem';
-import { TrashIcon, DownloadIcon, BrainIcon, SparklesIcon, PlusIcon, SearchIcon, XIcon, ZapIcon, TrendingUpIcon, UploadIcon, LayersIcon, PlayIcon, StarIcon } from './icons';
+import { TrashIcon, DownloadIcon, BrainIcon, SparklesIcon, PlusIcon, SearchIcon, XIcon, ZapIcon, TrendingUpIcon, UploadIcon, LayersIcon, PlayIcon, StarIcon, FolderIcon } from './icons';
 import { translations } from '../utils/translations';
 import { planAutoSet } from '../services/geminiService';
 import { detectClash } from '../utils/harmonicUtils';
@@ -40,7 +40,7 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
       progression: 'Rising',
       length: 10,
       isStrict: false,
-      ratingMin: 1,
+      ratingMin: 0, // Default to 0 to include unrated tracks
       ratingMax: 5,
       targetPlaylists: [] as string[],
       bpmMin: '',
@@ -333,6 +333,22 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
       setQueue(newQueue);
   };
 
+  const renderRatingStars = (rating: number) => {
+      const stars = [];
+      const normalizedRating = rating > 5 ? Math.round(rating / 20) : rating;
+      for (let i = 1; i <= 5; i++) {
+        const isFilled = i <= normalizedRating;
+        stars.push(
+          <StarIcon 
+            key={i} 
+            className={`w-2.5 h-2.5 ${isFilled ? 'text-yellow-400 fill-current' : 'text-white/10 stroke-white/30'}`} 
+            filled={isFilled} 
+          />
+        );
+      }
+      return <div className="flex items-center gap-0.5">{stars}</div>;
+  };
+
   return (
     <div className="h-full md:grid md:grid-cols-12 md:gap-6 md:px-6 md:pb-6 relative flex flex-col px-4 pb-24 md:overflow-hidden">
       <input type="file" ref={importFileRef} className="hidden" accept=".txt" onChange={handleImport} />
@@ -463,9 +479,12 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
                                             <div className="relative w-full">
                                                 <input
                                                     type="number"
-                                                    min="1" max="5"
+                                                    min="0" max="5"
                                                     value={plannerParams.ratingMin}
-                                                    onChange={(e) => setPlannerParams(p => ({...p, ratingMin: parseInt(e.target.value) || 1}))}
+                                                    onChange={(e) => {
+                                                        const val = parseInt(e.target.value);
+                                                        setPlannerParams(p => ({...p, ratingMin: isNaN(val) ? 0 : val}));
+                                                    }}
                                                     className="w-full bg-black/60 border border-white/10 rounded-lg p-2 text-center text-xs font-mono text-white focus:border-cyan-500 outline-none font-bold pl-4"
                                                 />
                                                 <StarIcon className="absolute left-1.5 top-2.5 w-3 h-3 text-yellow-500/50" />
@@ -474,9 +493,12 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
                                             <div className="relative w-full">
                                                 <input
                                                     type="number"
-                                                    min="1" max="5"
+                                                    min="0" max="5"
                                                     value={plannerParams.ratingMax}
-                                                    onChange={(e) => setPlannerParams(p => ({...p, ratingMax: parseInt(e.target.value) || 5}))}
+                                                    onChange={(e) => {
+                                                        const val = parseInt(e.target.value);
+                                                        setPlannerParams(p => ({...p, ratingMax: isNaN(val) ? 5 : val}));
+                                                    }}
                                                     className="w-full bg-black/60 border border-white/10 rounded-lg p-2 text-center text-xs font-mono text-white focus:border-cyan-500 outline-none font-bold pl-4"
                                                 />
                                                 <StarIcon className="absolute left-1.5 top-2.5 w-3 h-3 text-yellow-500/50" />
@@ -624,51 +646,86 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
                         <div 
                             key={uniqueKey} 
                             data-queue-index={index}
-                            className={`animate-in slide-in-from-left-2 transition-all duration-200 
-                                ${isDragging ? 'opacity-50 scale-95' : 'opacity-100'} 
-                                ${isTouchTarget && touchDragInfo ? 'border-t-4 border-cyan-500 pt-2' : ''}
-                            `}
-                            draggable={!isExpanded} 
+                            className={`animate-in slide-in-from-left-2 transition-all duration-200 ${isDragging || isTouchTarget ? 'opacity-50 scale-95' : 'opacity-100'}`}
+                            draggable="true"
                             onDragStart={(e) => handleDragStart(e, index)}
                             onDragOver={(e) => handleDragOver(e, index)}
                             onDrop={(e) => handleDrop(e, index)}
+                            onTouchStart={(e) => handleTouchStart(e, index)}
+                            onTouchMove={(e) => handleTouchMove(e)}
+                            onTouchEnd={handleTouchEnd}
                         >
                             {transitionInfo}
                             
                             <SwipeableItem 
-                                // Drag Right (>>): Delete
-                                onLeftAction={() => handleRemove(index)}
-                                leftColor="bg-red-600"
-                                leftIcon={<TrashIcon className="w-8 h-8 text-white" />}
-                                // Drag Left (<<): Load On Air
-                                onRightAction={() => onSelectTrack(track)}
-                                rightColor="bg-cyan-600"
-                                rightIcon={<PlayIcon className="w-8 h-8 text-white" />}
+                                onLeftAction={() => onSelectTrack(track)}
+                                leftIcon={<PlayIcon className="w-6 h-6 text-white" />}
+                                onRightAction={() => handleRemove(index)}
+                                rightColor="bg-red-600"
+                                rightIcon={<TrashIcon className="w-6 h-6 text-white" />}
                             >
-                                <div className="relative group flex items-stretch gap-3">
-                                    {/* Drag Handle Area - Now with TOUCH support */}
-                                    <div 
-                                        className="flex-shrink-0 w-8 flex flex-col items-center justify-center cursor-grab active:cursor-grabbing touch-none select-none"
-                                        onTouchStart={(e) => handleTouchStart(e, index)}
-                                        onTouchMove={handleTouchMove}
-                                        onTouchEnd={handleTouchEnd}
-                                    >
-                                        <div className={`text-xs font-black ${isOnAir ? 'text-cyan-400' : 'text-slate-600'} mb-0.5`}>{index + 1}</div>
-                                        <div className={`flex-1 w-[3px] bg-gradient-to-b ${isOnAir ? 'from-cyan-400' : 'from-slate-800'} to-transparent rounded-full`}></div>
+                                <div 
+                                    className={`bg-slate-900/80 rounded-2xl p-4 border relative group active:scale-[0.99] transition-all cursor-grab active:cursor-grabbing ${isOnAir ? 'border-cyan-500 shadow-[0_0_20px_rgba(6,182,212,0.3)] bg-cyan-900/20' : 'border-white/5 hover:border-white/20'}`}
+                                    onClick={() => handleToggleExpand(uniqueKey)}
+                                >
+                                    {/* Number Indicator */}
+                                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-2xl font-black text-white/5 pointer-events-none select-none group-hover:text-white/10 transition-colors">
+                                        {(index + 1).toString().padStart(2, '0')}
                                     </div>
-                                    
-                                    <div className="flex-1 relative pb-1">
-                                        <div className={`relative overflow-hidden rounded-xl transition-all duration-300 ${isOnAir ? 'ring-2 ring-cyan-400 ring-offset-2 ring-offset-black scale-[1.01] shadow-[0_0_20px_rgba(6,182,212,0.2)]' : 'hover:scale-[1.01]'}`}>
-                                            <TrackItem 
-                                                track={track} 
-                                                onSelect={(t) => onSelectTrack(t)} 
-                                                isSelected={currentTrackId === track.id} 
-                                                isOnAir={isOnAir}
-                                                isExpanded={isExpanded}
-                                                onToggleExpand={() => handleToggleExpand(uniqueKey)}
-                                            />
+
+                                    {/* Content Flex */}
+                                    <div className="flex items-center gap-4 relative z-10 pl-8">
+                                        
+                                        {/* Main Info */}
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className={`font-bold truncate text-base ${isOnAir ? 'text-cyan-300' : 'text-white'}`}>{track.name}</h3>
+                                            <p className="text-xs font-bold text-slate-500 truncate">{track.artist}</p>
+                                        </div>
+
+                                        {/* Meta Chips */}
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-mono text-xs font-bold text-slate-300 bg-black/40 px-2 py-1 rounded">{track.bpm}</span>
+                                            <span className={`font-mono text-xs font-bold px-2 py-1 rounded ${track.key.includes('m') ? 'text-cyan-400 bg-cyan-950/40' : 'text-pink-400 bg-pink-950/40'}`}>{track.key}</span>
                                         </div>
                                     </div>
+
+                                    {/* Expanded Details */}
+                                    {isExpanded && (
+                                        <div className="mt-4 pt-4 border-t border-white/5 grid grid-cols-2 gap-4 animate-in fade-in zoom-in-95">
+                                            {/* AI Reason - NEW */}
+                                            {track.reason && (
+                                                <div className="col-span-2 bg-purple-900/20 border border-purple-500/20 rounded-lg p-2.5 mb-2">
+                                                    <div className="flex items-center gap-1.5 mb-1.5">
+                                                        <BrainIcon className="w-3 h-3 text-purple-400" />
+                                                        <span className="text-[9px] font-bold text-purple-400 uppercase tracking-widest">{t.whyMatch}</span>
+                                                    </div>
+                                                    <p className="text-xs text-purple-100 italic leading-relaxed font-medium">"{track.reason}"</p>
+                                                </div>
+                                            )}
+
+                                            {/* Details */}
+                                            <div>
+                                                <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">Duração</p>
+                                                <p className="text-sm font-mono text-white">{track.duration}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">Avaliação</p>
+                                                {renderRatingStars(track.rating)}
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">Gênero</p>
+                                                <p className="text-xs text-white truncate">{track.genre}</p>
+                                            </div>
+                                            <div className="col-span-2 flex gap-2 pt-2">
+                                                 <button onClick={(e) => { e.stopPropagation(); onSelectTrack(track); }} className="flex-1 py-3 bg-cyan-600 rounded-xl text-xs font-bold text-white uppercase tracking-widest hover:bg-cyan-500 transition-colors shadow-lg flex items-center justify-center gap-2">
+                                                     <PlayIcon className="w-4 h-4" /> Load
+                                                 </button>
+                                                 <button onClick={(e) => { e.stopPropagation(); handleRemove(index); }} className="px-4 bg-slate-800 rounded-xl text-red-400 hover:bg-red-900/50 hover:text-red-200 transition-colors">
+                                                     <TrashIcon className="w-4 h-4" />
+                                                 </button>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </SwipeableItem>
                         </div>
@@ -676,9 +733,10 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
                 })}
             </div>
           ) : (
-            <div className="h-64 md:h-full flex flex-col items-center justify-center text-center p-8 border-2 border-dashed border-slate-800 rounded-3xl opacity-50">
-                <p className="text-white font-bold uppercase tracking-widest">{t.emptyBuilder}</p>
-                <p className="text-xs text-slate-500 mt-2 max-w-xs">{t.emptyBuilderSub}</p>
+            <div className="flex flex-col items-center justify-center h-64 text-center opacity-40">
+                <LayersIcon className="w-16 h-16 mb-4 text-slate-600" />
+                <h3 className="text-lg font-bold text-white uppercase tracking-widest">{t.emptyBuilder}</h3>
+                <p className="text-xs text-slate-400 max-w-[200px] mt-2">{t.emptyBuilderSub}</p>
             </div>
           )}
       </div>
