@@ -53,6 +53,28 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
     return validDirs.sort();
   }, [fullPlaylist, enabledDirectories]);
 
+  // Scroll to active track on mount or when track changes
+  useEffect(() => {
+      if (!currentTrackId || queue.length === 0) return;
+
+      const timer = setTimeout(() => {
+          // Find index of current track
+          const index = queue.findIndex(t => t.id === currentTrackId);
+          if (index !== -1) {
+              const track = queue[index];
+              const isDuplicate = queue.filter(t => t.id === track.id).length > 1;
+              const uniqueKey = isDuplicate ? `${track.id}-${index}` : track.id;
+              
+              const el = document.getElementById(`builder-item-${uniqueKey}`);
+              if (el) {
+                  el.scrollIntoView({ behavior: 'smooth', block: 'center' }); 
+              }
+          }
+      }, 300); // Slight delay to allow layout to settle if tab just switched
+
+      return () => clearTimeout(timer);
+  }, [currentTrackId, queue]);
+
   const toggleTargetPlaylist = (folder: string) => {
     setPlannerParams(p => ({
         ...p,
@@ -630,6 +652,7 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
                     return (
                         <div 
                             key={uniqueKey} 
+                            id={`builder-item-${uniqueKey}`}
                             data-queue-index={index}
                             className={`animate-in slide-in-from-left-2 transition-all duration-200 ${isDragging || isTouchTarget ? 'opacity-50 scale-95' : 'opacity-100'}`}
                         >

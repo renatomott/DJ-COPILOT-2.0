@@ -196,9 +196,12 @@ export const MainScreen: React.FC<MainScreenProps> = ({
     if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(10);
   };
 
-  const handleSelectTrack = (track: Track) => {
+  // Modified to optionally allow staying on the current tab (e.g. for SetBuilder)
+  const handleSelectTrack = (track: Track, switchTab: boolean = true) => {
     setCurrentTrack(track);
-    setActiveTab('deck');
+    if (switchTab) {
+        setActiveTab('deck');
+    }
     triggerHaptic();
   };
 
@@ -576,7 +579,15 @@ export const MainScreen: React.FC<MainScreenProps> = ({
         {/* TAB: BUILDER (Renovated Layout) */}
         {activeTab === 'builder' && (
           <div className="flex-1 h-full md:overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
-             <SetBuilder queue={queue} setQueue={setQueue} onSelectTrack={handleSelectTrack} currentTrackId={currentTrack?.id} language={language} fullPlaylist={playlist} enabledDirectories={enabledDirectories} />
+             <SetBuilder 
+                queue={queue} 
+                setQueue={setQueue} 
+                onSelectTrack={(t) => handleSelectTrack(t, false)} 
+                currentTrackId={currentTrack?.id} 
+                language={language} 
+                fullPlaylist={playlist} 
+                enabledDirectories={enabledDirectories} 
+             />
           </div>
         )}
         
