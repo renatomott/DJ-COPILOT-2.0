@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import type { Track } from '../types';
 import { TrackItem } from './TrackItem';
-import { TrashIcon, DownloadIcon, BrainIcon, SparklesIcon, PlusIcon, SearchIcon, XIcon, ZapIcon, TrendingUpIcon, UploadIcon, LayersIcon, PlayIcon, StarIcon, FolderIcon } from './icons';
+import { TrashIcon, DownloadIcon, BrainIcon, SparklesIcon, PlusIcon, SearchIcon, XIcon, ZapIcon, TrendingUpIcon, UploadIcon, LayersIcon, PlayIcon, StarIcon, FolderIcon, GripVerticalIcon, ChevronUpIcon, ChevronDownIcon } from './icons';
 import { translations } from '../utils/translations';
 import { planAutoSet } from '../services/geminiService';
 import { detectClash } from '../utils/harmonicUtils';
@@ -49,7 +49,6 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
   });
 
   const availableFolders = useMemo(() => {
-    // Show only folders that are currently enabled in the main settings
     const validDirs = enabledDirectories.length > 0 ? enabledDirectories : Array.from(new Set(fullPlaylist.map(t => t.location)));
     return validDirs.sort();
   }, [fullPlaylist, enabledDirectories]);
@@ -267,10 +266,19 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
       }).length;
   }, [fullPlaylist, plannerParams]);
 
+  // --- MANUAL MOVE HELPERS ---
+  const moveTrack = (index: number, direction: 'up' | 'down') => {
+      const newIndex = direction === 'up' ? index - 1 : index + 1;
+      if (newIndex >= 0 && newIndex < queue.length) {
+          moveItem(index, newIndex);
+      }
+  };
+
   // --- DESKTOP DRAG & DROP HANDLERS ---
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
       setDraggedIndex(index);
       e.dataTransfer.effectAllowed = 'move';
+      // Optional: Set custom drag image
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>, index: number) => {
@@ -286,8 +294,9 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
   };
 
   // --- MOBILE TOUCH DRAG HANDLERS ---
+  // Attached specifically to the HANDLE to avoid swipe conflict
   const handleTouchStart = (e: React.TouchEvent, index: number) => {
-      e.stopPropagation(); // Stop SwipeableItem and others
+      // e.stopPropagation(); // Crucial to prevent SwipeableItem from reacting
       const touch = e.touches[0];
       setTouchDragInfo({ 
           startIndex: index, 
@@ -299,11 +308,13 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
   const handleTouchMove = (e: React.TouchEvent) => {
       if (!touchDragInfo) return;
       
+      // Prevent scrolling while reordering via handle
       if (e.cancelable) e.preventDefault(); 
       
       const touch = e.touches[0];
       const target = document.elementFromPoint(touch.clientX, touch.clientY);
       
+      // Find the row under the finger using data attribute
       const row = target?.closest('[data-queue-index]');
       if (row) {
           const newIndex = parseInt(row.getAttribute('data-queue-index') || '-1');
@@ -621,39 +632,70 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
                             key={uniqueKey} 
                             data-queue-index={index}
                             className={`animate-in slide-in-from-left-2 transition-all duration-200 ${isDragging || isTouchTarget ? 'opacity-50 scale-95' : 'opacity-100'}`}
-                            draggable="true"
-                            onDragStart={(e) => handleDragStart(e, index)}
-                            onDragOver={(e) => handleDragOver(e, index)}
-                            onDrop={(e) => handleDrop(e, index)}
-                            onTouchStart={(e) => handleTouchStart(e, index)}
-                            onTouchMove={(e) => handleTouchMove(e)}
-                            onTouchEnd={handleTouchEnd}
                         >
                             {transitionInfo}
                             
-                            <SwipeableItem 
-                                onLeftAction={() => handleRemove(index)}
-                                leftColor="bg-red-600"
-                                leftIcon={<TrashIcon className="w-6 h-6 text-white" />}
-                                onRightAction={() => onSelectTrack(track)}
-                                rightColor="bg-cyan-600"
-                                rightIcon={<PlayIcon className="w-6 h-6 text-white" />}
-                            >
-                                <div className="relative">
-                                     <div className="absolute left-1 top-1 z-20 bg-black/80 text-white text-[10px] font-bold px-1.5 py-0.5 rounded border border-white/10 backdrop-blur-md pointer-events-none">
-                                        {(index + 1).toString().padStart(2, '0')}
-                                     </div>
-                                     <TrackItem 
-                                        track={track}
-                                        onSelect={onSelectTrack}
-                                        isSelected={isOnAir}
-                                        isOnAir={isOnAir}
-                                        isExpanded={isExpanded}
-                                        onToggleExpand={() => handleToggleExpand(uniqueKey)}
-                                        language={language}
-                                     />
+                            {/* Layout: Handle (Left) + Swipeable Card (Right) */}
+                            <div className="flex items-center gap-1.5 relative">
+                                {/* DRAG HANDLE - Explicit target for reordering */}
+                                <div
+                                    className="p-3 cursor-grab active:cursor-grabbing text-slate-600 hover:text-white touch-none flex flex-col items-center justify-center gap-1 min-w-[40px]"
+                                    draggable="true"
+                                    onDragStart={(e) => handleDragStart(e, index)}
+                                    onDragOver={(e) => handleDragOver(e, index)}
+                                    onDrop={(e) => handleDrop(e, index)}
+                                    onTouchStart={(e) => handleTouchStart(e, index)}
+                                    onTouchMove={(e) => handleTouchMove(e)}
+                                    onTouchEnd={handleTouchEnd}
+                                >
+                                    <GripVerticalIcon className="w-6 h-6" />
+                                    <span className="text-[10px] font-mono font-bold opacity-50">{(index + 1).toString().padStart(2, '0')}</span>
                                 </div>
-                            </SwipeableItem>
+
+                                {/* CONTENT - Swipeable Area */}
+                                <div className="flex-1 min-w-0">
+                                    <SwipeableItem 
+                                        onLeftAction={() => handleRemove(index)}
+                                        leftColor="bg-red-600"
+                                        leftIcon={<TrashIcon className="w-6 h-6 text-white" />}
+                                        onRightAction={() => onSelectTrack(track)}
+                                        rightColor="bg-cyan-600"
+                                        rightIcon={<PlayIcon className="w-6 h-6 text-white" />}
+                                    >
+                                        <TrackItem 
+                                            track={track}
+                                            onSelect={onSelectTrack}
+                                            isSelected={isOnAir}
+                                            isOnAir={isOnAir}
+                                            isExpanded={isExpanded}
+                                            onToggleExpand={() => handleToggleExpand(uniqueKey)}
+                                            language={language}
+                                        />
+                                    </SwipeableItem>
+                                </div>
+                            </div>
+
+                            {/* MANUAL REORDER ACTIONS (Visible only when Expanded) */}
+                            {isExpanded && (
+                                <div className="flex gap-2 pl-12 pr-1 mt-2 animate-in slide-in-from-top-2">
+                                    <button 
+                                        onClick={() => moveTrack(index, 'up')} 
+                                        disabled={index === 0}
+                                        className="flex-1 bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-700 text-slate-300 py-2 rounded-lg border border-slate-700 flex items-center justify-center gap-2 transition-colors active:scale-95"
+                                    >
+                                        <ChevronUpIcon className="w-4 h-4" />
+                                        <span className="text-[10px] font-bold uppercase tracking-wider">Subir</span>
+                                    </button>
+                                    <button 
+                                        onClick={() => moveTrack(index, 'down')} 
+                                        disabled={index === queue.length - 1}
+                                        className="flex-1 bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-700 text-slate-300 py-2 rounded-lg border border-slate-700 flex items-center justify-center gap-2 transition-colors active:scale-95"
+                                    >
+                                        <ChevronDownIcon className="w-4 h-4" />
+                                        <span className="text-[10px] font-bold uppercase tracking-wider">Descer</span>
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     );
                 })}
