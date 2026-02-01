@@ -632,11 +632,12 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
                             {transitionInfo}
                             
                             <SwipeableItem 
-                                onLeftAction={() => onSelectTrack(track)}
-                                leftIcon={<PlayIcon className="w-6 h-6 text-white" />}
-                                onRightAction={() => handleRemove(index)}
-                                rightColor="bg-red-600"
-                                rightIcon={<TrashIcon className="w-6 h-6 text-white" />}
+                                onLeftAction={() => handleRemove(index)}
+                                leftColor="bg-red-600"
+                                leftIcon={<TrashIcon className="w-6 h-6 text-white" />}
+                                onRightAction={() => onSelectTrack(track)}
+                                rightColor="bg-cyan-600"
+                                rightIcon={<PlayIcon className="w-6 h-6 text-white" />}
                             >
                                 <div className="relative">
                                      <div className="absolute left-1 top-1 z-20 bg-black/80 text-white text-[10px] font-bold px-1.5 py-0.5 rounded border border-white/10 backdrop-blur-md pointer-events-none">
