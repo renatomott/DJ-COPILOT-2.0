@@ -203,9 +203,13 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
                     <HighlightText text={track.artist} query={searchQuery} className="text-[10px] text-slate-400 truncate font-medium uppercase" />
                 </div>
                 
-                {/* Directory Line */}
-                <div className="flex items-center gap-1 mt-1">
-                    <FolderIcon className="w-2.5 h-2.5 text-slate-500" />
+                {/* Directory Line (Updated with Color Dot) */}
+                <div className="flex items-center gap-1.5 mt-1">
+                    {track.color ? (
+                        <span className="w-2 h-2 rounded-full shadow-[0_0_5px_currentColor] flex-shrink-0" style={{ backgroundColor: track.color, color: track.color }} />
+                    ) : (
+                        <FolderIcon className="w-2.5 h-2.5 text-slate-500 flex-shrink-0" />
+                    )}
                     <span className="text-[9px] text-slate-500 truncate font-mono uppercase tracking-wide max-w-[150px]">
                         {track.location || 'ROOT'}
                     </span>
@@ -334,8 +338,8 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
 
                         {/* Row B: Folder | Duration | Rating */}
                         <div className="flex items-center justify-between border-t border-white/5 pt-1 mt-0.5">
-                             {/* Folder */}
-                             <div className="flex items-center gap-1.5 overflow-hidden flex-1">
+                             {/* Folder (Restored with Dot Logic) */}
+                             <div className="flex items-center gap-1.5 overflow-hidden flex-1 min-w-0">
                                 {track.color ? (
                                     <span className="w-2 h-2 rounded-full shadow-[0_0_5px_currentColor] flex-shrink-0" style={{ backgroundColor: track.color, color: track.color }} />
                                 ) : (
@@ -406,7 +410,19 @@ export const TrackItem: React.FC<TrackItemProps> = ({ track, onSelect, isSelecte
                      )}
                 </div>
 
-                {/* NEW: AI Reason (If available from Set Builder) */}
+                {/* Directory Info in Expanded View */}
+                <div className="flex items-center gap-2 bg-black/20 p-2 rounded-lg border border-white/5">
+                    <div className="flex items-center gap-1.5 overflow-hidden flex-1">
+                        {track.color ? (
+                            <span className="w-2.5 h-2.5 rounded-full shadow-[0_0_5px_currentColor] flex-shrink-0" style={{ backgroundColor: track.color, color: track.color }} />
+                        ) : (
+                            <FolderIcon className="w-3 h-3 text-slate-500 flex-shrink-0" />
+                        )}
+                        <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wide truncate">{track.location || 'ROOT'}</span>
+                    </div>
+                </div>
+
+                {/* AI Reason */}
                 {track.reason && (
                     <div className="bg-purple-900/20 border border-purple-500/20 rounded-lg p-2.5 animate-in fade-in slide-in-from-top-1">
                         <div className="flex items-center gap-1.5 mb-1.5">

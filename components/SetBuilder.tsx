@@ -622,6 +622,9 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
                     
                     const isExpanded = expandedKey === uniqueKey;
                     const isDragging = draggedIndex === index;
+                    
+                    // Touch Drag Visuals
+                    const isTouchSource = touchDragInfo?.startIndex === index;
                     const isTouchTarget = touchDragInfo?.currentIndex === index;
 
                     if (index > 0) {
@@ -654,7 +657,11 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
                             key={uniqueKey} 
                             id={`builder-item-${uniqueKey}`}
                             data-queue-index={index}
-                            className={`animate-in slide-in-from-left-2 transition-all duration-200 ${isDragging || isTouchTarget ? 'opacity-50 scale-95' : 'opacity-100'}`}
+                            className={`animate-in slide-in-from-left-2 transition-all duration-200 
+                                ${isDragging ? 'opacity-50 scale-95' : 'opacity-100'}
+                                ${isTouchSource ? 'bg-cyan-900/20 border border-cyan-500/30 rounded-xl' : ''}
+                                ${isTouchTarget && !isTouchSource ? 'ring-2 ring-cyan-500 ring-offset-2 ring-offset-black rounded-xl' : ''}
+                            `}
                         >
                             {transitionInfo}
                             
@@ -662,7 +669,7 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
                             <div className="flex items-center gap-1.5 relative">
                                 {/* DRAG HANDLE - Explicit target for reordering */}
                                 <div
-                                    className="p-3 cursor-grab active:cursor-grabbing text-slate-600 hover:text-white touch-none flex flex-col items-center justify-center gap-1 min-w-[40px]"
+                                    className="p-3 cursor-grab active:cursor-grabbing text-slate-500 hover:text-white touch-none select-none flex flex-col items-center justify-center gap-1 min-w-[44px] hover:bg-white/5 rounded-lg transition-colors"
                                     draggable="true"
                                     onDragStart={(e) => handleDragStart(e, index)}
                                     onDragOver={(e) => handleDragOver(e, index)}
@@ -670,6 +677,8 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({ queue, setQueue, onSelec
                                     onTouchStart={(e) => handleTouchStart(e, index)}
                                     onTouchMove={(e) => handleTouchMove(e)}
                                     onTouchEnd={handleTouchEnd}
+                                    onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                                    style={{ touchAction: 'none' }}
                                 >
                                     <GripVerticalIcon className="w-6 h-6" />
                                     <span className="text-[10px] font-mono font-bold opacity-50">{(index + 1).toString().padStart(2, '0')}</span>
