@@ -65,9 +65,22 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
     }
   }, [isExpanded]);
 
-  const matchScoreDisplay = suggestion.matchScore <= 1 
-    ? Math.round(suggestion.matchScore * 100) 
-    : Math.round(suggestion.matchScore);
+  // Robust Score Normalization
+  // Ensures 0.85 -> 85%, 1 -> 100%, 85 -> 85%
+  let matchScoreDisplay = 0;
+  const rawScore = parseFloat(String(suggestion.matchScore));
+
+  if (!isNaN(rawScore) && rawScore > 0) {
+      if (rawScore <= 1.0) {
+          // It's a decimal (e.g., 0.85), convert to percentage
+          matchScoreDisplay = Math.round(rawScore * 100);
+      } else {
+          // It's likely already a percentage (e.g., 85)
+          matchScoreDisplay = Math.round(rawScore);
+      }
+      // Safety cap at 100%
+      if (matchScoreDisplay > 100) matchScoreDisplay = 100;
+  }
 
   const scoreColor = matchScoreDisplay >= 90 ? 'text-green-400' : 
                      matchScoreDisplay >= 75 ? 'text-cyan-400' : 'text-yellow-400';
@@ -171,17 +184,12 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                              <span className={`text-[11px] md:text-sm font-mono font-bold px-1.5 py-0.5 rounded ${isKeyMatch ? 'text-yellow-400 ring-1 ring-yellow-500/50' : suggestion.key.includes('m') ? 'text-cyan-300 bg-cyan-950/30' : 'text-pink-300 bg-pink-950/30'}`}>
                                 {suggestion.key}
                              </span>
-
-                             {/* Duration (Tablet Only) */}
-                             <span className="hidden md:block text-[11px] md:text-sm font-mono font-medium text-slate-400 bg-white/5 px-1.5 py-0.5 rounded">
-                                {suggestion.duration}
-                             </span>
                          </div>
 
-                         {/* Row B: Metadata (Folder, Duration, Rating) */}
+                         {/* Row B: Folder | Duration | Rating */}
                          <div className="flex items-center justify-between border-t border-white/5 pt-1 mt-0.5">
-                            {/* Left: Location */}
-                            <div className="flex items-center gap-1.5 overflow-hidden flex-1">
+                            {/* Directory Info */}
+                            <div className="flex items-center gap-1.5 overflow-hidden flex-1 min-w-0">
                                 {suggestion.color ? (
                                     <span className="w-2 h-2 rounded-full shadow-[0_0_5px_currentColor] flex-shrink-0" style={{ backgroundColor: suggestion.color, color: suggestion.color }} />
                                 ) : (
@@ -190,24 +198,24 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                                 <span className="text-[9px] md:text-[10px] text-slate-300 font-medium uppercase truncate tracking-wide">{suggestion.location || 'N/A'}</span>
                             </div>
 
-                            {/* Right: Duration & Stars */}
                             <div className="flex items-center gap-2 flex-shrink-0 pl-2">
-                                {/* Duration (Mobile Only - Hidden on Tablet because it's on top row) */}
-                                <span className="text-[10px] font-mono text-slate-400 font-bold md:hidden">{suggestion.duration}</span>
-                                {renderRating(suggestion.rating, "w-2 h-2")}
+                                {/* Duration */}
+                                <span className="text-xs font-mono text-slate-400 font-bold md:hidden">{suggestion.duration}</span>
+                                {/* Rating */}
+                                {renderRating(suggestion.rating, "w-3 h-3")}
                             </div>
                          </div>
                     </div>
                 )}
 
-                {/* EXPANDED: Location & Rating Inline */}
+                {/* EXPANDED: Simplified Header Stats (Since we have the big grid below) */}
                 {isExpanded && (
                     <div className="flex items-center gap-3">
-                         <div className="flex items-center gap-1.5 bg-black/30 px-2 py-1 rounded-md border border-white/5 max-w-fit">
-                            {suggestion.color && <span className="w-2 h-2 rounded-full shadow-[0_0_5px_currentColor]" style={{ backgroundColor: suggestion.color, color: suggestion.color }} />}
-                            <span className="text-[10px] text-slate-300 font-bold uppercase break-all line-clamp-1">{suggestion.location}</span>
-                         </div>
                          {renderRating(suggestion.rating, "w-2.5 h-2.5")}
+                         <div className="flex items-center gap-1">
+                            <BrainIcon className={`w-3 h-3 ${scoreColor}`} />
+                            <span className={`text-xs font-bold ${scoreColor}`}>MATCH: {matchScoreDisplay}%</span>
+                         </div>
                     </div>
                 )}
             </div>
@@ -215,30 +223,27 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
 
           {/* 3. EXPANDED DETAILS */}
           {isExpanded && (
-            <div className="px-3 pb-3 space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
+             <div className="px-3 pb-3 space-y-3 animate-in fade-in slide-in-from-top-1 duration-200">
                 
-                {/* A. Data Grid - 4 Columns for Compact Vertical Height */}
+                {/* A. Data Grid */}
                 <div className="grid grid-cols-4 gap-2">
-                    {/* Match */}
-                    <div className="bg-black/40 rounded border border-white/10 p-1.5 flex flex-col items-center justify-center">
-                        <span className="text-[8px] text-slate-400 uppercase font-bold mb-0.5">Match</span>
-                        <div className="flex items-center gap-1">
-                            <BrainIcon className={`w-3 h-3 ${scoreColor}`} />
-                            <span className={`text-xs font-bold ${scoreColor}`}>{matchScoreDisplay}%</span>
-                        </div>
-                    </div>
                     {/* BPM */}
-                    <div className={`rounded p-1.5 flex flex-col items-center justify-center ${isBpmMatch ? goldBorderClass : defaultBorderClass}`}>
+                    <div className="rounded p-1.5 flex flex-col items-center justify-center bg-black/40 border border-white/10">
                         <span className="text-[8px] text-slate-400 uppercase font-bold mb-0.5">BPM</span>
-                        <div className="flex items-center gap-1 leading-none">
-                            <span className={`text-xs font-mono font-bold ${isBpmMatch ? 'text-yellow-400' : 'text-slate-200'}`}>{suggestion.bpm}</span>
-                            <span className={`text-[8px] font-mono font-bold ${bpmDiffColor}`}>{bpmDiffFormatted}</span>
-                        </div>
+                        <span className={`text-xs font-mono font-bold ${isBpmMatch ? 'text-yellow-400' : 'text-slate-200'}`}>
+                            {suggestion.bpm} 
+                            {!isBpmMatch && <span className={`text-[9px] ml-1 ${bpmDiff > 0 ? 'text-red-400' : 'text-blue-400'}`}>({bpmDiffFormatted})</span>}
+                        </span>
                     </div>
                     {/* Key */}
-                    <div className={`rounded p-1.5 flex flex-col items-center justify-center ${isKeyMatch ? goldBorderClass : defaultBorderClass}`}>
-                        <span className="text-[8px] text-slate-400 uppercase font-bold mb-0.5">Key</span>
-                        <span className={`text-xs font-mono font-bold ${isKeyMatch ? 'text-yellow-400' : suggestion.key.includes('m') ? 'text-cyan-400' : 'text-pink-400'}`}>{suggestion.key}</span>
+                    <div className="rounded p-1.5 flex flex-col items-center justify-center bg-black/40 border border-white/10">
+                         <span className="text-[8px] text-slate-400 uppercase font-bold mb-0.5">Key</span>
+                         <span className={`text-xs font-mono font-bold ${isKeyMatch ? 'text-yellow-400' : suggestion.key.includes('m') ? 'text-cyan-400' : 'text-pink-400'}`}>{suggestion.key}</span>
+                    </div>
+                    {/* Plays */}
+                    <div className="bg-black/40 rounded border border-white/10 p-1.5 flex flex-col items-center justify-center">
+                        <span className="text-[8px] text-slate-400 uppercase font-bold mb-0.5">Plays</span>
+                        <span className="text-xs font-mono font-bold text-slate-300">{suggestion.playCount}</span>
                     </div>
                     {/* Time */}
                     <div className="bg-black/40 rounded border border-white/10 p-1.5 flex flex-col items-center justify-center">
@@ -247,48 +252,74 @@ export const SuggestionItem: React.FC<SuggestionItemProps> = ({
                     </div>
                 </div>
 
-                {/* B. Reason - Compact */}
-                <div className="bg-white/5 rounded-lg p-2.5 border border-white/5">
-                    <p className="text-xs text-slate-200 italic leading-relaxed text-center font-medium">
-                        "{suggestion.reason}"
-                    </p>
+                {/* B. Genre / Subgenre */}
+                <div className="flex gap-2">
+                     <div className="flex-1 bg-white/5 rounded-lg p-2 border border-white/5">
+                        <span className="text-[8px] text-slate-400 font-bold uppercase block mb-0.5">Gênero</span>
+                        <span className="text-xs text-slate-200 font-semibold truncate block">{suggestion.genre || '-'}</span>
+                     </div>
+                     {suggestion.subgenre && (
+                        <div className="flex-1 bg-cyan-950/20 rounded-lg p-2 border border-cyan-500/20">
+                            <span className="text-[8px] text-cyan-500 font-bold uppercase block mb-0.5 flex items-center gap-1"><BrainIcon className="w-2 h-2" /> Vibe</span>
+                            <span className="text-xs text-cyan-200 font-semibold truncate block">{suggestion.subgenre}</span>
+                        </div>
+                     )}
                 </div>
 
-                {/* C. Cues */}
+                {/* Directory Info in Expanded View */}
+                <div className="flex items-center gap-2 bg-black/20 p-2 rounded-lg border border-white/5">
+                    <div className="flex items-center gap-1.5 overflow-hidden flex-1">
+                        {suggestion.color ? (
+                            <span className="w-2.5 h-2.5 rounded-full shadow-[0_0_5px_currentColor] flex-shrink-0" style={{ backgroundColor: suggestion.color, color: suggestion.color }} />
+                        ) : (
+                            <FolderIcon className="w-3 h-3 text-slate-500 flex-shrink-0" />
+                        )}
+                        <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wide truncate">{suggestion.location || 'ROOT'}</span>
+                    </div>
+                </div>
+
+                {/* C. AI Reason */}
+                <div className="bg-purple-900/20 border border-purple-500/20 rounded-lg p-2.5">
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                        <BrainIcon className="w-3 h-3 text-purple-400" />
+                        <span className="text-[9px] font-bold text-purple-400 uppercase tracking-widest">{t.whyMatch}</span>
+                    </div>
+                    <p className="text-xs text-purple-100 italic leading-relaxed font-medium">"{suggestion.reason}"</p>
+                </div>
+
+                {/* D. Cue Points */}
                 {suggestion.cuePoints && suggestion.cuePoints.length > 0 && (
-                    <div className="flex flex-wrap justify-center gap-1.5">
-                        {suggestion.cuePoints.map((cue, idx) => (
-                            <span key={idx} className="bg-slate-800 text-cyan-200 text-[9px] font-bold px-2 py-1 rounded border border-slate-700">
-                                {cue}
-                            </span>
+                    <div className="flex flex-wrap gap-1.5 justify-center bg-black/20 p-2 rounded-lg">
+                        {suggestion.cuePoints.slice(0, 4).map((cue, idx) => (
+                             <span key={idx} className="bg-slate-800 text-cyan-200 text-[9px] font-bold px-2 py-1 rounded border border-slate-700">{cue}</span>
                         ))}
                     </div>
                 )}
 
-                {/* D. Actions - Same Line Buttons */}
+                {/* E. Action Buttons */}
                 <div className="flex gap-2 pt-1">
                      <button 
-                        onClick={(e) => { e.stopPropagation(); onSelect(suggestion); }}
-                        className="flex-1 bg-cyan-600 hover:bg-cyan-500 text-white h-10 rounded-lg font-bold text-xs uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 active:scale-95"
+                        onClick={() => onSelect(suggestion)}
+                        className="flex-1 bg-cyan-600 hover:bg-cyan-500 text-white h-10 rounded-lg font-bold text-xs uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-transform"
                      >
                         <PlayIcon className="w-4 h-4" /> Load
                      </button>
                      {onAddToQueue && (
-                         <button 
-                            onClick={(e) => { e.stopPropagation(); onAddToQueue(suggestion); }}
-                            className="bg-green-600 hover:bg-green-500 text-white w-12 h-10 rounded-lg flex items-center justify-center shadow-lg active:scale-95"
-                         >
+                        <button 
+                            onClick={() => onAddToQueue(suggestion)}
+                            className="bg-green-600 hover:bg-green-500 text-white w-14 h-10 rounded-lg flex items-center justify-center shadow-lg active:scale-95 transition-transform"
+                        >
                             <PlusIcon className="w-5 h-5" />
-                         </button>
+                        </button>
                      )}
                      <button 
-                        onClick={(e) => { e.stopPropagation(); onDismiss(suggestion.id); }}
-                        className="bg-slate-800 text-gray-400 hover:text-red-400 w-10 h-10 rounded-lg border border-slate-700 flex items-center justify-center active:scale-95"
+                        onClick={() => onDismiss(suggestion.id)}
+                        className="bg-slate-800 hover:bg-red-900/50 text-slate-400 hover:text-red-400 w-10 h-10 rounded-lg flex items-center justify-center border border-slate-700 active:scale-95 transition-colors"
                      >
                         <XIcon className="w-4 h-4" />
                      </button>
                 </div>
-            </div>
+             </div>
           )}
         </div>
     </SwipeableItem>

@@ -4,7 +4,7 @@ import type { Track, Suggestion } from '../types';
 import { getTrackSuggestions } from '../services/geminiService';
 import { Loader } from './Loader';
 import { SuggestionItem } from './SuggestionItem';
-import { BrainIcon, RefreshCwIcon, PlusIcon } from './icons';
+import { BrainIcon, RefreshCwIcon, PlusIcon, ZapIcon } from './icons';
 import { SkeletonLoader } from './SkeletonLoader';
 import { translations } from '../utils/translations';
 
@@ -25,6 +25,7 @@ export const SuggestionPanel: React.FC<SuggestionPanelProps> = ({ currentTrack, 
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [autoMode, setAutoMode] = useState(false); // Default OFF to save credits
   
   const t = translations[language];
   const isFetching = useRef(false);
@@ -57,10 +58,12 @@ export const SuggestionPanel: React.FC<SuggestionPanelProps> = ({ currentTrack, 
     setError(null);
     isFetching.current = true;
     
-    // If track changed, clear old suggestions and update reference
-    if (trackChanged) {
-        setSuggestions([]);
-        setExpandedId(null);
+    // Update reference immediately to prevent double fetches
+    if (trackChanged || force) {
+        if (trackChanged) {
+            setSuggestions([]); // Clear old suggestions visually
+            setExpandedId(null);
+        }
         lastTrackId.current = currentTrack.id;
         localStorage.setItem(LAST_ID_KEY, currentTrack.id);
     }
@@ -104,13 +107,27 @@ export const SuggestionPanel: React.FC<SuggestionPanelProps> = ({ currentTrack, 
       }
   };
 
-  // Trigger load whenever currentTrack ID changes
-  // Pass 'false' to allow persistence logic to skip reload if IDs match
+  // Logic to handle Track Changes based on AutoMode
   useEffect(() => {
-    if (currentTrack?.id) {
-        loadSuggestions(false); 
+    if (!currentTrack?.id) return;
+
+    const trackChanged = lastTrackId.current !== currentTrack.id;
+
+    if (trackChanged) {
+        // Always update the ref so we know we are on a new track
+        lastTrackId.current = currentTrack.id;
+        localStorage.setItem(LAST_ID_KEY, currentTrack.id);
+
+        if (autoMode) {
+            // Auto: Fetch immediately
+            loadSuggestions(true);
+        } else {
+            // Manual: Clear previous suggestions to avoid confusion (showing suggestions for prev track)
+            setSuggestions([]);
+            setExpandedId(null);
+        }
     }
-  }, [currentTrack?.id, loadSuggestions]); 
+  }, [currentTrack?.id, autoMode, loadSuggestions, setSuggestions]); 
 
   const handleRefresh = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -125,19 +142,34 @@ export const SuggestionPanel: React.FC<SuggestionPanelProps> = ({ currentTrack, 
     <div className="mt-1 mb-6 p-3 bg-gray-900 rounded-2xl border border-gray-800">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <BrainIcon className="w-5 h-5 text-purple-400" />
+          <BrainIcon className={`w-5 h-5 ${autoMode ? 'text-green-400' : 'text-slate-500'}`} />
           <h3 className="text-lg font-bold text-gray-200">{t.nextTracks}</h3>
         </div>
         
-        <button 
-          onClick={handleRefresh}
-          disabled={isLoading}
-          className="flex items-center gap-1.5 px-3 py-2 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-300 hover:text-white rounded-lg border border-gray-700 transition-all text-xs font-semibold group min-h-[36px]"
-          title="Pedir novas sugestões à IA"
-        >
-          <RefreshCwIcon className={`w-3.5 h-3.5 transition-transform group-hover:rotate-180 duration-500 ${isLoading ? 'animate-spin' : ''}`} />
-          {isLoading ? t.analyzing : t.recalculate}
-        </button>
+        <div className="flex items-center gap-3">
+            {/* Auto Toggle */}
+            <div className="flex items-center gap-2 mr-2 bg-black/40 px-2 py-1 rounded-lg border border-white/5">
+                <span className={`text-[9px] font-bold uppercase tracking-wider ${autoMode ? 'text-green-400' : 'text-slate-500'}`}>
+                    Auto
+                </span>
+                <button
+                    onClick={() => setAutoMode(!autoMode)}
+                    className={`w-8 h-4 rounded-full relative transition-colors duration-300 ${autoMode ? 'bg-green-600 shadow-[0_0_10px_rgba(34,197,94,0.4)]' : 'bg-slate-700'}`}
+                >
+                    <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all duration-300 shadow-sm ${autoMode ? 'right-0.5' : 'left-0.5'}`} />
+                </button>
+            </div>
+
+            <button 
+                onClick={handleRefresh}
+                disabled={isLoading}
+                className="flex items-center gap-1.5 px-3 py-2 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-300 hover:text-white rounded-lg border border-gray-700 transition-all text-xs font-semibold group min-h-[36px]"
+                title="Pedir novas sugestões à IA"
+            >
+                <RefreshCwIcon className={`w-3.5 h-3.5 transition-transform group-hover:rotate-180 duration-500 ${isLoading ? 'animate-spin' : ''}`} />
+                {isLoading ? t.analyzing : t.recalculate}
+            </button>
+        </div>
       </div>
       
       {isLoading && suggestions.length === 0 && (
@@ -155,7 +187,20 @@ export const SuggestionPanel: React.FC<SuggestionPanelProps> = ({ currentTrack, 
       )}
       
       {!isLoading && !error && suggestions.length === 0 && (
-        <p className="text-gray-400 text-center py-8 italic border-2 border-dashed border-gray-800 rounded-xl text-sm">{t.noSuggestions}</p>
+        <div className="py-10 px-4 border-2 border-dashed border-slate-800 rounded-xl flex flex-col items-center justify-center text-center">
+            <p className="text-slate-500 font-bold uppercase tracking-widest text-xs mb-3">
+                {autoMode ? t.noSuggestions : "Modo Manual"}
+            </p>
+            {!autoMode && (
+                <button 
+                    onClick={handleRefresh}
+                    className="flex items-center gap-2 bg-cyan-600 hover:bg-cyan-500 text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-cyan-900/20 transition-all active:scale-95"
+                >
+                    <BrainIcon className="w-4 h-4" />
+                    Gerar Sugestões
+                </button>
+            )}
+        </div>
       )}
       
       {/* Mostramos as sugestões antigas enquanto carrega as novas se for um refresh */}
